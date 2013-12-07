@@ -1,0 +1,11 @@
+{
+	"id": "nodebb-plugin-import",
+	"name": "nodebb-plugin-import",
+	"description": "Import your structured set of forum data to nodebb",
+	"url": "https://github.com/akhoury/nodebb-plugin-import",
+	"library": "./lib/index.js",
+	"hooks": [
+		{ "hook": "filter:admin.header.build", "method": "admin.menu", "callbacked": false },
+		{ "hook": "filter:admin.create_routes", "method": "admin.route", "callbacked": true }
+	]
+}
