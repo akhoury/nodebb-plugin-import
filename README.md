@@ -24,7 +24,9 @@ take a look at it to get an idea on how to generate them.
 ```
 cd NodeBB
 npm install nodebb-plugin-import
-cd node_module/nodebb-plugin-import/bin
+cd node_module/nodebb-plugin-import
+npm install
+cd bin
 node import.js --storage="../storage" --config="../import.config.json" --log="debug" --flush
 ```
 
