@@ -1,0 +1,54 @@
+{
+	"log": "info,warn,error,debug",
+	"passwordGen": {
+		"chars": "{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890",
+		"len": 13
+	},
+	"redirectTemplatesStrings": {
+		"users": {
+			"oldPath": "/users/<%= _uid %>",
+			"newPath": "/user/<%= userslug %>"
+		},
+		"categories": {
+			"oldPath": "/forums/<%= _cid %>",
+			"newPath": "/category/<%= cid %>"
+		},
+		"topics": {
+			"oldPath": "/topics/<%= _tid %>",
+			"newPath": "/topic/<%= tid %>"
+		},
+		"posts": null
+	},
+	"storageDir": "../storage",
+	"nbb": {
+		"setup": {
+			"runFlush": false,
+			"setupVal": {
+				"admin:username": "admin",
+				"admin:password": "password",
+				"admin:password:confirm": "password",
+				"admin:email": "you@example.com",
+				"base_url": "http://localhost",
+				"port": "4567",
+				"use_port": "y",
+				"bind_address": "0.0.0.0",
+				"secret": "",
+				"database": "redis",
+				"redis:host": "127.0.0.1",
+				"redis:port": 6379,
+				"redis:password": "",
+				"redis:database": 0,
+				"mongo:host": "127.0.0.1",
+				"mongo:port": 27017,
+				"mongo:user": "",
+				"mongo:password": "",
+				"mongo:database": 0
+			}
+		},
+		"categoriesTextColors": ["#FFFFFF"],
+		"categoriesBgColors": ["#ab1290", "#004c66", "#0059b2"],
+		"categoriesIcons": ["fa-comment"],
+		"autoConfirmEmails": true,
+		"userReputationMultiplier": 1
+	}
+}
