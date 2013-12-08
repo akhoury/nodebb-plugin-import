@@ -1,4 +1,3 @@
-
 nodebb-plugin-import
 =========
 Import your structured set of forum data to nodebb.
@@ -209,9 +208,6 @@ every post data must be a seperate file, the file name must start with `p.[_pid]
 }
 ```
 
-### Versions tested on:
-  - NodeBB 0.1.x-edge (I was almost daily updating from nodebb/master during development)
-
 ### Your config are required
 These are the defaults
 ```javascript
@@ -319,6 +315,10 @@ These are the defaults
 
 			}
 ```
+
+### Versions tested on:
+  - NodeBB 0.1.x-edge (I am almost, updating daily, from nodebb/master during development but I will stablize at the NodeBB's 0.2.0 release)
+
 ### Future versions support
 
 * Will keep supporting future NodeBB versions, since it's still very young and I'm a fan, but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can.
