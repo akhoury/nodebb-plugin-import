@@ -1,0 +1,12 @@
+{
+    "normalized": {
+		"_pid": 12,
+        "_tid": 6,
+        "_uid": 1,
+        "_content": "Post 12 - this one will not make it cus its topic (_tid = 6) won't",
+        "_timestamp": 1386475819970
+	},
+
+	"imported": null,
+	"skipped": null
+}
