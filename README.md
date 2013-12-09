@@ -354,7 +354,7 @@ NodeBB 0.1.x-edge (I am almost updating and testing daily, from nodebb/master at
 I will keep supporting future NodeBB versions, since it's still very young and I'm a fan, but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can, or a pull request if you find an issue or you want to add a feature
 
 ### Markdown Note
-NodeBB 'prefers' Markdown as its main 'content' language, so it enables [nodebb-plugin-markdown](https://github.com/julianlam/nodebb-plugin-markdown) by default, which also aggressively sanitize all HTML from the content. Now, I know a lot for forum sofrware allow and have a lot of HTML content, but to be honest, converting from HTML to Markdown was such a memory hog, so I took it out of the importer. Here are your options:
+NodeBB 'prefers' Markdown as its main 'content' language, so it enables [nodebb-plugin-markdown](https://github.com/julianlam/nodebb-plugin-markdown) by default, which aggressively sanitize all HTML from the content. Now, I know a lot for forum sofrware allow and have a lot of HTML content, but to be honest, converting from HTML to Markdown was such a memory hog, so I took it out of the importer. Here are your options:
 * If you can, convert your HTML content to markdown on your own, I was using [html-md](https://github.com/neocotic/html.md) 
 * If you can't, leave it as HTML, then, DISABLE html sanitization in the __nodebb-plugin-markdown__ sttings page, but don't stop there, this is a high security risk on you and your users, so you must sanitize the UNSAFE html somehow, to do that you can install this plugin [nodebb-plugin-sanitizehtml](https://github.com/akhoury/nodebb-plugin-sanitizehtml) which will sanitize all the `<script>` tags, the `<a href='javascript:evil();'>` tags, etc. by default, even if you still want to allow safe `<a>` tags you still safely can, and all of your html content will look just fine. (`<img>` is not enabled by default, but you can just add it in the settings page)
 * Strip all html tags out, and make everything as clear text
@@ -362,7 +362,7 @@ NodeBB 'prefers' Markdown as its main 'content' language, so it enables [nodebb-
 ### Redis Note
 
 Since the importer will be hitting the database constantely, with almost 0 interval, I would add these config to the bottom of your redis.conf file, to disable some stuff and make redis more responsive, but less safe, then after the migration is complete, you must, __before__ you kill your redis server, ```redis-cli bgsave``` to actually write the data to disk, then remove these extra configs and restart your redis server.
-If you're an redis guru, you don't need my help, but take a look at it anyway and let me know where I went wrong :)
+If you're a redis guru, you don't need my help, but take a look at it anyway and let me know where I went wrong :)
 ```
 # NODEBB-PLUGIN-IMPORT TEMPORARY SETTINGS
 
