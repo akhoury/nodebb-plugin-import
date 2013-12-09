@@ -18,6 +18,7 @@ you must install it in ```NodeBB/node_modules/nodebb-plugin-import```, then you 
 * Pre-generated data, see [Source Files Structure](https://github.com/akhoury/nodebb-plugin-import/blob/master/README.md#source-files-structure) below, you can generate them however you want, as long as you meet the end resutls.
 I, for example, am writing this [nodebb-plugin-import-ubb](https://github.com/akhoury/nodebb-plugin-import-ubb) which exports [UBB Threads](http://www.ubbcentral.com/) data into files that this importer can understand,
 take a look at it to get an idea on how to generate them (also still in development)
+* a tiny bit of terminal knowledge
 
 
 ## Example usage
