@@ -227,9 +227,10 @@ every post data must be in a seperate file, each file name must start with `p.` 
 ```
 
 ### Your config are required
-These are the defaults
+These are the defaults, the defaults are good too.
+
 ```javascript
-    log: 'info,warn,error,debug',
+    log: 'debug',
 	
 	// generate passwords for the users, if no password is provided
 	passwordGen: {
@@ -293,7 +294,7 @@ These are the defaults
 			// this WILL FLUSH YOU DATABASE and attempt to run:
 			// node app --setup={...}
 			// with a merge of the setupVal values below and, if you have NodeBB/config.json in its place too
-			runFlush: true,
+			runFlush: false,
 		
 			setupVal:  {
 				'admin:username': 'admin',
