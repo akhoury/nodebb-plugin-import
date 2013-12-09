@@ -1,6 +1,6 @@
 nodebb-plugin-import
 =========
-Import your structured set of forum data to nodebb | a one time use plugin
+Import your structured forum data to nodebb | a one time use plugin
 
 a refactor of: [nodebb-plugin-ubbmigrator](https://github.com/akhoury/nodebb-plugin-ubbmigrator)
 into this general __nodebb-plugin-import_ and [nodebb-plugin-import-ubb](https://github.com/akhoury/nodebb-plugin-import-ubb)
