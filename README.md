@@ -81,7 +81,7 @@ You must generate 4 arrays and save them in the following format, these are basi
 The rest of the data must be in the following format:
 
 #### category: c.[_cid] file sample: 
-Every category data must be in a seperate file, each file name must with `c.` for `category` and then appended with its old category id `_cid`, i.e. `c.1`
+Every category data must be in a seperate file, each file name must start with `c.` for `category` and then appended with its old category id `_cid`, i.e. `c.1`
 
 ```javascript
 {
