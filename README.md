@@ -156,15 +156,8 @@ Every user data must be a seperate file, each file name must start with `u.` for
     "skipped": null
 }
 ```
-#### topic: t.[_id] file sample: 
+#### topic: t.[_tid] file sample: 
 every topic data must be in have a seperate file, each file name must start with `t.` for topic, then appended with its old topic id `_tid`, i.e. `t.123`
-
-
-#### Important Note On Topics and Posts: 
-* Most forums, when creating a topic, a post will be created immediately along with it, this last post will be the __main-post__ or __parent-post__ or __topic_content_post__ or whatever other term it's known with, and it's usually saved in the same __table__ with the other posts, known as the "__reply-posts__". Usually this  __parent-post__ have some sort of flag to differentiate it, such as `is_parent = 1` or `parent = 0` or something close.
-* Most likely, you may have to do some tables `join`ing to get each Topic's record along with its __parent-post__'s content, then save it the `_content` on the `t.[_tid]` JSON.
-* You should discard all of the other data on that __parent-post__ as in NodeBB, it will be the Topic's content.
-* Remember to fliter these __parent-posts__ from your __reply-posts__ query so they don't get imported twice.  
 
 
 ```javascript
@@ -202,7 +195,15 @@ every topic data must be in have a seperate file, each file name must start with
 }
 ```
 
-#### post: p.[_id] file sample: 
+
+#### Important Note On Topics and Posts: 
+* Most forums, when creating a topic, a post will be created immediately along with it, this last post will be the __main-post__ or __parent-post__ or __topic_content_post__ or whatever other term it's known with, and it's usually saved in the same __table__ with the other posts, known as the "__reply-posts__". Usually this  __parent-post__ have some sort of flag to differentiate it, such as `is_parent = 1` or `parent = 0` or something close.
+* Most likely, you may have to do some tables `join`ing to get each Topic's record along with its __parent-post__'s content, then save it the `_content` on the `t.[_tid]` JSON.
+* You should discard all of the other data on that __parent-post__ as in NodeBB, it will be the Topic's content.
+* Remember to fliter these __parent-posts__ from your __reply-posts__ query so they don't get imported twice.  
+
+
+#### post: p.[_pid] file sample: 
 every post data must be in a seperate file, each file name must start with `p.` for post, then appended with its old post id `_pid`, i.e. `p.65487`
 ```javascript
 {
