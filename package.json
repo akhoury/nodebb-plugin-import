@@ -1,7 +1,7 @@
 
 {
 	"name": "nodebb-plugin-import",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "Import your structured set of forum data to nodebb",
 	"main": "./lib/import.js",
 	"scripts": {
@@ -29,12 +29,11 @@
 	"dependencies": {
 		"underscore": "~1.5.2",
 		"fs-extra": "~0.8.1",
-		"glob": "~3.2.7",
 		"async": "~0.2.9",
-		"html-md": "~3.0.2",
 		"optimist": "~0.6.0",
 		"exec-sync": "~0.1.6",
 		"marked": "~0.1.6",
+		"tiny-logger": "~0.0.x",
 		"node-persist": "git://github.com/simonlast/node-persist.git"
 	}
 }
