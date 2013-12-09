@@ -130,6 +130,9 @@ Every user data must be a seperate file, each file name must start with `u.` for
         // save dem logs
         
         "_signature": "u45 signature", // OPTIONAL, defaults to '', over 150 chars will be truncated with an '...' at the end
+        
+        "_picture": "http://images.com/derp.png", // OPTIONAL, defaults to ''. Note that if there is an '_pciture' on the 'normalized' object, the 'imported' objected will be augmented with a key imported.keptPicture = true, so you can iterate later and check if the images 200 or 404s
+        
         "_website": "u45.com", // OPTIONAL, defaults to ''
         
         "_banned": 0, // OPTIONAL, defaults to 0 
