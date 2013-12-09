@@ -76,7 +76,7 @@ You must generate 4 arrays and save them in the following format, these are basi
 [7,8,9,10,11,12]
 ```
 
-### You a single file for each record.
+### You need a single file for each record.
 
 The rest of the data must be in the following format:
 
