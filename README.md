@@ -20,6 +20,10 @@ I, for example, am writing this [nodebb-plugin-import-ubb](https://github.com/ak
 take a look at it to get an idea on how to generate them (also still in development)
 * a tiny bit of terminal knowledge
 
+### Pre-Generated files
+
+You can write your __exporter__ for your own forum, to get an idea on how to,
+I've written one for [UBB Threads](http://www.ubbcentral.com/) called it [nodebb-plugin-import-ubb](https://github.com/akhoury/nodebb-plugin-import-ubb) to keep the namespacing accurate,
 
 ## Example usage
 ```
