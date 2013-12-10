@@ -11,7 +11,7 @@ var argv = require('optimist').argv,
 			+ '\n-c | --config	: [REQUIRED] input config file'
 			+ '\n-s | --storage	: [OPTIONAL-only if you already have it in config.json] where your storage dir is, will override the import.config.json value'
 			+ '\n-l | --log	: [OPTIONAL] log level, WILL override whatever is in the import.config.json file, if none, defaults to "debug", i think'
-			+ '\n-f | --flush : [OPTIONAL] if you want to flush the db and start over, WILL override the its value in import.config.json'
+			+ '\n-f | --flush : [OPTIONAL] if you want to flush the db and start over, WILL override its value in import.config.json'
 
 			+ '\n\n--copy-from-test : [OPTIONAL][DEV-ONLY][IGNORE] I use it to copy ./test/storage to ./storage, so I could test this script easily, ignore it'
 		);
@@ -24,7 +24,7 @@ var argv = require('optimist').argv,
 
 var configFile = argv.c || argv.config || '';
 if (!configFile) error ('You must provide a config file');
-configFile = path.join(__dirname, configFile);
+configFile = path.resolve(configFile);
 if (!fs.existsSync(configFile)) error(configFile + ' does not exist or cannot be read.');
 var config = fs.readJsonSync(configFile);
 
