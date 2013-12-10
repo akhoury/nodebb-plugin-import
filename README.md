@@ -32,7 +32,7 @@ npm install nodebb-plugin-import
 cd node_module/nodebb-plugin-import
 npm install
 cd bin
-node import.js --storage="../storage" --config="../import.config.json" --flsuh --log="debug" | tee import.log
+node import.js --storage="../storage" --config="../import.config.json" --flush --log="debug" | tee import.log
 ```
 
 ### Terminology
