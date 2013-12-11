@@ -6,15 +6,15 @@
 	},
 	"redirectTemplatesStrings": {
 		"users": {
-			"oldPath": "/users/<%= _uid %>",
+			"oldPath": "/forums/ubbthreads.php/users/<%= _uid %>",
 			"newPath": "/user/<%= userslug %>"
 		},
 		"categories": {
-			"oldPath": "/forums/<%= _cid %>",
+			"oldPath": "/forums/ubbthreads.php/forums/<%= _cid %>",
 			"newPath": "/category/<%= cid %>"
 		},
 		"topics": {
-			"oldPath": "/topics/<%= _tid %>",
+			"oldPath": "/forums/ubbthreads.php/topics/<%= _tid %>",
 			"newPath": "/topic/<%= tid %>"
 		},
 		"posts": null
