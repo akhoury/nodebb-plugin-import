@@ -259,20 +259,20 @@ These are the defaults, the defaults are good too.
 		// uses the underscore templating engine
 		// all variables that start an an '_' are the old variables
 		users: {
-			// this is an example (the ubb way)
-			oldPath: '/users/<%= _uid %>',
+			// this is an example (the ubb way), with prefix /forums
+			oldPath: '/forums/ubbthreads.php/users/<%= _uid %>',
 			// this is the nbb way
 			newPath: '/user/<%= userslug %>'
 		},
 		categories: {
-			// this is an example (the ubb way)
-			oldPath: '/forums/<%= _cid %>',
+			// this is an example (the ubb way), with prefix /forums
+			oldPath: '/forums/ubbthreads.php/forums/<%= _cid %>',
 			// this is the nbb way
 			newPath: '/category/<%= cid %>'
 		},
 		topics: {
-			// this is an example (the ubb way)
-			oldPath: '/topics/<%= _tid %>',
+			// this is an example (the ubb way), with prefix /forums
+			oldPath: '/forums/ubbthreads.php/topics/<%= _tid %>',
 			// this is the nbb way
 			newPath: '/topic/<%= tid %>'
 		},
