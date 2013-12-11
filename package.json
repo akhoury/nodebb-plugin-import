@@ -34,6 +34,6 @@
 		"exec-sync": "~0.1.6",
 		"marked": "~0.1.6",
 		"tiny-logger": "~0.0.x",
-		"node-persist": "git://github.com/simonlast/node-persist.git"
+		"node-persist": "git://github.com/akhoury/node-persist.git#master"
 	}
 }
