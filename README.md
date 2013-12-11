@@ -391,7 +391,7 @@ aof-rewrite-incremental-fsync yes
 
 ### Storage results
 
-After the import is done, you can open the storage files and see that the `imported` or `skipped` objects has been set appropriately. The `imported` ones have some extra data such as, `_redirect: { oldPath: '/users/123', newPath: '/user/elvis'}`, which you can use to create redirect rules. 
+After the import is done, you can open the storage files and see that the `imported` or `skipped` objects has been set appropriately. The `imported` ones have some extra data such as, `_redirect: { oldPath: '/users/123', newPath: '/user/elvis'}`, which you can use to create redirect rules, or use this [RedirectBB](https://github.com/akhoury/RedirectBB), which I wrote specifically for this.
 
 Also, in the users files, `u._uid`, there is a property `keptPicture`, which will be true if the user account had his/her own picture and NodeBB used it, this way you can iterate if you want and check which images 404s and remove them, but I'll let you do that.
 
