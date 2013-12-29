@@ -357,10 +357,11 @@ These are the defaults, the defaults are good too.
 ```
 
 ### Versions tested on:
-NodeBB 0.1.x-edge (I am almost updating and testing daily, from nodebb/master at the moment,but I will stablize right after the the NodeBB's 0.2.0 release)
+NodeBB 0.2.0
 
 ### Future versions support
-I will keep supporting future NodeBB versions, since it's still very young and I'm a fan, but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can, or a pull request if you find an issue or you want to add a feature
+I will try to keep supporting future NodeBB versions, since it's still very young and I'm a fan,
+but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can, or a pull request if you find an issue or a missing feature
 
 ### Markdown Note
 NodeBB 'prefers' Markdown as its main 'content' language, so it enables [nodebb-plugin-markdown](https://github.com/julianlam/nodebb-plugin-markdown) by default, which aggressively sanitize all HTML from the content. Now, I know a lot for forum sofrware allow and have a lot of HTML content, but to be honest, converting from HTML to Markdown was such a memory hog, so I took it out of the importer. Here are your options:
@@ -398,6 +399,16 @@ Also, in the users files, `u._uid`, there is a property `keptPicture`, which wil
 ### Limitations
 * UNIX only (Linux, Mac) but no Windows support yet, it's one a time use, I probably won't support Windows soon.
 * If you're migrating a very large forum, I'm talking about 300k records and up, expect to wait few hours, depending on your machine, but, you might need to hack and disable some things in NodeBB, temporarily. I can't figure out what yet, since NodeBB is highly active and unstable at the moment, but give me a buzz, I'll help you out. Also, once the next stable version comes out, I will stabilize this importer better, and find out how I can disable few NodeBB features just during the migration, to increase performance.
+
+### Get your hands dirty
+During a 350k+ posts migration, I had to temporarily comment few things in NodeBB's code, to make the migration much faster, basically unnecessary stuff that occurs during a migration.
+##### here's what I did:
+* Comment out [NodeBB/src/posts.js: FROM Line-74 TO Line-75](https://github.com/designcreateplay/NodeBB/blob/4a11307b244468f2d2fba02ff13a5814169bf10c/src/posts.js#L74)
+* Comment out [NodeBB/src/posts.js: FROM Line-94 TO Line-109](https://github.com/designcreateplay/NodeBB/blob/4a11307b244468f2d2fba02ff13a5814169bf10c/src/posts.js#L94)
+* Comment out [NodeBB/src/posts.js: FROM Line-112 TO Line-113](https://github.com/designcreateplay/NodeBB/blob/4a11307b244468f2d2fba02ff13a5814169bf10c/src/posts.js#L112)
+* Comment out [NodeBB/src/topics.js: FROM Line-90 TO Line 92](https://github.com/designcreateplay/NodeBB/blob/4a11307b244468f2d2fba02ff13a5814169bf10c/src/topics.js#L90)
+
+(__make sure you undo your changes after the migration__, also these Line numbers are noted from the [NodeBB 0.2.0 release source](https://github.com/designcreateplay/NodeBB/tree/4a11307b244468f2d2fba02ff13a5814169bf10c))
 
 ### Todo, some are for you to do.
 * todo go through all users who has user.keptPicture == true, and test each image url if 200 or not and filter the ones pointing to my old forum avatar dir.
