@@ -369,7 +369,9 @@ NodeBB 'prefers' Markdown as its main 'content' language, so it enables [nodebb-
 * If you can't, leave it as HTML, then, DISABLE html sanitization in the __nodebb-plugin-markdown__ sttings page, but don't stop there, this is a high security risk on you and your users, so you must sanitize the UNSAFE html somehow, to do that you can install this plugin [nodebb-plugin-sanitizehtml](https://github.com/akhoury/nodebb-plugin-sanitizehtml) which will sanitize all the `<script>` tags, the `<a href='javascript:evil();'>` tags, etc. by default, even if you still want to allow safe `<a>` tags you still safely can, and all of your html content will look just fine. (`<img>` is not enabled by default, but you can just add it in the settings page)
 * Strip all html tags out, and make everything as clear text
 
+
 ### Redis Note
+__you may not need to do that__: I didn't when I migrated over 350k records, I had a decent machine. (Ubuntu 12.04, 8GB Memory, 4 Cores, 80GB SSD Disk)
 
 Since the importer will be hitting the database constantely, with almost 0 interval, I would add these config to the bottom of your redis.conf file, to disable some stuff and make redis more responsive, but less safe, then after the migration is complete, you must, __before__ you kill your redis server, ```redis-cli bgsave``` to actually write the data to disk, then remove these extra configs and restart your redis server.
 If you're a redis guru, you don't need my help, but take a look at it anyway and let me know where I went wrong :)
@@ -398,7 +400,7 @@ Also, in the users files, `u._uid`, there is a property `keptPicture`, which wil
 
 ### Limitations
 * UNIX only (Linux, Mac) but no Windows support yet, it's one a time use, I probably won't support Windows soon.
-* If you're migrating a very large forum, I'm talking about 300k records and up, expect to wait few hours, depending on your machine, but, you might need to hack and disable some things in NodeBB, temporarily. I can't figure out what yet, since NodeBB is highly active and unstable at the moment, but give me a buzz, I'll help you out. Also, once the next stable version comes out, I will stabilize this importer better, and find out how I can disable few NodeBB features just during the migration, to increase performance.
+* If you're migrating a very large forum, I'm talking about 300k records and up, expect to wait few hours, depending on your machine, but, you might need to hack and disable some things in NodeBB, check out the next section, Get your hands dirty.
 
 ### Get your hands dirty
 During a 350k+ posts migration, I had to temporarily comment few things in NodeBB's code, to make the migration much faster, basically unnecessary stuff that occurs during a migration.
