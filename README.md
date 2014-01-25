@@ -399,6 +399,16 @@ wget https://github.com/designcreateplay/NodeBB/archive/46e29dfb2b841ad491905988
 I will try to keep supporting future NodeBB versions, since it's still very young and I'm a fan,
 but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can, or a pull request if you find an issue or a missing feature
 
+### Markdown Note
+
+NodeBB prefers using Markdown as the *content language format*, and since most Web 1.0 forums use either straight out __HTML__ or __BB Code__, there is a config options called `"convert"` which you can set to either `"html-to-md"` or `"bbcode-to-md"` and the while importing, the importer will convert the following: 
+
+- Users signatures
+- Topics Content, but NOT titles
+- Posts Content
+
+*If you are importing allread 'markdownified' content, just don't set the `convert` field, to skip the conversion, also if you are importing some other format, feel free to submit a pull request or open an issue, if there is a Node module to it, or there is some pre-built JS "function" to convert the content, I'll add it*
+
 ### Redis Note
 __you may not need to do that__: I didn't when I migrated over 350k records, I had a decent machine. (Ubuntu 12.04, 8GB Memory, 4 Cores, 80GB SSD Disk)
 
