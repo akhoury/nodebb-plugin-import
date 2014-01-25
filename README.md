@@ -439,14 +439,17 @@ Also, in the users files, `u._uid`, there is a property `keptPicture`, which wil
 
 ### Limitations
 * UNIX only (Linux, Mac) but no Windows support yet, it's one a time use, I probably won't support Windows soon.
-* If you're migrating a very large forum, I'm talking about 300k records and up, expect to wait few hours, depending on your machine, but, you might need to hack and disable some things in NodeBB, check out the next section, Get your hands dirty.
+* If you're migrating a very large forum, I'm talking about 300k records and up, expect to wait some time, especially if you are converting content, but it's not too bad, it took me about 28 minutes to migrate 350k records.
 
 ### Todo, some are for you to do.
 * todo go through all users who has user.keptPicture == true, and test each image url if 200 or not and filter the ones pointing to my old forum avatar dir.
-* todo create a nodebb-theme that works with the site
-* todo send emails to all users with temp passwords, see the user u._uid example JSON and read the comments to find how to get the passwords 
+* todo create a nodebb-theme that works with your site
+* todo send emails to all users with temp passwords, see the user `u.{_uid}` example JSON and read the comments to find how to get the passwords 
 * todo maybe implement a nbb plugin that enforces the 1 time use of temp passwords.
-* todo TEST
+
+### Test
+
+pffffft
 
 
     
