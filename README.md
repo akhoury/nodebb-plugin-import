@@ -381,7 +381,7 @@ wget https://github.com/designcreateplay/NodeBB/archive/46e29dfb2b841ad491905988
 ./nodebb upgrade
 
 ```
-## BUT YOU WILL NEED TO COMMENT OUT SOME NODEBB CODE IN THIS SAME EXACT VERSION from the commit above
+## BUT YOU WILL NEED TO COMMENT/CHANGE SOME NODEBB CODE IN THIS SAME EXACT VERSION from the commit above
 
 ### in [src/emailer.js](https://github.com/designcreateplay/NodeBB/blob/46e29dfb2b841ad4919059886b8c68f1c21da77e/src/emailer.js) (1 diff snapshot - notice the line numbers)
 ![Imgur](http://i.imgur.com/STFmP6H.png)
