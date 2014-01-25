@@ -20,6 +20,9 @@
 		"posts": null
 	},
 	"storageDir": "../storage",
+
+	"convert": null,
+
 	"nbb": {
 		"setup": {
 			"runFlush": false,
@@ -49,6 +52,21 @@
 		"categoriesBgColors": ["#ab1290", "#004c66", "#0059b2"],
 		"categoriesIcons": ["fa-comment"],
 		"autoConfirmEmails": true,
-		"userReputationMultiplier": 1
+		"userReputationMultiplier": 1,
+
+		"tempConfig": {
+			"postDelay": 0,
+			"minimumPostLength": 1,
+			"minimumPasswordLength": 3,
+			"minimumTitleLength": 1,
+			"maximumTitleLength": 300,
+			"maximumUsernameLength": 100,
+			"allowGuestPosting": 1
+		},
+
+		"categoriesBatchSize": 5,
+		"usersBatchSize": 5,
+		"topicsBatchSize": 5,
+		"postsBatchSize": 5
 	}
 }

@@ -6,6 +6,7 @@ a refactor of: [nodebb-plugin-ubbmigrator](https://github.com/akhoury/nodebb-plu
 into this general __nodebb-plugin-import__ and [nodebb-plugin-import-ubb](https://github.com/akhoury/nodebb-plugin-import-ubb)
 
 __works, but still young__
+
 <br />
 
 ### General Note
@@ -184,7 +185,7 @@ every topic data must be in have a seperate file, each file name must start with
         
         "_viewcount": 10, // OPTIONAL, defaults to 0
          
-        "_locked": 0, // OPTIONAL, defaults to 0
+        "_locked": 0, // OPTIONAL, defaults to 0, during migration, ALL topics will be unlocked then locked back up at the end
         
         "_deleted": 0, // OPTIONAL, defaults to 0
         
@@ -236,7 +237,7 @@ every post data must be in a seperate file, each file name must start with `p.` 
 ```
 
 ### Your config are required
-These are the defaults, the defaults are good too.
+These are the defaults, the defaults are good. There is a little more configs, see lib/import.js
 
 ```javascript
     log: 'debug',
@@ -282,7 +283,7 @@ These are the defaults, the defaults are good too.
 		// by default this is null to disable it and increase performance,
 		// it is a little but of CPU hog since, usually the post are the highest number of records
 		// and this require string processing, so if 
-		// you're okay with redirecting oldTopcPaths and oldPostsPaths to the newTopciPaths without scrolling to the right post in the topic, leave this null.
+		// you're okay with redirecting oldTopicPaths and oldPostsPaths to the newTopciPaths without scrolling to the right post in the topic, leave this null.
 		posts: null
 		/*
 		 posts: {
@@ -297,6 +298,15 @@ These are the defaults, the defaults are good too.
 	// where are the storage files generated?
 	// can be overwritten with the --storage flag
 	storageDir: '../storage',
+
+
+	// convert all users signatures, posts and topics content, to Markdown, the preferred NodeBB content format language
+	// pick one, or neither, if you have another [from-to] format you want to add, let me know, or pull request it
+	// NOTE: this have a performance hit, but who cares, you'll migrate once, I hope, sit back, relax and watch it work
+	"convert": null,
+	// "convert": "bbcode-to-md",
+	// this one is even more slow
+	// "convert": "html-to-md",
 
 	nbb: {
 		setup: {
@@ -356,19 +366,38 @@ These are the defaults, the defaults are good too.
 }
 ```
 
-### Versions tested on:
-NodeBB 0.2.0
+### Currently supports NodeBB 0.3.x as of this exact commit [46e29dfb2b841ad4919059886b8c68f1c21da77e](https://github.com/designcreateplay/NodeBB/tree/46e29dfb2b841ad4919059886b8c68f1c21da77e)
+
+```
+# so
+git clone https://github.com/designcreateplay/NodeBB.git
+git checkout 46e29dfb2b841ad4919059886b8c68f1c21da77e
+
+# or just
+wget https://github.com/designcreateplay/NodeBB/archive/46e29dfb2b841ad4919059886b8c68f1c21da77e.zip
+
+# If you want a higher 0.3.x version, import to this one then just checkout master (or another stable higher 0.3.x+ release)
+# and use the lovely nodebb upgrade
+./nodebb upgrade
+
+```
+## BUT YOU WILL NEED TO COMMENT OUT SOME NODEBB CODE IN THIS SAME EXACT VERSION from the commit above
+
+### in [src/emailer.js](https://github.com/designcreateplay/NodeBB/blob/46e29dfb2b841ad4919059886b8c68f1c21da77e/src/emailer.js) (1 diff snapshot - notice the line numbers)
+![Imgur](http://i.imgur.com/STFmP6H.png)
+
+### in [src/topic.js](https://github.com/designcreateplay/NodeBB/blob/46e29dfb2b841ad4919059886b8c68f1c21da77e/src/topics.js) (3 diff snapshots - notice the line numbers)
+#### image 1
+![Imgur](http://i.imgur.com/oRq2maD.png)
+#### image 2
+![Imgur](http://i.imgur.com/rBpAHC0.png)
+#### image 3
+![Imgur](http://i.imgur.com/OLsB2tr.png)
+
 
 ### Future versions support
 I will try to keep supporting future NodeBB versions, since it's still very young and I'm a fan,
 but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can, or a pull request if you find an issue or a missing feature
-
-### Markdown Note
-NodeBB 'prefers' Markdown as its main 'content' language, so it enables [nodebb-plugin-markdown](https://github.com/julianlam/nodebb-plugin-markdown) by default, which aggressively sanitize all HTML from the content. Now, I know a lot for forum sofrware allow and have a lot of HTML content, but to be honest, converting from HTML to Markdown was such a memory hog, so I took it out of the importer. Here are your options:
-* If you can, convert your HTML content to markdown on your own, I was using [html-md](https://github.com/neocotic/html.md) 
-* If you can't, leave it as HTML, then, DISABLE html sanitization in the __nodebb-plugin-markdown__ sttings page, but don't stop there, this is a high security risk on you and your users, so you must sanitize the UNSAFE html somehow, to do that you can install this plugin [nodebb-plugin-sanitizehtml](https://github.com/akhoury/nodebb-plugin-sanitizehtml) which will sanitize all the `<script>` tags, the `<a href='javascript:evil();'>` tags, etc. by default, even if you still want to allow safe `<a>` tags you still safely can, and all of your html content will look just fine. (`<img>` is not enabled by default, but you can just add it in the settings page)
-* Strip all html tags out, and make everything as clear text
-
 
 ### Redis Note
 __you may not need to do that__: I didn't when I migrated over 350k records, I had a decent machine. (Ubuntu 12.04, 8GB Memory, 4 Cores, 80GB SSD Disk)
@@ -401,16 +430,6 @@ Also, in the users files, `u._uid`, there is a property `keptPicture`, which wil
 ### Limitations
 * UNIX only (Linux, Mac) but no Windows support yet, it's one a time use, I probably won't support Windows soon.
 * If you're migrating a very large forum, I'm talking about 300k records and up, expect to wait few hours, depending on your machine, but, you might need to hack and disable some things in NodeBB, check out the next section, Get your hands dirty.
-
-### Get your hands dirty
-During a 350k+ posts migration, I had to temporarily comment few things in NodeBB's code, to make the migration much faster, basically unnecessary stuff that occurs during a migration.
-##### here's what I did:
-* Comment out [NodeBB/src/posts.js: FROM Line-74 TO Line-75](https://github.com/designcreateplay/NodeBB/blob/4a11307b244468f2d2fba02ff13a5814169bf10c/src/posts.js#L74)
-* Comment out [NodeBB/src/posts.js: FROM Line-94 TO Line-109](https://github.com/designcreateplay/NodeBB/blob/4a11307b244468f2d2fba02ff13a5814169bf10c/src/posts.js#L94)
-* Comment out [NodeBB/src/posts.js: FROM Line-112 TO Line-113](https://github.com/designcreateplay/NodeBB/blob/4a11307b244468f2d2fba02ff13a5814169bf10c/src/posts.js#L112)
-* Comment out [NodeBB/src/topics.js: FROM Line-90 TO Line 92](https://github.com/designcreateplay/NodeBB/blob/4a11307b244468f2d2fba02ff13a5814169bf10c/src/topics.js#L90)
-
-(__make sure you undo your changes after the migration__, also these Line numbers are noted from the [NodeBB 0.2.0 release source](https://github.com/designcreateplay/NodeBB/tree/4a11307b244468f2d2fba02ff13a5814169bf10c))
 
 ### Todo, some are for you to do.
 * todo go through all users who has user.keptPicture == true, and test each image url if 200 or not and filter the ones pointing to my old forum avatar dir.
