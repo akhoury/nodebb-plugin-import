@@ -431,6 +431,10 @@ hz 100
 aof-rewrite-incremental-fsync yes
 ```
 
+### Mongo Note
+
+see [Redis Note](https://github.com/akhoury/nodebb-plugin-import#redis-note), and try to mimic that in Mongo settings, I am not familiar with Mongo, so I wouldn't take my word for it.
+
 ### Storage results
 
 After the import is done, you can open the storage files and see that the `imported` or `skipped` objects has been set appropriately. The `imported` ones have some extra data such as, `_redirect: { oldPath: '/users/123', newPath: '/user/elvis'}`, which you can use to create redirect rules, or use this [RedirectBB](https://github.com/akhoury/RedirectBB), which I wrote specifically for this.
