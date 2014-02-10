@@ -5,7 +5,9 @@ Import your structured forum data to nodebb | a one time use plugin
 a refactor of: [nodebb-plugin-ubbmigrator](https://github.com/akhoury/nodebb-plugin-ubbmigrator)
 into this general __nodebb-plugin-import__ and [nodebb-plugin-import-ubb](https://github.com/akhoury/nodebb-plugin-import-ubb)
 
-__works, but still young__
+__works with 0.3.1, but still young__
+
+### Will make compatible with NodeBB 0.4.0 as soon as [it's released](https://github.com/designcreateplay/NodeBB/issues?milestone=15&state=open)
 
 <br />
 
