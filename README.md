@@ -2,12 +2,7 @@ nodebb-plugin-import
 =========
 Import your structured forum data to nodebb | a one time use plugin
 
-a refactor of: [nodebb-plugin-ubbmigrator](https://github.com/akhoury/nodebb-plugin-ubbmigrator)
-into this general __nodebb-plugin-import__ and [nodebb-plugin-import-ubb](https://github.com/akhoury/nodebb-plugin-import-ubb)
-
-__works with 0.3.1, but still young__
-
-### Will make compatible with NodeBB 0.4.0 as soon as [it's released](https://github.com/designcreateplay/NodeBB/issues?milestone=15&state=open)
+__works with 0.4.0, but still young__
 
 <br />
 
@@ -58,7 +53,7 @@ This section is up here because it's very important for you to read it, so let's
 in order for the importer to consume your data, it must be saved in a defined structure. For example, the [test storage](https://github.com/akhoury/nodebb-plugin-import/tree/master/test/storage)'s directory looks like this:
 ```
 $ ls ./storage/
-_cids.json    _uids.json	p.10		p.7		t.1		t.4		u.1
+_cids.json    _uids.json    p.10		p.7		t.1		t.4		u.1
 _pids.json	c.1		p.11		p.8		t.2		t.5		u.2
 _tids.json	c.2		p.12		p.9		t.3		t.6		u.3
 ```
@@ -99,7 +94,7 @@ Every category data must be in a seperate file, each file name must start with `
         
         "_name": "Category 1", // REQUIRED
         
-        "_description": "it's about category 1", // REQUIRED
+        "_description": "it's about category 1", // OPTIONAL
         
         "_order": 1 // OPTIONAL, defauls to its index + 1 in the _cids.json array
         
@@ -138,7 +133,7 @@ Every user data must be a seperate file, each file name must start with `u.` for
         
         "_signature": "u45 signature", // OPTIONAL, defaults to '', over 150 chars will be truncated with an '...' at the end
         
-        "_picture": "http://images.com/derp.png", // OPTIONAL, defaults to ''. Note that if there is an '_pciture' on the 'normalized' object, the 'imported' objected will be augmented with a key imported.keptPicture = true, so you can iterate later and check if the images 200 or 404s
+        "_picture": "http://images.com/derp.png", // OPTIONAL, defaults to ''. Note that, if there is an '_piçture' on the 'normalized' object, the 'imported' objected will be augmented with a key imported.keptPicture = true, so you can iterate later and check if the images 200 or 404s
         
         "_website": "u45.com", // OPTIONAL, defaults to ''
         
@@ -182,7 +177,9 @@ every topic data must be in have a seperate file, each file name must start with
         "_title": "this is topic 1 Title", // OPTIONAL, defaults to "Untitled :id"
         
         "_content": "This is the first content in this topic 1", // REQUIRED
-        
+
+        "_thumb": "http://foo.bar/picture.png", // OPTIONAL, a thumbnail for the topic if you have one, note that the importer will NOT validate the URL
+
         "_timestamp": 1386475817370, // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates
         
         "_viewcount": 10, // OPTIONAL, defaults to 0
@@ -207,7 +204,7 @@ every topic data must be in have a seperate file, each file name must start with
 * Most forums, when creating a topic, a post will be created immediately along with it, this last post will be the __main-post__ or __parent-post__ or __topic_content_post__ or whatever other term it's known with, and it's usually saved in the same __table__ with the other posts, known as the "__reply-posts__". Usually this  __parent-post__ have some sort of flag to differentiate it, such as `is_parent = 1` or `parent = 0` or something close.
 * Most likely, you may have to do some tables `join`ing to get each Topic's record along with its __parent-post__'s content, then save it the `_content` on the `t.[_tid]` JSON.
 * You should discard all of the other data on that __parent-post__ as in NodeBB, it will be the Topic's content.
-* Remember to fliter these __parent-posts__ from your __reply-posts__ query so they don't get imported twice.  
+* Remember to filter these __parent-posts__ from your __reply-posts__ query so they don't get imported twice.  
 
 
 #### post: p.[_pid] file sample: 
@@ -223,9 +220,13 @@ every post data must be in a seperate file, each file name must start with `p.` 
         "_tid": 1234, // REQUIRED, OLD TOPIC ID
         
         "_uid": 202, // REQUIRED, OLD USER ID
-        
+
         "_content": "Post content ba dum tss", // REQUIRED
-        
+
+        "_reputation": 0, // OPTIONAL, defaults to 0
+
+        "_votes": 0, // OPTIONAL, defaults to 0, can be negative
+
         "_timestamp": 1386475829970, // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
         
         "_skip": 0 // OPTIONAL, if you intentionally want to skip that record 
@@ -352,6 +353,8 @@ These are the defaults, the defaults are good. There is a little more configs, s
 		// feel free to add more colors
 		categoriesTextColors: ['#FFFFFF'],
 		categoriesBgColors: ['#ab1290','#004c66','#0059b2'],
+        categoriesBackgrounds: ['#ab1290','#004c66','#0059b2'],
+        
 		// here's a list, http://fontawesome.io/icons/ 
 		// feel free to add to this array
 		categoriesIcons: ['fa-comment'],
@@ -368,34 +371,31 @@ These are the defaults, the defaults are good. There is a little more configs, s
 }
 ```
 
-### Currently supports NodeBB 0.3.x as of this exact commit [46e29dfb2b841ad4919059886b8c68f1c21da77e](https://github.com/designcreateplay/NodeBB/tree/46e29dfb2b841ad4919059886b8c68f1c21da77e)
+### Currently supports NodeBB 0.4.0 Release
 
 ```
 # so
 git clone https://github.com/designcreateplay/NodeBB.git
-git checkout 46e29dfb2b841ad4919059886b8c68f1c21da77e
+git checkout 0.4.0
 
 # or just
-wget https://github.com/designcreateplay/NodeBB/archive/46e29dfb2b841ad4919059886b8c68f1c21da77e.zip
+wget https://github.com/designcreateplay/NodeBB/archive/v0.4.0.zip
 
-# If you want a higher 0.3.x version, import to this one then just checkout master (or another stable higher 0.3.x+ release)
-# and use the lovely nodebb upgrade
+# If you want a higher 0.4.0 version, import to this one then just checkout master (or another stable higher 0.x.x+ release)
+
+# and use the lovely ./nodebb upgrade
 ./nodebb upgrade
 
 ```
+
 ## BUT YOU WILL NEED TO COMMENT/CHANGE SOME NODEBB CODE IN THIS SAME EXACT VERSION from the commit above
 
-### in [src/emailer.js](https://github.com/designcreateplay/NodeBB/blob/46e29dfb2b841ad4919059886b8c68f1c21da77e/src/emailer.js) (1 diff snapshot - notice the line numbers)
-![Imgur](http://i.imgur.com/STFmP6H.png)
+### FIND THIS FILE [src/topic/create.js](https://github.com/designcreateplay/NodeBB/blob/v0.4.0/src/topics/create.js#L208)
+### FIND THIS LINE: 208, then comment it out, like this.
 
-### in [src/topic.js](https://github.com/designcreateplay/NodeBB/blob/46e29dfb2b841ad4919059886b8c68f1c21da77e/src/topics.js) (3 diff snapshots - notice the line numbers)
-#### image 1
-![Imgur](http://i.imgur.com/oRq2maD.png)
-#### image 2
-![Imgur](http://i.imgur.com/rBpAHC0.png)
-#### image 3
-![Imgur](http://i.imgur.com/OLsB2tr.png)
-
+```
+// Topics.pushUnreadCount();
+```
 
 ### Future versions support
 I will try to keep supporting future NodeBB versions, since it's still very young and I'm a fan,
@@ -456,6 +456,3 @@ Also, in the users files, `u._uid`, there is a property `keptPicture`, which wil
 ### Test
 
 pffffft
-
-
-    
