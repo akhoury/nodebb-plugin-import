@@ -30,7 +30,7 @@ git clone https://github.com/designcreateplay/NodeBB.git
 cd NodeBB
 git checkout 0.4.0
 npm install nodebb-plugin-import
-cd node_module/nodebb-plugin-import
+cd node_modules/nodebb-plugin-import
 npm install
 cd bin
 node import.js --storage="../storage" --config="../import.config.json" --flush --log="debug" | tee import.log
