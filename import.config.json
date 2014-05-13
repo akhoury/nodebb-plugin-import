@@ -1,9 +1,4 @@
 {
-	"log": "info,warn,error,debug",
-	"passwordGen": {
-		"chars": "{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890",
-		"len": 13
-	},
 	"redirectTemplatesStrings": {
 		"users": {
 			"oldPath": "/forums/ubbthreads.php/users/<%= _uid %>",
@@ -18,55 +13,5 @@
 			"newPath": "/topic/<%= tid %>"
 		},
 		"posts": null
-	},
-	"storageDir": "../storage",
-
-	"convert": null,
-
-	"nbb": {
-		"setup": {
-			"runFlush": false,
-			"setupVal": {
-				"admin:username": "admin",
-				"admin:password": "password",
-				"admin:password:confirm": "password",
-				"admin:email": "you@example.com",
-				"base_url": "http://localhost",
-				"port": "4567",
-				"use_port": "y",
-				"bind_address": "0.0.0.0",
-				"secret": "",
-				"database": "redis",
-				"redis:host": "127.0.0.1",
-				"redis:port": 6379,
-				"redis:password": "",
-				"redis:database": 0,
-				"mongo:host": "127.0.0.1",
-				"mongo:port": 27017,
-				"mongo:user": "",
-				"mongo:password": "",
-				"mongo:database": 0
-			}
-		},
-		"categoriesTextColors": ["#FFFFFF"],
-		"categoriesBgColors": ["#ab1290", "#004c66", "#0059b2"],
-		"categoriesIcons": ["fa-comment"],
-		"autoConfirmEmails": true,
-		"userReputationMultiplier": 1,
-
-		"tempConfig": {
-			"postDelay": 0,
-			"minimumPostLength": 1,
-			"minimumPasswordLength": 3,
-			"minimumTitleLength": 1,
-			"maximumTitleLength": 300,
-			"maximumUsernameLength": 100,
-			"allowGuestPosting": 1
-		},
-
-		"categoriesBatchSize": 5,
-		"usersBatchSize": 5,
-		"topicsBatchSize": 5,
-		"postsBatchSize": 5
 	}
 }

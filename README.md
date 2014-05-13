@@ -2,7 +2,7 @@ nodebb-plugin-import
 =========
 Import your structured forum data to nodebb | a one time use plugin
 
-__works with 0.4.0, but still young__
+__works with 0.4.2, but still young__
 
 <br />
 
@@ -25,15 +25,12 @@ I've written one for [UBB Threads](http://www.ubbcentral.com/) called it [nodebb
 
 ## Example usage
 ```
-
 git clone https://github.com/designcreateplay/NodeBB.git
 cd NodeBB
-git checkout 0.4.0
+git checkout 0.4.2
 npm install nodebb-plugin-import
 cd node_modules/nodebb-plugin-import
-npm install
-cd bin
-node import.js --storage="../storage" --config="../import.config.json" --flush --log="debug" | tee import.log
+node import.js --storage="path/to/storage" --log="debug" --flush --convert="bbcode-to-md" | tee import.log
 
 ```
 
@@ -63,7 +60,7 @@ _tids.json	c.2		p.12		p.9		t.3		t.6		u.3
 ```
 
 ### You need 4 Arrays of _ids
-You must generate 4 arrays and save them in the following format, these are basically all of the old ids of all of the records. 
+You must generate 4 arrays and save them in the following format, these are basically all of the old ids of all of the records.
 
 * `_cids.json` must contain an array of ALL of the _cids aka old category ids, if they're called 'forums' in your old software, you still have to save them as 'categories', you're making a big change, start with this one. Here's a tiny example:
 ```
@@ -73,7 +70,7 @@ You must generate 4 arrays and save them in the following format, these are basi
 ```
 [1, 2, 3]
 ```
-* `_tids.json` must contain an arra of ALL of the _tids, aka old topics ids, tiny example: 
+* `_tids.json` must contain an arra of ALL of the _tids, aka old topics ids, tiny example:
 ```
 [1, 2, 3, 4]
 ```
@@ -86,83 +83,85 @@ You must generate 4 arrays and save them in the following format, these are basi
 
 The rest of the data must be in the following format:
 
-#### category: c.[_cid] file sample: 
+#### category: c.[_cid] file sample:
 Every category data must be in a seperate file, each file name must start with `c.` for `category` and then appended with its old category id `_cid`, i.e. `c.1`
 
 ```javascript
 {
     "normalized": {
         // notice how all the old variables start with an _
-        // if any of the required variables fails, the category and all of its topics/posts will be skipped 
+        // if any of the required variables fails, the category and all of its topics/posts will be skipped
         "_cid": 1, // REQUIRED
-        
+
         "_name": "Category 1", // REQUIRED
-        
+
         "_description": "it's about category 1", // OPTIONAL
-        
+
         "_order": 1 // OPTIONAL, defauls to its index + 1 in the _cids.json array
-        
+
         "_skip": 0, // OPTIONAL, if you want to intetionally skip that record
     },
-    
+
     // either leave these two as null or remove them, but the 'normalized' key must exist in this structure
     "imported": null,
     "skipped": null
 }
 ```
 
-#### user: u.[_uid] file sample: 
+#### user: u.[_uid] file sample:
 Every user data must be a seperate file, each file name must start with `u.` for `user` and then appended with its old user id `_uid`, i.e `u.45`
 
 ```javascript
 {
     "normalized": {
        // notice how all the old variables start with an _
-      // if any of the required variables fails, the user and all of its topics/posts will be skipped 
+      // if any of the required variables fails, the user and all of its topics/posts will be skipped
 
         "_uid": 45, // REQUIRED
-        
+
         "_email": "u45@example.com", // REQUIRED
-        
+
         "_username": "user45", // REQUIRED
 
         "_joindate": 1386475817370, // OPTIONAL, [UNIT: MILLISECONDS], defaults to current, but what's the point of migrating if you don't preserve dates
 
-        "_alternativeUsername": "u45alt", // OPTIONAL, defaults to '', some forums provide UserDisplayName, we could leverage that if the _username validation fails 
+        "_alternativeUsername": "u45alt", // OPTIONAL, defaults to '', some forums provide UserDisplayName, we could leverage that if the _username validation fails
+
+        "_password": '', // OPTIONAL, if you have them, or you want to generate them on your own, great, if not, all passwords will be blank
         
-        "_password": '', // OPTIONAL, if you have them, or you want to generate them on your own, great, if not, one will be generated for each user
-        // the passwords with the usernames, emails and some more stuff will be spit out in the logs
+        // if you would like to generate random passwords, you will need to set the config.passwordGen.enabled = true, note that this will impact performance pretty hard
+        // the new passwords with the usernames, emails and some more stuff will be spit out in the logs
         // look for the [user-csv] OR [user-json] tags to grep for a list of them
         // save dem logs
-        
+
         "_signature": "u45 signature", // OPTIONAL, defaults to '', over 150 chars will be truncated with an '...' at the end
-        
+
         "_picture": "http://images.com/derp.png", // OPTIONAL, defaults to ''. Note that, if there is an '_piçture' on the 'normalized' object, the 'imported' objected will be augmented with a key imported.keptPicture = true, so you can iterate later and check if the images 200 or 404s
-        
+
         "_website": "u45.com", // OPTIONAL, defaults to ''
-        
-        "_banned": 0, // OPTIONAL, defaults to 0 
-        
+
+        "_banned": 0, // OPTIONAL, defaults to 0
+
         "_location": "u45 city", // OPTIONAL, defaults to ''
 
         "_reputation": 1, // OPTIONAL, defaults to 0, (there is a config for multiplying these with a number for moAr karma)
-        
+
         "_profileviews": 1, // OPTIONAL, defaults to 0
-        
+
         "_birthday": "01/01/1977", // OPTIONAL, [FORMAT: mm/dd/yyyy], defaults to ''
         "_showemail": 0, // OPTIONAL, defaults to 0
-        
+
         "_level": "administrator", // OPTIONAL, [OPTIONS: 'administrator' or 'moderator'], defaults to '', also note that a moderator will become a NodeBB Moderator on ALL categories at the moment.
-       
+
         "_skip": 0, // optional, if you want to intentionally skip that record
     },
-    
+
     // either leave these two as null or remove them, but the 'normalized' key must exist in this structure
     "imported": null,
     "skipped": null
 }
 ```
-#### topic: t.[_tid] file sample: 
+#### topic: t.[_tid] file sample:
 every topic data must be in have a seperate file, each file name must start with `t.` for topic, then appended with its old topic id `_tid`, i.e. `t.123`
 
 
@@ -170,33 +169,33 @@ every topic data must be in have a seperate file, each file name must start with
 {
     "normalized": {
        // notice how all the old variables start with an _
-      // if any of the required variables fails, the topic and all of its posts will be skipped 
-      
+      // if any of the required variables fails, the topic and all of its posts will be skipped
+
         "_tid": 1, // REQUIRED
-        
+
         "_uid": 1, // REQUIRED, THE OLD USER ID
-        
+
         "_cid": 1, // REQUIRED, THE OLD CATEGORY ID
-        
+
         "_title": "this is topic 1 Title", // OPTIONAL, defaults to "Untitled :id"
-        
+
         "_content": "This is the first content in this topic 1", // REQUIRED
 
         "_thumb": "http://foo.bar/picture.png", // OPTIONAL, a thumbnail for the topic if you have one, note that the importer will NOT validate the URL
 
         "_timestamp": 1386475817370, // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates
-        
+
         "_viewcount": 10, // OPTIONAL, defaults to 0
-         
+
         "_locked": 0, // OPTIONAL, defaults to 0, during migration, ALL topics will be unlocked then locked back up at the end
-        
+
         "_deleted": 0, // OPTIONAL, defaults to 0
-        
+
         "_pinned": 1, // OPTIONAL, defaults to 0
-        
+
         "_skip": 0 // OPTIONAL, if you want to intentionally skip that record
 	},
-    
+
     // either leave these two as null or remove them, but the 'normalized' key must exist in this structure
 	"imported": null,
 	"skipped": null
@@ -204,25 +203,25 @@ every topic data must be in have a seperate file, each file name must start with
 ```
 
 
-#### Important Note On Topics and Posts: 
+#### Important Note On Topics and Posts:
 * Most forums, when creating a topic, a post will be created immediately along with it, this last post will be the __main-post__ or __parent-post__ or __topic_content_post__ or whatever other term it's known with, and it's usually saved in the same __table__ with the other posts, known as the "__reply-posts__". Usually this  __parent-post__ have some sort of flag to differentiate it, such as `is_parent = 1` or `parent = 0` or something close.
 * Most likely, you may have to do some tables `join`ing to get each Topic's record along with its __parent-post__'s content, then save it the `_content` on the `t.[_tid]` JSON.
 * You should discard all of the other data on that __parent-post__ as in NodeBB, it will be the Topic's content.
 * Remember to filter these __parent-posts__ from your __reply-posts__ query so they don't get imported twice.  
 
 
-#### post: p.[_pid] file sample: 
+#### post: p.[_pid] file sample:
 every post data must be in a seperate file, each file name must start with `p.` for post, then appended with its old post id `_pid`, i.e. `p.65487`
 ```javascript
 {
     "normalized": {
       // notice how all the old variables start with an _
-      // if any of the required variables fails, the post will be skipped 
-      
+      // if any of the required variables fails, the post will be skipped
+
     	"_pid": 65487, // REQUIRED, OLD POST ID
-        
+
         "_tid": 1234, // REQUIRED, OLD TOPIC ID
-        
+
         "_uid": 202, // REQUIRED, OLD USER ID
 
         "_content": "Post content ba dum tss", // REQUIRED
@@ -232,31 +231,32 @@ every post data must be in a seperate file, each file name must start with `p.` 
         "_votes": 0, // OPTIONAL, defaults to 0, can be negative
 
         "_timestamp": 1386475829970, // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
-        
-        "_skip": 0 // OPTIONAL, if you intentionally want to skip that record 
-        
+
+        "_skip": 0 // OPTIONAL, if you intentionally want to skip that record
+
 	},
-    
+
     // either leave these two as null or remove them, but the 'normalized' key must exist in this structure
 	"imported": null,
 	"skipped": null
 }
 ```
 
-### Your config are required
+### Extra configs, these are the defaults
 These are the defaults, the defaults are good. There is a little more configs, see lib/import.js
 
 ```javascript
     log: 'debug',
-	
+
 	// generate passwords for the users, if no password is provided
 	passwordGen: {
+    enabled: false,
 		// chars selection menu
 		chars: '{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890',
 		// password length
 		len: 13
 	},
-	
+
 	// SET all of the 'oldPath' templates based on your forum's paths
 	// You can use any variable in the 'normalized' structure
 	// BUT don't change the 'newPath' ones since these are the NodeBB way
@@ -289,7 +289,7 @@ These are the defaults, the defaults are good. There is a little more configs, s
 		// but if your old-forums doesn't do that, feel free to edit that config
 		// by default this is null to disable it and increase performance,
 		// it is a little but of CPU hog since, usually the post are the highest number of records
-		// and this require string processing, so if 
+		// and this require string processing, so if
 		// you're okay with redirecting oldTopicPaths and oldPostsPaths to the newTopciPaths without scrolling to the right post in the topic, leave this null.
 		posts: null
 		/*
@@ -301,7 +301,7 @@ These are the defaults, the defaults are good. There is a little more configs, s
 		 }
 		 */
 	},
-	
+
 	// where are the storage files generated?
 	// can be overwritten with the --storage flag
 	storageDir: '../storage',
@@ -321,12 +321,22 @@ These are the defaults, the defaults are good. There is a little more configs, s
 			// node app --setup={...}
 			// with a merge of the setupVal values below and, if you have NodeBB/config.json in its place too
 			runFlush: false,
-		
-			setupVal:  {
+
+			adminConfig:  {
 				'admin:username': 'admin',
 				'admin:password': 'password',
 				'admin:password:confirm': 'password',
-				'admin:email': 'you@example.com',
+				'admin:email': 'you@example.com'
+      },
+
+      fileConfig: null, // OPTIONAL, only if you already have a NodeBB/config.json
+
+      // this should look like the NodeBB/config.json
+      // by default it's null, because if it was set, it would take precedence,
+      // if kep null, the importer will attempt to use NodeBB/config.json
+      // example:
+      /*
+      {
 				'base_url': 'http://localhost',
 				'port': '4567',
 				'use_port': 'y',
@@ -340,26 +350,19 @@ These are the defaults, the defaults are good. There is a little more configs, s
 				'redis:host': '127.0.0.1',
 				'redis:port': 6379,
 				'redis:password': '',
-				'redis:database': 0,
-
-				// mongodb
-				'mongo:host': '127.0.0.1',
-				'mongo:port': 27017,
-				'mongo:user': '',
-				'mongo:password': '',
-				'mongo:database': 0
+				'redis:database': 0
 			}
+      */
 		},
+
 
 		// to be randomly selected
 		// you can change all that in the NodeBB/admin panel
-		
 		// feel free to add more colors
 		categoriesTextColors: ['#FFFFFF'],
 		categoriesBgColors: ['#ab1290','#004c66','#0059b2'],
-        categoriesBackgrounds: ['#ab1290','#004c66','#0059b2'],
-        
-		// here's a list, http://fontawesome.io/icons/ 
+    categoriesBackgrounds: ['#ab1290','#004c66','#0059b2'],
+		// here's a list, http://fontawesome.io/icons/
 		// feel free to add to this array
 		categoriesIcons: ['fa-comment'],
 
@@ -371,21 +374,20 @@ These are the defaults, the defaults are good. There is a little more configs, s
 		// if you want to boost the Karma
 		userReputationMultiplier: 1,
 	}
-
 }
 ```
 
-### Currently supports NodeBB 0.4.0 Release
+### Currently supports NodeBB 0.4.2 Release
 
 ```
 # so
 git clone https://github.com/designcreateplay/NodeBB.git
-git checkout 0.4.0
+git checkout 0.4.2
 
 # or just
-wget https://github.com/designcreateplay/NodeBB/archive/v0.4.0.zip
+wget https://github.com/designcreateplay/NodeBB/archive/v0.4.2.zip
 
-# If you want a higher 0.4.0 version, import to this one then just checkout master (or another stable higher 0.x.x+ release)
+# If you want a higher 0.4.2 version, import to this one then just checkout master (or another stable higher 0.x.x+ release)
 
 # and use the lovely ./nodebb upgrade
 ./nodebb upgrade
@@ -394,8 +396,8 @@ wget https://github.com/designcreateplay/NodeBB/archive/v0.4.0.zip
 
 ## BUT YOU WILL NEED TO COMMENT/CHANGE SOME NODEBB CODE IN THIS SAME EXACT VERSION from the commit above
 
-### FIND THIS FILE [src/topic/create.js](https://github.com/designcreateplay/NodeBB/blob/v0.4.0/src/topics/create.js#L208)
-### FIND THIS LINE: 208, then comment it out, like this.
+### FIND THIS FILE [src/topic/create.js](https://github.com/designcreateplay/NodeBB/blob/v0.4.2/src/topics/create.js#L217)
+### FIND THIS LINE: 217, then comment it out, like this.
 
 ```
 // Topics.pushUnreadCount();
@@ -407,39 +409,13 @@ but you need to submit an issue with all the details (NodeBB version, issue etc.
 
 ### Markdown Note
 
-NodeBB prefers using Markdown as the *content language format*, and since most Web 1.0 forums use either straight out __HTML__ or __BB Code__, there is a config options called `"convert"` which you can set to either `"html-to-md"` or `"bbcode-to-md"` and the while importing, the importer will convert the following: 
+NodeBB prefers using Markdown as the *content language format*, and since most Web 1.0 forums use either straight out __HTML__ or __BB Code__, there is a config options called `"convert"` which you can set to either `"html-to-md"` or `"bbcode-to-md"` and the while importing, the importer will convert the following:
 
 - Users signatures
 - Topics Content, but NOT titles
 - Posts Content
 
-*If you are importing allread 'markdownified' content, just don't set the `convert` field, to skip the conversion, also if you are importing some other format, feel free to submit a pull request or open an issue, if there is a Node module to it, or there is some pre-built JS "function" to convert the content, I'll add it*
-
-### Redis Note
-__you may not need to do that__: I didn't when I migrated over 350k records, I had a decent machine. (Ubuntu 12.04, 8GB Memory, 4 Cores, 80GB SSD Disk)
-
-Since the importer will be hitting the database constantely, with almost 0 interval, I would add these config to the bottom of your redis.conf file, to disable some stuff and make redis more responsive, but less safe, then after the migration is complete, you must, __before__ you kill your redis server, ```redis-cli bgsave``` to actually write the data to disk, then remove these extra configs and restart your redis server.
-If you're a redis guru, you don't need my help, but take a look at it anyway and let me know where I went wrong :)
-```
-# NODEBB-PLUGIN-IMPORT TEMPORARY SETTINGS
-
-# disabling saving !!!!
-# then manually run 'redis-cli bgsave' after migration is done
-save ""
-
-stop-writes-on-bgsave-error no
-rdbcompression no
-rdbchecksum no
-appendonly no
-appendfsync no
-no-appendfsync-on-rewrite yes
-hz 100
-aof-rewrite-incremental-fsync yes
-```
-
-### Mongo Note
-
-see [Redis Note](https://github.com/akhoury/nodebb-plugin-import#redis-note), and try to mimic that in Mongo settings, I am not familiar with Mongo, so I wouldn't take my word for it.
+*If you are importing already 'markdownified' content, just don't set the `convert` flag to skip the conversion, also if you are importing some other format, feel free to submit a pull request or open an issue, if there is a Node module to it, or there is some pre-built JS "function" to convert the content, I'll add it*
 
 ### Storage results
 
@@ -453,9 +429,7 @@ Also, in the users files, `u._uid`, there is a property `keptPicture`, which wil
 
 ### Todo, some are for you to do.
 * todo go through all users who has user.keptPicture == true, and test each image url if 200 or not and filter the ones pointing to my old forum avatar dir.
-* todo create a nodebb-theme that works with your site
-* todo send emails to all users with temp passwords, see the user `u.{_uid}` example JSON and read the comments to find how to get the passwords 
-* todo maybe implement a nbb plugin that enforces the 1 time use of temp passwords.
+* todo send emails to all users with temp passwords, if you generated new ones, see the user `u.{_uid}` example JSON and read the comments to find how to get the passwords
 
 ### Test
 
