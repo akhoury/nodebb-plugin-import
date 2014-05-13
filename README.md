@@ -407,6 +407,32 @@ wget https://github.com/designcreateplay/NodeBB/archive/v0.4.2.zip
 I will try to keep supporting future NodeBB versions, since it's still very young and I'm a fan,
 but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can, or a pull request if you find an issue or a missing feature
 
+### Redis Note
+__you may not need to do that__: I didn't when I migrated over 350k records, I had a decent machine. (Ubuntu 12.04, 8GB Memory, 4 Cores, 80GB SSD Disk)
+
+Since the importer will be hitting the database constantely, with almost 0 interval, I would add these config to the bottom of your redis.conf file, to disable some stuff and make redis more responsive, but less safe, then after the migration is complete, you must, __before__ you kill your redis server, ```redis-cli bgsave``` to actually write the data to disk, then remove these extra configs and restart your redis server.
+If you're a redis guru, you don't need my help, but take a look at it anyway and let me know where I went wrong :)
+```
+# NODEBB-PLUGIN-IMPORT TEMPORARY SETTINGS
+
+# disabling saving !!!!
+# then manually run 'redis-cli bgsave' after migration is done
+save ""
+
+stop-writes-on-bgsave-error no
+rdbcompression no
+rdbchecksum no
+appendonly no
+appendfsync no
+no-appendfsync-on-rewrite yes
+hz 100
+aof-rewrite-incremental-fsync yes
+```
+
+### Mongo Note
+
+see [Redis Note](https://github.com/akhoury/nodebb-plugin-import#redis-note), and try to mimic that in Mongo settings, I am not familiar with Mongo, so I wouldn't take my word for it.
+
 ### Markdown Note
 
 NodeBB prefers using Markdown as the *content language format*, and since most Web 1.0 forums use either straight out __HTML__ or __BB Code__, there is a config options called `"convert"` which you can set to either `"html-to-md"` or `"bbcode-to-md"` and the while importing, the importer will convert the following:
