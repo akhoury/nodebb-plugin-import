@@ -2,7 +2,7 @@ nodebb-plugin-import
 =========
 Import your structured forum data to nodebb | a one time use plugin
 
-__works with 0.4.2, but still young__
+__works with NodeBB v0.4.2, but still young__
 
 <br />
 
@@ -382,7 +382,7 @@ These are the defaults, the defaults are good. There is a little more configs, s
 ```
 # so
 git clone https://github.com/designcreateplay/NodeBB.git
-git checkout 0.4.2
+git checkout v0.4.2
 
 # or just
 wget https://github.com/designcreateplay/NodeBB/archive/v0.4.2.zip
