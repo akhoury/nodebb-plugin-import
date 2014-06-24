@@ -41,6 +41,8 @@ if (config.storageDir) {
 	config.nbb.setup = config.nbb.setup || {};
 	config.nbb.setup.runFlush = argv.f || argv.flush ? true : config.nbb.setup.runFlush;
 
+    config.convert = argv.t || argv.convert || config.convert;
+
 	// dev only
 	if (argv['copy-from-test'])
 		fs.copySync(path.resolve('./test/storage'), config.storageDir);
