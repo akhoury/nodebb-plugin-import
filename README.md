@@ -2,7 +2,8 @@ nodebb-plugin-import
 =========
 Import your structured forum data to nodebb | a one time use plugin
 
-__works with NodeBB v0.4.2, but still young__
+__works with NodeBB v0.4.x, but still young__
+#### I will release a compatible version with [0.5.0](https://github.com/NodeBB/NodeBB/issues?milestone=18&state=open) as soon as it's released
 
 <br />
 
@@ -27,7 +28,7 @@ I've written one for [UBB Threads](http://www.ubbcentral.com/) called it [nodebb
 ```
 git clone https://github.com/designcreateplay/NodeBB.git
 cd NodeBB
-git checkout 0.4.2
+git checkout 206acab1bfab4be0f9073f7f885b773c5942ead2
 npm install nodebb-plugin-import
 cd node_modules/nodebb-plugin-import
 node import.js --storage="path/to/storage" --log="debug" --flush --convert="bbcode-to-md" | tee import.log
@@ -377,30 +378,19 @@ These are the defaults, the defaults are good. There is a little more configs, s
 }
 ```
 
-### Currently supports NodeBB 0.4.2 Release
+### Currently supports NodeBB 0.4.x as if this commit [206acab1bfab4be0f9073f7f885b773c5942ead2](https://github.com/NodeBB/NodeBB/commit/206acab1bfab4be0f9073f7f885b773c5942ead2)
 
+### will release a compatible version with 0.5.0 as soon as it's released
 ```
 # so
 git clone https://github.com/designcreateplay/NodeBB.git
-git checkout v0.4.2
+git checkout 206acab1bfab4be0f9073f7f885b773c5942ead2
 
-# or just
-wget https://github.com/designcreateplay/NodeBB/archive/v0.4.2.zip
-
-# If you want a higher 0.4.2 version, import to this one then just checkout master (or another stable higher 0.x.x+ release)
+# If you want a higher revision, import to this one then just checkout master (or another stable higher 0.x.x+ release)
 
 # and use the lovely ./nodebb upgrade
 ./nodebb upgrade
 
-```
-
-## BUT YOU WILL NEED TO COMMENT/CHANGE SOME NODEBB CODE IN THIS SAME EXACT VERSION from the commit above
-
-### FIND THIS FILE [src/topic/create.js](https://github.com/designcreateplay/NodeBB/blob/v0.4.2/src/topics/create.js#L217)
-### FIND THIS LINE: 217, then comment it out, like this.
-
-```
-// Topics.pushUnreadCount();
 ```
 
 ### Future versions support
