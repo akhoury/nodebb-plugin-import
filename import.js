@@ -50,9 +50,11 @@ if (config.storageDir) {
 	var Import = require(path.resolve('./lib/import.js'));
 	var imprt = new Import(config);
 
-	imprt.on('ready', function() {
+	imprt.on('init.done', function(){
+		// todo: overwrite dispatcher scope to the Import instance
 		imprt.start();
 	});
+	imprt.init();
 
 } else {
 	error ('You must provide a storage dir, either in a --config file or using the --storage flag');
