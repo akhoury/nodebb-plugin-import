@@ -5,10 +5,9 @@ var
 	async = module.parent.require('async'),
 	meta = module.parent.require('./meta'),
 
-	utils = module.parent.require('../public/src/utils'),
-
 	Plugin = {};
 
+Plugin.utils = 	utils = module.parent.require('../public/src/utils');
 Plugin.json = require('../plugin.json');
 
 Plugin.json.nbbId = Plugin.json.id.replace(/nodebb-plugin-/, '');
@@ -43,6 +42,7 @@ Plugin.admin = {
 		},
 		load: function(app, middleware, controllers, callback) {
 			Plugin.getSettings(function() {
+
 				require('./routes').setup(app, middleware, controllers, Plugin);
 
 				if (typeof callback === 'function') {
@@ -61,12 +61,15 @@ Plugin.api = {
 		config: function(req, res, next) {
 
 		},
-		status: function(req, res, next) {
+		state: function(req, res, next) {
 
 		}
 	},
 	post: {
 		config: function(req, res, next) {
+
+		},
+		command: function(req, res, next) {
 
 		}
 	}

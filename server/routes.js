@@ -7,9 +7,10 @@ module.exports =  {
 		app.get(apiPrefix, middleware.admin.buildHeader, Plugin.render);
 
 		app.get(apiPrefix + '/config', Plugin.api.get.config);
-		app.post(apiPrefix + '/config', Plugin.api.post.config);
-
-		app.get(apiPrefix + '/status', Plugin.api.get.status);
+		app.get(apiPrefix + '/state', Plugin.api.get.state);
 		app.get(apiPrefix + '/logs', Plugin.api.get.logs);
+
+		app.post(apiPrefix + '/command', Plugin.api.post.command);
+		app.post(apiPrefix + '/config', Plugin.api.post.config);
 	}
 };

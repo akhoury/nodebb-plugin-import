@@ -66,7 +66,7 @@
 	<fieldset>
 
 		<div class="col-sm-12 {json.nbbId}-config-wrapper">
-			<div class="col-sm-12 {json.nbbId}-config hidden">
+			<div class="col-sm-12 {json.nbbId}-config">
 				<div class="form-group">
 					<label for="log">Log level</label>
 					<select class="form-control" id="log" name="log">
