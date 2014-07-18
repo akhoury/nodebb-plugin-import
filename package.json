@@ -1,7 +1,7 @@
 
 {
 	"name": "nodebb-plugin-import",
-	"version": "0.1.63",
+	"version": "0.1.64",
 	"description": "Import your structured set of forum data to nodebb",
 	"main": "./lib/import.js",
 	"scripts": {
@@ -28,7 +28,7 @@
 	},
 	"dependencies": {
 		"underscore": "~1.5.2",
-		"jquery": "~2.1.0",
+		"node.extend": "~1.0.10",
 		"jsdom": "~0.8.11",
 		"fs-extra": "~0.8.1",
 		"async": "~0.2.9",
