@@ -38,7 +38,7 @@
 		"tiny-logger": "~0.0.x",
 		"html-md-optional_window": "git://github.com/akhoury/html-md-optional_window.git#master",
 		"node-persist": "git://github.com/akhoury/node-persist.git#master",
-        "bbcode-to-markdown": "0.0.3",
+        "bbcode-to-markdown": "~0.0.x",
         "html-entities": "1.0.10"
 	}
 }
