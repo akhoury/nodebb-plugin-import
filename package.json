@@ -1,7 +1,7 @@
 
 {
 	"name": "nodebb-plugin-import",
-	"version": "0.1.66",
+	"version": "0.1.67",
 	"description": "Import your structured set of forum data to nodebb",
 	"main": "./lib/import.js",
 	"scripts": {
@@ -38,6 +38,7 @@
 		"tiny-logger": "~0.0.x",
 		"html-md-optional_window": "git://github.com/akhoury/html-md-optional_window.git#master",
 		"node-persist": "git://github.com/akhoury/node-persist.git#master",
-        "bbcode-to-markdown": "0.0.2"
+        "bbcode-to-markdown": "0.0.2",
+        "html-entities": "1.0.10"
 	}
 }
