@@ -13,7 +13,7 @@ module.exports = {
 
         // here's an example on to "decode" html entities if you need to
         // content = entities.decode(content); // this will convert "you&#39;re fat" to "you're fat"
-        // content = content.replace(/\[url=\\"(.*)\\"\]/g, '[url=$1]');
+        // content = content.replace(/\[url=\\"(.*)\\"\]/g, '[url=$1]'); // this will change [url="link"] to [url=link]
 
         // leave that statement in
         return content;
