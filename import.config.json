@@ -1,17 +1,32 @@
 {
+	"log": "debug",
+
+	"convert": "bbcode-to-md",
+
+	"storageDir": "/path/to/storage",
+
+	"nbb": {
+		"setup": {
+			"runFlush": true
+		}
+	},
+
 	"redirectTemplatesStrings": {
 		"users": {
-			"oldPath": "/forums/ubbthreads.php/users/<%= _uid %>",
+			"oldPath": "/old/users/<%= _uid %>",
 			"newPath": "/user/<%= userslug %>"
 		},
 		"categories": {
-			"oldPath": "/forums/ubbthreads.php/forums/<%= _cid %>",
+			"oldPath": "/old/categories/<%= _cid %>",
 			"newPath": "/category/<%= cid %>"
 		},
 		"topics": {
-			"oldPath": "/forums/ubbthreads.php/topics/<%= _tid %>",
+			"oldPath": "/old/topics/<%= _tid %>",
 			"newPath": "/topic/<%= tid %>"
 		},
-		"posts": null
+		"posts": {
+			"oldPath": "/old/topics/<%= _tid %>#<%= _pid %>",
+			"newPath": "/topic/<%= tid %>#<%= pid %>"
+		}
 	}
 }
