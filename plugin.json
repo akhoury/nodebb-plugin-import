@@ -5,9 +5,8 @@
 	"url": "https://github.com/akhoury/nodebb-plugin-import",
 	"library": "./server/index.js",
 	"hooks": [
-		{"hook": "filter:admin.header.build", "method": "admin.filter.menu"},
-		{"hook": "filter:app.load", "method": "admin.filters.load"},
-		{"hook": "action:app.load", "method": "admin.filters.load"}
+		{"hook": "filter:admin.header.build", "method": "admin.filters.menu"},
+		{"hook": "filter:app.load", "method": "admin.filters.load"}
 	],
 	"templates": "assets/templates",
 	"compatibility": "~0.5.0",

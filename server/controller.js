@@ -54,6 +54,10 @@ var Controller = {
 
 	on: function () {
 		Controller._dispatcher.on.apply(Controller._dispatcher, arguments);
+	},
+
+    once: function () {
+		Controller._dispatcher.once.apply(Controller._dispatcher, arguments);
 	}
 };
 
