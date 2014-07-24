@@ -29,7 +29,7 @@
 				<h3>Source Forum</h3>
 
 				<div class="form-group">
-					<label for="log">Available Exporter</label>
+					<label for="log">Available Exporters</label>
 					<select data-on="change" data-target="" data-action="" class="form-control" id="exporter-module" name="exporter-module">
 						<option val="nodebb-plugin-import-ubb">UBB (7.x)</option>
 					</select>
@@ -48,4 +48,4 @@
 	</fieldset>
 </form>
 
-<script src="/plugins/nodebb-plugin-{nbbId}/assets/js/acp.js">
+<script src="/plugins/nodebb-plugin-{json.nbbId}/assets/js/acp.js">
