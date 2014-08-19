@@ -9,6 +9,10 @@
 		{"hook": "static:app.load", "method": "hooks.statics.load"}
 	],
 	"templates": "assets/templates",
-	"compatibility": "~0.5.x",
-	"faIcon": "fa-magic"
+	"compatibility": "0.5.0-2",
+    "faIcon": "fa-magic",
+    "staticDirs": {
+        "js": "assets/js",
+        "css": "assets/css"
+    }
 }

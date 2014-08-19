@@ -26,17 +26,21 @@
 	"bugs": {
 		"url": "https://github.com/akhoury/nodebb-plugin-import/issues"
 	},
+
 	"dependencies": {
-		"underscore": "~1.5.2",
+        "tail": "~0.3.7",
+        "fs-extra": "~0.8.1",
+
+        "async": "~0.2.9",
+        "underscore": "~1.5.2",
 		"jquery": "~2.1.0",
 		"jsdom": "~0.8.11",
-		"fs-extra": "~0.8.1",
-		"async": "~0.2.9",
 		"optimist": "~0.6.0",
-		"exec-sync": "~0.1.6",
+        "exec-sync": "~0.1.6",
 		"marked": "~0.1.6",
 		"tiny-logger": "~0.0.x",
-		"html-md-optional_window": "git://github.com/akhoury/html-md-optional_window.git#master",
+
+        "html-md-optional_window": "git://github.com/akhoury/html-md-optional_window.git#master",
 		"node-persist": "git://github.com/akhoury/node-persist.git#master",
         "bbcode-to-markdown": "0.0.1"
 	}

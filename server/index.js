@@ -63,7 +63,6 @@ Plugin.render = function(req, res, next) {
 Plugin.hooks = {
     filters: {
         menu: function(custom_header, callback) {
-            debugger;
             custom_header.plugins.push({
                 "route": '/plugins/' + Plugin.json.nbbId,
                 "icon": Plugin.json.faIcon,
