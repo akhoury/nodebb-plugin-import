@@ -159,20 +159,11 @@
             }
         },
 
-        start: function(e) {
-            getState()
-                .done(function() {
+        startExport: function(e) {
 
-                })
-                .fail(function(err) {
-                    nbb.alertError(JSON.stringify(err));
-                })
-                .complete(function() {
-
-                })
         },
 
-        stop: function(e) {
+        startImport: function(e) {
 
         }
     };
@@ -180,29 +171,24 @@
     var fn = plugin.fn = function(fn, args) {
         $.ajax({
             type: 'post',
-            data: args,
+            data: {
+                fn: fn,
+                args: args
+            },
             url: plugin.apiHost + '/fn'
         })
     };
 
     var startExport = plugin.startExport = function(options) {
-        return fn('export');
+        return fn('startExport');
     };
 
     var startImport = plugin.startImport = function() {
-        return fn('import');
+        return fn('startImport');
     };
 
     var getState = plugin.getState = function() {
         return $.get(plugin.apiHost + '/state');
-    };
-
-    var listenToStateChange = function() {
-
-    };
-
-    var listenToLogsChange = function() {
-
     };
 
     var bindActions = function() {
@@ -217,14 +203,29 @@
         });
     };
 
+    var stateEl = $wrapper.find('.state');
+    var onControllerState = function(state) {
+        stateEl.html(state);
+    };
+    var logsEl = $wrapper.find('.logs');
+    var onLine = function(line) {
+        logsEl.append(line);
+    };
+    var onError = function(error) {
+        logsEl.append(error);
+        app.alertError(error);
+    };
 
     require(['settings'], function(Settings) {
-
         bindActions();
-
         Settings.load(plugin.name, $configForm, function() {
             listenToStateChange();
             listenToLogsChange();
         });
+        socket.on('controller.state', onControllerState);
+        socket.on('importer.tail.line', onLine);
+        socket.on('exporter.tail.line', onLine);
+        socket.on('importer.tail.error', onError);
+        socket.on('exporter.tail.error', onError);
     });
 })(this);

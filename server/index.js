@@ -1,10 +1,9 @@
 var
-
     winston = module.parent.require('winston'),
     nconf = module.parent.require('nconf'),
     async = module.parent.require('async'),
     meta = module.parent.require('./meta'),
-
+    sockets = module.parent.require('./socket.io'),
     Plugin = {};
 
 Plugin.utils = module.parent.require('../public/src/utils');
@@ -78,7 +77,18 @@ Plugin.hooks = {
                 if (err) {
                     console.warn(err);
                 }
+
                 require('./routes').setup(app, middleware, controllers, Plugin);
+                Plugin.controller = require('./controller');
+                Plugin.controller.setup();
+
+                var handler = function() {
+                    sockets.server.sockets.emit.apply(sockets.server.sockets, arguments);
+                };
+
+                Plugin.controller.on('controller.*', handler);
+                Plugin.controller.on('importer.*', handler);
+                Plugin.controller.on('exporter.*', handler);
 
                 if (typeof callback === 'function') {
                     callback.apply(this, arguments);
@@ -118,7 +128,8 @@ Plugin.api = {
         },
         state: function(req, res, next) {
             if (Plugin.controller) {
-                res.json(Plugin.controller.state());
+                var state = Plugin.controller.state();
+                res.json(state);
             } else {
                 res.json(500, {error: 'No state'});
             }
