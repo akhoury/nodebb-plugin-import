@@ -5,10 +5,9 @@ module.exports =  {
 
 		app.get(prefix, middleware.admin.buildHeader, Plugin.render);
 		app.get(apiPrefix, middleware.admin.buildHeader, Plugin.render);
-
 		app.get(apiPrefix + '/state', Plugin.api.get.state);
 
-        app.post(apiPrefix + '/fn', Plugin.api.post.fn);
-        app.get(apiPrefix + '/fn', Plugin.api.get.fn);
-	}
+        app.get(apiPrefix + '/fn', middleware.admin.isAdmin, Plugin.api.get.fn);
+        app.post(apiPrefix + '/fn', middleware.admin.isAdmin, Plugin.api.post.fn);
+    }
 };

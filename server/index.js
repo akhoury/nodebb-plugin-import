@@ -70,7 +70,6 @@ Plugin.hooks = {
             callback(null, custom_header);
         }
     },
-    actions: {},
     statics: {
         load: function(app, middleware, controllers, callback) {
             Plugin.settings(function(err) {
@@ -79,7 +78,10 @@ Plugin.hooks = {
                 }
 
                 require('./routes').setup(app, middleware, controllers, Plugin);
+
+                // Plugin.controller = {setup: function(){}, on: function(){}};
                 Plugin.controller = require('./controller');
+
                 Plugin.controller.setup();
 
                 var handler = function() {
@@ -95,14 +97,15 @@ Plugin.hooks = {
                 }
             });
         }
-    }
+    },
+    actions: {}
 };
 
 Plugin.api = {
     'get': {
         fn: function(req, res, next) {
             var fn = req.params.fn || req.query.fn,
-                args = (req.params.args || req.query.args).split(',').map(function(v) { return Plugin.utils.resolveType(v); });
+                args = req.params.args || req.query.args;
 
             args.push(function(err) {
                 if (err) {
@@ -111,6 +114,7 @@ Plugin.api = {
                     res.json.apply(res, arguments);
                 }
             });
+
             if (Plugin.controller && typeof Plugin.controller[fn] === 'function') {
                 Plugin.controller[fn].apply(Plugin.controller, args);
             } else {
@@ -166,6 +170,8 @@ Plugin.api = {
                     res.json.apply(res, arguments);
                 }
             });
+
+            debugger;
 
             if (Plugin.controller && typeof Plugin.controller[fn] === 'function') {
                 Plugin.controller[fn].apply(Plugin.controller, args);

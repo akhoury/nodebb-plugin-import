@@ -160,7 +160,6 @@
         },
 
         startExport: function(e) {
-
         },
 
         startImport: function(e) {
@@ -170,7 +169,8 @@
 
     var fn = plugin.fn = function(fn, args) {
         $.ajax({
-            type: 'post',
+            type: 'get',
+            // type: 'post',
             data: {
                 fn: fn,
                 args: args
@@ -180,7 +180,15 @@
     };
 
     var startExport = plugin.startExport = function(options) {
-        return fn('startExport');
+        return fn('startExport', [{
+            exporter: {
+                module: 'nodebb-plugin-import-ubb',
+                dbhost: '127.0.0.1',
+                dbport: 3306,
+                dbuser: 'root',
+                dbuser: 'Confluge'
+            }
+        }]);
     };
 
     var startImport = plugin.startImport = function() {
@@ -219,13 +227,12 @@
     require(['settings'], function(Settings) {
         bindActions();
         Settings.load(plugin.name, $configForm, function() {
-            listenToStateChange();
-            listenToLogsChange();
+
+            socket.on('controller.state', onControllerState);
+            socket.on('importer.tail.line', onLine);
+            socket.on('exporter.tail.line', onLine);
+            socket.on('importer.tail.error', onError);
+            socket.on('exporter.tail.error', onError);
         });
-        socket.on('controller.state', onControllerState);
-        socket.on('importer.tail.line', onLine);
-        socket.on('exporter.tail.line', onLine);
-        socket.on('importer.tail.error', onError);
-        socket.on('exporter.tail.error', onError);
     });
 })(this);
