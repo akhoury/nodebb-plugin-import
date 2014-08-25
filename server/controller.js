@@ -2,8 +2,8 @@
 var Tail = require('tail').Tail,
     fs = require('fs-extra'),
     path = require('path'),
+    _ = require('underscore'),
     async = require('async'),
-// events = require('events'),
     EventEmitter2 = require('eventemitter2').EventEmitter2;
 
 //todo make these configured in each module, not here
@@ -19,17 +19,6 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
     Controller._state = {now: 'idle', event: ''};
 
     Controller._config = null;
-
-    Controller.setup = function(callback) {
-        async.parallel([
-            function (next) {
-                Controller.requireExporter(next);
-            },
-            function (next) {
-                Controller.requireImporter(next);
-            }
-        ], callback);
-    };
 
     Controller.clean = function() {
         // call clean functions for both importers and exporters
@@ -53,7 +42,13 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
         });
     };
 
-    Controller.startExport = function (config) {
+    Controller.startExport = function (config, callback) {
+        if (_.isFunction(config)) {
+            callback = config;
+            config  = null;
+        }
+        callback = _.isFunction(callback) ? callback : function(){};
+
         if (config) {
             Controller.config(config);
         }
@@ -62,7 +57,10 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
             return Controller.emit('exporter.warning', {message: 'Busy, cannot export'});
         }
 
-        this.requireExporter(function(err, exporter) {
+        Controller.requireExporter(function(err, exporter) {
+            if (Controller._exporter) {
+                Controller._exporter.removeAllListeners();
+            }
             Controller._exporter = exporter;
 
             Controller._exporter.on('exporter.*', function(type, data) {
@@ -74,14 +72,17 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
                     now: 'idle',
                     event: 'exporter.complete'
                 });
+                callback();
             });
-            Controller._importer.once('exporter.error', function() {
+
+            Controller._exporter.once('exporter.error', function(type, data) {
                 Controller.state({
                     now: 'errored',
                     event: 'exporter.error'
                 });
             });
-            Controller._importer.once('exporter.start', function() {
+
+            Controller._exporter.once('exporter.start', function() {
                 Controller.state({
                     now: 'busy',
                     event: 'exporter.start'
@@ -96,7 +97,7 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
     };
 
     Controller.requireImporter = function(callback) {
-        importer = require('./importer');
+        var importer = require('./importer');
 
         fs.ensureFile(IMPORTER_LOG_FILE, function() {
             Controller._importerTail = new Tail(IMPORTER_LOG_FILE);
@@ -129,29 +130,44 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
         return Controller._state;
     };
 
-    Controller.startImport = function() {
-        if (Controller.state().now !== 'idle') {
-            return Controller.emit('importer.warning', {message: 'Busy, cannot import now'});
+    Controller.startImport = function(config, callback) {
+        if (_.isFunction(config)) {
+            callback = config;
+            config  = null;
+        }
+        callback = _.isFunction(callback) ? callback : function(){};
+
+        var state = Controller.state();
+        if (state.now !== 'idle') {
+            return Controller.emit('importer.warning', {message: 'Busy, cannot import now', state: state});
         }
 
-        this.requireImporter(function(err, importer) {
+        Controller.requireImporter(function(err, importer) {
+            if (Controller._importer) {
+                Controller._importer.removeAllListeners();
+            }
+
             Controller._importer = importer;
 
             Controller._importer.on('importer.*', function(type, data) {
                 Controller.emit(type, data);
             });
+
             Controller._importer.once('importer.complete', function() {
                 Controller.state({
                     now: 'idle',
                     event: 'importer.complete'
                 });
+                callback();
             });
+
             Controller._importer.once('importer.error', function() {
                 Controller.state({
                     now: 'errored',
                     event: 'importer.error'
                 });
             });
+
             Controller._importer.once('importer.start', function() {
                 Controller.state({
                     now: 'busy',
@@ -166,11 +182,32 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
         });
     };
 
+    Controller.findModules = function(q, callback) {
+        if (typeof q === 'function') {
+            callback = q;
+            q = ['nodebb-plugin-import-'];
+        }
+
+        if (typeof q === 'string') {
+            q = [q];
+        }
+
+        var	npm = require('npm');
+        npm.load({}, function(err) {
+            if (err) {
+                callback(err);
+            }
+
+            npm.config.set('spin', false);
+            npm.commands.search(q, function(err, results) {
+                callback(err, results);
+            });
+        });
+    };
+
     Controller.emit = function (type, b, c) {
         var args = Array.prototype.slice.call(arguments, 0);
         args.unshift(args[0]);
-
-        console.log.apply(console, args);
         Controller._dispatcher.emit.apply(Controller._dispatcher, args);
     };
 
@@ -182,4 +219,8 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
         Controller._dispatcher.once.apply(Controller._dispatcher, arguments);
     };
 
-})(exports);
+    Controller.removeAllListeners = function () {
+        Controller._dispatcher.removeAllListeners();
+    };
+
+})(module.exports);

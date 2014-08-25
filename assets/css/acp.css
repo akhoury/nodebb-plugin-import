@@ -1,0 +1,30 @@
+.import-overflow-hidden {
+    overflow: hidden;
+}
+.import-hand {
+    cursor: hand;
+    cursor: pointer;
+}
+.import-config,
+.import-config-wrapper {
+    background: #EEEEEE;
+}
+.import-config {
+    max-height: 400px;
+    overflow: auto;
+}
+.import-logs {
+    width: 100%;
+    padding: 5px;
+    background: #f2ffbe;
+    min-width: 750px;
+    height: 500px;
+    border: 1px dashed black;
+    overflow: auto;
+}
+.import-logs-line {
+    padding: 3px;
+}
+.import-toolbar {
+    margin: 10px 0;
+}

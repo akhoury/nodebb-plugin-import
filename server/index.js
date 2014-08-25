@@ -53,7 +53,7 @@ Plugin.settings = function(settings, callback) {
             callback(null, config);
         });
     }
-}
+};
 
 Plugin.render = function(req, res, next) {
     res.render('index', {json: Plugin.json || {}, config: Plugin.config || {}});
@@ -74,17 +74,14 @@ Plugin.hooks = {
         load: function(app, middleware, controllers, callback) {
             Plugin.settings(function(err) {
                 if (err) {
-                    console.warn(err);
+                    throw err;
                 }
 
                 require('./routes').setup(app, middleware, controllers, Plugin);
 
-                // Plugin.controller = {setup: function(){}, on: function(){}};
                 Plugin.controller = require('./controller');
 
-                Plugin.controller.setup();
-
-                var handler = function() {
+                var handler = function(a, b, c) {
                     sockets.server.sockets.emit.apply(sockets.server.sockets, arguments);
                 };
 
@@ -107,13 +104,15 @@ Plugin.api = {
             var fn = req.params.fn || req.query.fn,
                 args = req.params.args || req.query.args;
 
-            args.push(function(err) {
+            var handler = function(err) {
                 if (err) {
                     res.json(500, err);
                 } else {
                     res.json.apply(res, arguments);
                 }
-            });
+            };
+
+            args.push();
 
             if (Plugin.controller && typeof Plugin.controller[fn] === 'function') {
                 Plugin.controller[fn].apply(Plugin.controller, args);
@@ -121,6 +120,7 @@ Plugin.api = {
                 res.json(500, {error: 'Could not Controller.' + fn});
             }
         },
+
         config: function(req, res, next) {
             Plugin.settings(function(err, config) {
                 if (err) {
@@ -130,12 +130,21 @@ Plugin.api = {
                 }
             })
         },
+
         state: function(req, res, next) {
             if (Plugin.controller) {
                 var state = Plugin.controller.state();
                 res.json(state);
             } else {
                 res.json(500, {error: 'No state'});
+            }
+        },
+
+        exporters: function(req, res, next) {
+            if (Plugin.controller) {
+                Plugin.controller.findModules('nodebb-plugin-import-', function(err, results) {
+                    res.json(results);
+                });
             }
         }
     },
@@ -170,8 +179,6 @@ Plugin.api = {
                     res.json.apply(res, arguments);
                 }
             });
-
-            debugger;
 
             if (Plugin.controller && typeof Plugin.controller[fn] === 'function') {
                 Plugin.controller[fn].apply(Plugin.controller, args);

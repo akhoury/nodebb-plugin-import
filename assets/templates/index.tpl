@@ -1,51 +1,198 @@
-<style>
-	.{json.nbbId}-overflow-hidden {
-		overflow: hidden;
-	}
-	.{json.nbbId}-hand {
-		cursor: hand;
-		cursor: pointer;
-	}
-</style>
+<link href="/plugins/nodebb-plugin-import/css/acp.css" rel="stylesheet" />
 
-<h1><i class="fa {json.faIcon}"></i> {json.name}</h1>
+<div class="import-wrapper">
+    <h1>
+        <i class="fa {json.faIcon}"></i> {json.name}
+    </h1>
 
-<form role="form" class="{json.nbbId}-settings">
-	<fieldset>
+    <form role="form" class="import-settings">
+        <fieldset>
+            <div class="col-sm-12 import-config-wrapper">
+                <div class="col-sm-12 import-config">
 
-		<div class="col-sm-12 {json.nbbId}-config-wrapper">
+                    <h2>Exporter Configs</h2>
 
-			<div class="col-sm-12 {json.nbbId}-config">
-				<div class="form-group">
-					<label for="log">Log level</label>
-					<select class="form-control" id="log" name="log">
-						<option val="debug">debug</option>
-						<option val="error">error</option>
-						<option val="warn">warn</option>
-						<option val="info">info</option>
-					</select>
-				</div>
+                    <h4>Source DB Configs</h4>
+                    <p class="help-block">Not all are required, it really depends on each the database type and exporter you're using</p>
+                    <div class="form">
+                        <div class="form-group">
+                            <label for="exporter-dbhost">Database host</label>
+                            <input type="text" class="form-control" name="exporter-dbhost" id="exporter-dbhost" placeholder="127.0.0.1">
 
-				<h3>Source Forum</h3>
+                            <label for="exporter-dbname">Database name</label>
+                            <input type="text" class="form-control" name="exporter-dbname" id="exporter-dbname" placeholder="my_schema">
 
-				<div class="form-group">
-					<label for="log">Available Exporters</label>
-					<select data-on="change" data-target="" data-action="" class="form-control" id="exporter-module" name="exporter-module">
-						<option val="nodebb-plugin-import-ubb">UBB (7.x)</option>
-					</select>
-				</div>
+                            <label for="exporter-dbuser">Database username</label>
+                            <input type="text" class="form-control" name="exporter-dbuser" id="exporter-dbuser" placeholder="user">
 
-				<button class="btn btn-lg btn-primary" id="save" type="button">Save Config</button>
-			</div>
+                            <label for="exporter-dbpass">Database password</label>
+                            <input type="text" class="form-control" name="exporter-dbpass" id="exporter-dbpass" placeholder="password">
 
-			<div class="text-center">
-				<i data-actions="click:slideToggle" data-target=".{json.nbbId}-config" class="fa fa-bars {json.nbbId}-hand"></i>
-			</div>
-		</div>
+                            <label for="exporter-dbport">Database port</label>
+                            <input type="text" class="form-control" name="exporter-dbport" id="exporter-dbport" placeholder="3306 (i.e. mysql)">
 
-        <hr />
+                            <label for="exporter-tablePrefix">Table prefix (if applicable)</label>
+                            <input type="text" class="form-control" name="exporter-tablePrefix" id="exporter-tablePrefix" placeholder="ubbt_">
+                        </div>
+                    </div>
 
-	</fieldset>
-</form>
+                    <hr />
 
-<script src="/plugins/nodebb-plugin-{json.nbbId}/js/acp.js"></script>
+                    <div class="form-group">
+                        <h4>Select an Exporter</h4>
+
+                        <label for="exporter-module">Select one of the few detected on npmjs's registry</label><i class="fa fa-spinner exporter-module-spinner"></i>
+                        <select class="form-control" id="exporter-module" name="exporter-module"></select>
+
+                        <label for="exporter-module-input">Or just enter the module's name or url you want to install</label>
+                        <input type="text" class="form-control" id="exporter-module-input" name="exporter-module-input" placeholder="nodebb-plugin-vbexporter">
+                    </div>
+
+                    <div class="form-group">
+                        <h2>Importer Configs</h2>
+
+                        <div class="form-group">
+                            <label for="importer-convert">Content conversion</label>
+                            <p class="help-block">
+                                Convert your posts content, user signatures and topics titles
+                                to Markdown (the preferred NodeBB format language).
+                                If you have another [from-to] format you want to add, let me know, or pull request it
+                            </p>
+                            <select class="form-control" id="importer-convert" name="importer-convert">
+                                <option value="">Don't convert</option>
+                                <option value="bbcode-to-md">BBCode to Markdown</option>
+                                <option value="html-to-md">HTML to Markdown</option>
+                            </select>
+                        </div>
+
+                        <hr />
+
+                        <div class="form-group">
+                            <h4 for="importer-templates">Redirection templates</h4>
+                            <p class="help-block">
+                                These templates allow you to create redirection maps; the importer will spit out logs
+                                that include each old path mapped to a relevant new NodeBB one, based on the templates provided.
+                                For example, some forums uses IDs in the URLs, some uses slugs. The old paths here are an example of the
+                                UBB forum's way, and the disabled ones are the NodeBB way. Change the old paths at will.
+                                <br />
+                                After the import is done, and you can download the mapped URLs and use them with,
+                                either like <a href="http://wiki.nginx.org/HttpMapModule" target="_blank">NGINX MapModule</a> or this lite <a href="https://github.com/akhoury/RedirectBB" target="_blank">"redirector"</a> that I wrote for this purpose.
+                                <br />
+                                Note the templating syntax, it uses the <a href="http://underscorejs.org/#template" target="_blank">Underscore.js's template</a>
+                            </p>
+                            <div class="importer-templates-configs">
+                                <label for="importer-templates-users-oldpath">Users old path</label>
+                                <input value="/forums/ubbthreads.php/users/<%= _uid %>" type="text" class="form-control" id="importer-templates-users-oldpath" name="importer-templates-users-oldpath" placeholder="/forums/ubbthreads.php/users/<%= _uid %>">
+                                <label for="importer-templates-users-newpath">Users new path</label>
+                                <input disabled="disabled" value="/user/<%= userslug %>" type="text" class="form-control" id="importer-templates-users-newpath" name="importer-templates-users-newpath" placeholder="/user/<%= userslug %>">
+
+                                <label for="importer-templates-categories-oldpath">Categories old path</label>
+                                <input value="/forums/ubbthreads.php/forums/<%= _cid %>" type="text" class="form-control" id="importer-templates-categories-oldpath" name="importer-templates-categories-oldpath" placeholder="/forums/ubbthreads.php/forums/<%= _cid %>">
+                                <label for="importer-templates-categories-newpath">Categories new path</label>
+                                <input disabled="disabled" value="/category/<%= cid %>" type="text" class="form-control" id="importer-templates-categories-newpath" name="importer-templates-categories-newpath" placeholder="/category/<%= cid %>">
+
+                                <label for="importer-templates-topics-oldpath">Topics old path</label>
+                                <input value="/forums/ubbthreads.php/topics/<%= _tid %>" type="text" class="form-control" id="importer-templates-topics-oldpath" name="importer-templates-topics-oldpath" placeholder="/forums/ubbthreads.php/topics/<%= _tid %>">
+                                <label for="importer-templates-topics-newpath">Topics new path</label>
+                                <input disabled="disabled" value="/topic/<%= tid %>" type="text" class="form-control" id="importer-templates-topics-newpath" name="importer-templates-topics-newpath" placeholder="/topic/<%= tid %>">
+
+                                <label for="importer-templates-posts-oldpath">Posts old path</label>
+                                <p class="help-block">
+                                     Most Forums uses the '#' (location.hash) to add the post id to the path, this cannot be easily redirected
+                                     without some client side JS 'Redirector' that grabs that # value and add to the query string or something
+                                     but if your old-forums doesn't do that, feel free to edit that config.
+
+                                     By default this it's blank to disable it and increase performance,
+                                     it is a little bit of a CPU hog since the posts have the highest number of records
+                                     and this require string processing, so if
+                                     you're okay with redirecting oldTopicPaths and oldPostsPaths to the newTopicPaths without scrolling to the right post in the topic, leave this empty.
+                                </p>
+                                <input value="" type="text" class="form-control" id="importer-templates-posts-oldpath" name="importer-templates-posts-oldpath" placeholder="/topics/<%= _tid %>/*#Post<%= _pid %>" >
+                                <label for="importer-templates-posts-newpath">Posts new path</label>
+                                <input disabled="disabled" value="/topic/<%= tid %>/#<%= pid %>" type="text" class="form-control" id="importer-templates-posts-newpath" name="importer-templates-posts-newpath" placeholder="/topic/<%= tid %>/#<%= pid %>">
+                            </div>
+                        </div>
+
+                            <hr />
+
+                        <div class="form-group">
+                            <label for="importer-passwordgen-enabled">Auto Password Generation</label>
+                            <p class="help-block">Auto Generate passwords for users, if no passwords are provided. If checked, this will hit performance, if unchecked, all passwords are NULL so all users will need to reset their passwords before login in. The latter is the recommended behavior</p>
+                            <input data-on="change" data-action="visibleToggle" data-target=".importer-passwordgen-configs" type="checkbox" class="form-control" id="importer-passwordGen-enabled" name="importer-passwordGen-enabled">
+                            <div class="importer-passwordgen-configs" style="display: none;">
+                                <label for="importer-passwordgen-chars">Password generation uses these characters</label>
+                                <input value="{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890" type="text" class="form-control" id="importer-passwordgen-chars" name="importer-passwordgen-chars" placeholder="{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890">
+
+                                <label for="importer-passwordgen-len">Passwords length</label>
+                                <input value="13" type="number" min="6" max="20" class="form-control" id="importer-passwordgen-len" name="importer-passwordgen-len" placeholder="13">
+                            </div>
+                        </div>
+
+                            <hr />
+
+                        <div class="form-group">
+                            <label for="importer-autoconfirm-emails">Auto confirm user accounts</label>
+                            <p class="help-block">
+                                Let the importer auto confirm the users new email automatically
+                                <br/>
+                                It will try to set the nodebb 'email:*:confirm' records to true
+                                and also delete all the 'confirm:*KEYS*:emails'
+                            </p>
+                            <input checked type="checkbox" id="importer-autoconfirm-emails" name="importer-autoconfirm-emails" class="form-control">
+                        </div>
+                            <hr />
+
+                        <div class="form-group">
+                            <label for="importer-user-reputation-multiplier">Users reputation multiplier</label>
+                            <p class="help-block">If you want to boost the karma</p>
+                            <input value="1" type="number" min="0" id="importer-user-reputation-multiplier" name="importer-user-reputation-multiplier" class="form-control">
+                        </div>
+                            <hr />
+
+                        <div class="form-group">
+                            <h4>Categories styling</h4>
+                            <p class="help-block">You can change these later.</p>
+                            <label for="importer-categories-text-colors">List of new categories text colors to use</label>
+                            <p class="help-block">Comma separated values of text colors to be randomly chosen from</p>
+                            <input value="#FFFFFF" type="text" id="importer-categories-text-colors" name="importer-categories-text-colors" placeholder="#FFFFFF,#EEEEEE" class="form-control">
+                            <label for="importer-categories-bg-colors">List of new categories background colors to use</label>
+                            <p class="help-block">Comma separated values of background colors to be randomly chosen from</p>
+                            <input value="#ab1290,#004c66,#0059b2" type="text" id="importer-categories-bg-colors" name="importer-categories-bg-colors" placeholder="#ab1290,#004c66,#0059b2" class="form-control">
+                            <label for="importer-categories-icons">List of new categories icons to use</label>
+                            <p class="help-block">Comma separated values of <a href="http://fortawesome.github.io/Font-Awesome/icons/" target="_blank">font-awesome</a> icons to be randomly chosen from</p>
+                            <input value="fa-comment" type="text" id="importer-categories-icons" name="importer-categories-icons" placeholder="fa-comment,fa-home" class="form-control">
+                        </div>
+
+                    </div>
+
+                   <button class="btn btn-lg btn-primary pull-right" data-on="click" data-action="saveSettings" id="save" type="button">Save Config</button>
+            </div>
+
+            <div class="text-center">
+                <i title="Toggle settings" data-target-visible-direction="down" data-on="click" data-action="slideVerticalToggle" data-target=".import-config" class="fa fa-bars import-hand"></i>
+            </div>
+        </fieldset>
+    </form>
+
+    <div class="import-toolbar">
+       <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Start Export Then Import</button>
+    </div>
+
+    <div class="import-state-container">
+        <h4>
+            State:
+            <span class="controller-state-now">Idle</span> <i class="fa controller-state-icon"></i>,
+            by event:
+            <span class="controller-state-event">none</span>
+        </h4>
+    </div>
+
+    <div class="import-logs-container">
+        <h4>Logs (reversed order)</h4>
+        <div class="import-logs col-sm-12">
+
+        </div>
+    </div>
+</div>
+
+<script src="/plugins/nodebb-plugin-import/js/acp.js"></script>

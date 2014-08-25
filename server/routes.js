@@ -7,6 +7,8 @@ module.exports =  {
 		app.get(apiPrefix, middleware.admin.buildHeader, Plugin.render);
 		app.get(apiPrefix + '/state', Plugin.api.get.state);
 
+        app.get(apiPrefix + '/exporters', Plugin.api.get.exporters);
+
         app.get(apiPrefix + '/fn', middleware.admin.isAdmin, Plugin.api.get.fn);
         app.post(apiPrefix + '/fn', middleware.admin.isAdmin, Plugin.api.post.fn);
     }
