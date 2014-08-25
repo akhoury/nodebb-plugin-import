@@ -8,6 +8,6 @@ Import your old forum data to nodebb | a one time use plugin
 
 ![Imgur](http://i.imgur.com/WcEnfni.png)
 
-![Imgur](http://i.imgur.com/lDLjGgc)
+![Imgur](http://i.imgur.com/lDLjGgc.png)
 
-![Imgur](http://i.imgur.com/0KEHNaY)
+![Imgur](http://i.imgur.com/0KEHNaY.png)
