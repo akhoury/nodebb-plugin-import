@@ -1,6 +1,3 @@
-// resolvedpath: /Users/akhoury/code/akhoury-NodeBB/node_modules/nodebb-plugin-import-ubb/lib/export.js
-// resolvedpath: /Users/akhoury/code/akhoury-NodeBB/node_modules/nodebb-plugin-import-ubb/lib/export.js
-
 var async = require('async'),
     _ = require('underscore'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
@@ -28,6 +25,14 @@ var async = require('async'),
         searchModulesCache(moduleName, function(mod) {
             delete require.cache[mod.id];
         });
+
+        // https://github.com/joyent/node/issues/8266
+        Object.keys(module.constructor._pathCache).forEach(function(cacheKey) {
+            if (cacheKey.indexOf(moduleName) > 0) {
+                delete module.constructor._pathCache[cacheKey];
+            }
+        });
+
         return require(moduleName);
     };
 
@@ -143,41 +148,37 @@ var async = require('async'),
                 }
 
                 Exporter.emit('exporter.install.done');
-                Exporter.emit('exporter.log', 'install done: ' + module + ' waiting 3 seconds before loading, don\'t ask.');
+                Exporter.emit('exporter.log', 'install done: ' + module);
 
-                setTimeout(function() {
-                    var moduleId = getModuleId(module);
-                    var exporter = reloadModule(moduleId);
+                var moduleId = getModuleId(module);
+                var exporter = reloadModule(moduleId);
 
-                    if (! Exporter.isCompatible(exporter)) {
-                        // no?
-                        if (module.indexOf('github.com/akhoury') === -1) {
-                            Exporter.emit('exporter.warn', {warn: module + ' is not compatible, trying github.com/akhoury\'s fork'});
+                if (! Exporter.isCompatible(exporter)) {
+                    // no?
+                    if (module.indexOf('github.com/akhoury') === -1) {
+                        Exporter.emit('exporter.warn', {warn: module + ' is not compatible, trying github.com/akhoury\'s fork'});
 
-                            npm.commands.uninstall([module], function(err) {
-                                if(err) {
-                                    next(err);
-                                }
-                                Exporter.emit('exporter.log', 'uninstalled: ' + module);
+                        npm.commands.uninstall([module], function(err) {
+                            if(err) {
+                                next(err);
+                            }
+                            Exporter.emit('exporter.log', 'uninstalled: ' + module);
 
-                                setTimeout(function() {
-                                    // let's try my #master fork till the PRs close and get published
-                                    Exporter.install('git://github.com/akhoury/' + moduleId + '#master', {'no-registry': true}, next);
-                                }, 2000);
-                            });
-                        } else {
-                            Exporter.emit('exporter.error', {error: module + ' is not compatible.'});
-                            next({error: module + ' is not compatible.'});
-                        }
+                            // let's try my #master fork till the PRs close and get published
+                            Exporter.install('git://github.com/akhoury/' + moduleId + '#master', {'no-registry': true}, next);
+                        });
                     } else {
-
-                        Exporter._exporter = exporter;
-                        Exporter._module = module;
-                        Exporter._moduleId = moduleId;
-
-                        next();
+                        Exporter.emit('exporter.error', {error: module + ' is not compatible.'});
+                        next({error: module + ' is not compatible.'});
                     }
-                }, 3000);
+                } else {
+
+                    Exporter._exporter = exporter;
+                    Exporter._module = module;
+                    Exporter._moduleId = moduleId;
+
+                    next();
+                }
             });
         });
     };
