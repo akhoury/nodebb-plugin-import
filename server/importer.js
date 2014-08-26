@@ -23,6 +23,8 @@ var async = require('async'),
 
     logPrefix = '[nodebb-plugin-import]',
 
+    backupConfigFilepath = __dirname + '/tmp/importer.nbb.backedConfig.json',
+
     defaults = {
         convert: null,
         passwordGen: {
@@ -673,7 +675,9 @@ var async = require('async'),
         DB.getObject('config', function(err, data) {
             if (err) throw err;
             Importer.config('backedConfig', data || {});
-            fs.outputJsonSync(__dirname + '/tmp/importer.nbb.backedConfig.json', Importer.config().backedConfig);
+            if (!fs.existsSync(backupConfigFilepath)) {
+                fs.outputJsonSync(backupConfigFilepath, Importer.config().backedConfig);
+            }
             next();
         });
     };
@@ -699,7 +703,7 @@ var async = require('async'),
 
     // im nice
     Importer.restoreConfig = function(next) {
-        Importer.config('backedConfig', fs.readJsonFileSync(__dirname + '/tmp/importer.nbb.backedConfig.json'));
+        Importer.config('backedConfig', fs.readJsonFileSync(backupConfigFilepath);
         DB.setObject('config', Importer.config().backedConfig, function(err){
             if (err) {
                 Importer.error('Something went wrong while restoring your nbb configs');
