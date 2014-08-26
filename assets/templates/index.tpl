@@ -26,7 +26,7 @@
                             <input type="text" class="form-control" name="exporter-dbuser" id="exporter-dbuser" placeholder="user">
 
                             <label for="exporter-dbpass">Database password</label>
-                            <input type="text" class="form-control" name="exporter-dbpass" id="exporter-dbpass" placeholder="password">
+                            <input type="password" class="form-control" name="exporter-dbpass" id="exporter-dbpass" placeholder="password">
 
                             <label for="exporter-dbport">Database port</label>
                             <input type="text" class="form-control" name="exporter-dbport" id="exporter-dbport" placeholder="3306 (i.e. mysql)">

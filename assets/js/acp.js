@@ -143,7 +143,9 @@
             },
 
             saveSettings: function(e) {
-                e.preventDefault();
+                if (e) {
+                    e.preventDefault();
+                }
                 $form.find('.form-group').removeClass('has-error');
 
                 Settings.save(plugin.name, $form, function() {
@@ -152,10 +154,10 @@
             },
 
             start: function(e) {
-                util.toggleVertical($form.find('.import-config'), false, 'down');
                 $wrapper.find('#import-start').prop('disabled', true).addClass('disabled');
                 $wrapper.find('.import-logs').empty();
-                startExport();
+                actions.saveSettings();
+                start();
             }
         };
 
@@ -169,6 +171,13 @@
                 },
                 url: plugin.apiHost + '/fn'
             });
+        };
+
+        var start = plugin.start = function() {
+            var configs = gatherConfigs();
+            if (configs) {
+                return fn('start', [configs]);
+            }
         };
 
         var startExport = plugin.startExport = function() {
@@ -326,10 +335,12 @@
             socket.on('exporter.tail.line', onLine);
             socket.on('importer.tail.error', onError);
             socket.on('exporter.tail.error', onError);
-            socket.on('exporter.error', onLine);
-            socket.on('importer.log', onLine);
+
             socket.on('exporter.log', onLine);
             socket.on('exporter.warn', onLine);
+            socket.on('exporter.error', onLine);
+
+            socket.on('importer.log', onLine);
             socket.on('importer.warn', onLine);
             socket.on('importer.error', onLine);
 
