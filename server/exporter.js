@@ -29,7 +29,7 @@ var async = require('async'),
         });
     };
 
-    Exporter.start = function() {
+    Exporter.start = function(callback) {
         Exporter.emit('exporter.start');
 
         async.series([
@@ -38,62 +38,60 @@ var async = require('async'),
             Exporter.getTopics,
             Exporter.getPosts,
             Exporter.teardown
-        ]);
+        ], callback);
     };
 
     Exporter.setup = function(next) {
         Exporter.emit('exporter.setup.start');
 
-        Exporter.mirrorLogs();
+        Exporter.augmentLogFunctions();
 
-        Exporter._exporter.setup(Exporter.config, function() {
+        Exporter._exporter.setup(Exporter.config, function(err, map, arr) {
             Exporter.emit('exporter.setup.done');
             Exporter.emit('exporter.ready');
-            next();
+            next(err, map, arr);
         });
     };
 
     Exporter.getUsers = function(next) {
         Exporter.emit('exporter.users.start');
-        Exporter._exporter.getUsers(function() {
+        Exporter._exporter.getUsers(function(err, map, arr) {
             Exporter.emit('exporter.users.done');
-            next();
+            next(err, map, arr);
         });
     };
 
     Exporter.getCategories = function(next) {
         Exporter.emit('exporter.categories.start');
-        Exporter._exporter.getCategories(function() {
+        Exporter._exporter.getCategories(function(err, map, arr) {
             Exporter.emit('exporter.categories.done');
-            next();
+            next(err, map, arr);
         });
 
     };
 
     Exporter.getTopics = function(next) {
         Exporter.emit('exporter.topics.start');
-        Exporter._exporter.getTopics(function() {
+        Exporter._exporter.getTopics(function(err, map, arr) {
             Exporter.emit('exporter.topics.done');
-            next();
+            next(err, map, arr);
         });
 
     };
 
     Exporter.getPosts = function(next) {
         Exporter.emit('exporter.posts.start');
-        Exporter._exporter.getPosts(function() {
+        Exporter._exporter.getPosts(function(err, map, arr) {
             Exporter.emit('exporter.posts.done');
-            next();
+            next(err, map, arr);
         });
     };
 
     Exporter.teardown = function(next) {
         Exporter.emit('exporter.teardown.start');
-        Exporter._exporter.teardown(function() {
+        Exporter._exporter.teardown(function(err, map, arr) {
             Exporter.emit('exporter.teardown.done');
-            Exporter.emit('exporter.complete');
-            next();
-
+            next(err, map, arr);
         });
     };
 
@@ -182,7 +180,7 @@ var async = require('async'),
         })();
     };
 
-    Exporter.mirrorLogs = function() {
+    Exporter.augmentLogFunctions = function() {
         var log = Exporter._exporter.log;
         if (_.isFunction(log)) {
             Exporter._exporter.log = Exporter.augmentFn(log, function (a, b, c) {

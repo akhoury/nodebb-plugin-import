@@ -102,17 +102,15 @@ Plugin.api = {
     'get': {
         fn: function(req, res, next) {
             var fn = req.params.fn || req.query.fn,
-                args = req.params.args || req.query.args;
+                args = req.params.args || req.query.args || [];
 
-            var handler = function(err) {
+            args.push(function(err) {
                 if (err) {
                     res.json(500, err);
                 } else {
                     res.json.apply(res, arguments);
                 }
-            };
-
-            args.push();
+            });
 
             if (Plugin.controller && typeof Plugin.controller[fn] === 'function') {
                 Plugin.controller[fn].apply(Plugin.controller, args);
@@ -170,7 +168,7 @@ Plugin.api = {
 
         fn: function(req, res, next) {
             var fn = req.body.fn,
-                args = req.body.args;
+                args = req.body.args || [];
 
             args.push(function(err) {
                 if (err) {

@@ -42,7 +42,13 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
         });
     };
 
-    Controller.startExport = function (config, callback) {
+    Controller.start = function(config, callback) {
+        Controller.startExport(config, function(data) {
+            Controller.startImport(data, config, callback);
+        });
+    };
+
+    Controller.startExport = function(config, callback) {
         if (_.isFunction(config)) {
             callback = config;
             config  = null;
@@ -67,12 +73,11 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
                 Controller.emit(type, data);
             });
 
-            Controller._exporter.once('exporter.complete', function() {
+            Controller._exporter.once('exporter.complete', function(type, data) {
                 Controller.state({
                     now: 'idle',
                     event: 'exporter.complete'
                 });
-                callback();
             });
 
             Controller._exporter.once('exporter.error', function(type, data) {
@@ -89,7 +94,25 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
                 });
             });
             Controller._exporter.once('exporter.ready', function() {
-                Controller._exporter.start();
+                Controller._exporter.start(function(err, results) {
+                    Controller._exporter.data = {
+                        users: results[0][0],
+                        categories: results[1][0],
+                        topics: results[2][0],
+                        posts: results[3][0]
+                    };
+                    results = null;
+
+                    fs.outputFile(
+                        path.join(__dirname, '/tmp/exporter.data.json'),
+                        JSON.stringify(Controller._exporter.data, undefined, 2),
+                        function(err) {
+                            Controller._exporter.emit('exporter.complete');
+
+                            callback(err, Controller._exporter.data);
+                        }
+                    );
+                });
             });
 
             Controller._exporter.init(Controller.config());
@@ -130,11 +153,12 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
         return Controller._state;
     };
 
-    Controller.startImport = function(config, callback) {
+    Controller.startImport = function(data, config, callback) {
         if (_.isFunction(config)) {
             callback = config;
             config  = null;
         }
+
         callback = _.isFunction(callback) ? callback : function(){};
 
         var state = Controller.state();
@@ -178,7 +202,7 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
                 Controller._importer.start();
             });
 
-            Controller._importer.init(Controller.config());
+            Controller._importer.init(config || Controller.config());
         });
     };
 
