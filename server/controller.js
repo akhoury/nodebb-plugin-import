@@ -43,7 +43,7 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
     };
 
     Controller.start = function(config, callback) {
-        Controller.startExport(config, function(data) {
+        Controller.startExport(config, function(err, data) {
             Controller.startImport(data, config, callback);
         });
     };
@@ -202,7 +202,7 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
                 Controller._importer.start();
             });
 
-            Controller._importer.init(config || Controller.config());
+            Controller._importer.init(data, config || Controller.config(), callback);
         });
     };
 
