@@ -703,7 +703,7 @@ var async = require('async'),
 
     // im nice
     Importer.restoreConfig = function(next) {
-        Importer.config('backedConfig', fs.readJsonFileSync(backupConfigFilepath);
+        Importer.config('backedConfig', fs.readJsonFileSync(backupConfigFilepath));
         DB.setObject('config', Importer.config().backedConfig, function(err){
             if (err) {
                 Importer.error('Something went wrong while restoring your nbb configs');
