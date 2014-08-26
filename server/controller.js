@@ -60,8 +60,13 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
         }
 
         if (Controller.state().now !== 'idle') {
-            return Controller.emit('exporter.warning', {message: 'Busy, cannot export'});
+            return Controller.emit('exporter.warn', {message: 'Busy, cannot export'});
         }
+
+        Controller.state({
+            now: 'busy',
+            event: 'exporter.require'
+        });
 
         Controller.requireExporter(function(err, exporter) {
             if (Controller._exporter) {
@@ -163,7 +168,7 @@ var IMPORTER_LOG_FILE = path.resolve(LOGS_DIR, 'import.log');
 
         var state = Controller.state();
         if (state.now !== 'idle') {
-            return Controller.emit('importer.warning', {message: 'Busy, cannot import now', state: state});
+            return Controller.emit('importer.warn', {message: 'Busy, cannot import now', state: state});
         }
 
         Controller.requireImporter(function(err, importer) {

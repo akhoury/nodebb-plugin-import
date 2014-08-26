@@ -282,7 +282,7 @@ var async = require('async'),
 
                 User.create(userData, function(err, uid) {
                     if (err) {
-                        Importer.error('skipping username: "' + user.username + '" ' + err);
+                        Importer.warn('skipping username: "' + user.username + '" ' + err);
                         nextTick(done);
                     } else {
                         user.imported = true;
@@ -653,7 +653,7 @@ var async = require('async'),
                 if (topic._locked) {
                     DB.setObjectField('topic:' + topic.tid, 'locked', '1', function(err) {
                         if (err) {
-                            Importer.error(err);
+                            Importer.warn(err);
                         } else {
                             Importer.log('[count: ' + count + '] locked topic:' + topic.tid + ' back');
                         }
@@ -706,7 +706,7 @@ var async = require('async'),
         Importer.config('backedConfig', fs.readJsonFileSync(backupConfigFilepath));
         DB.setObject('config', Importer.config().backedConfig, function(err){
             if (err) {
-                Importer.error('Something went wrong while restoring your nbb configs');
+                Importer.warn('Something went wrong while restoring your nbb configs');
                 Importer.warn('here are your backed-up configs, you do it.');
                 Importer.warn(JSON.stringify(Importer.config().backedConfig));
             }
@@ -734,7 +734,7 @@ var async = require('async'),
             if (category) {
                 Group.join('group:cid:' + cid + ':privileges:mods:members', uid, function(err){
                     if (err) {
-                        Importer.error(err);
+                        Importer.warn(err);
                     }
                 });
             }

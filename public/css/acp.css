@@ -23,7 +23,9 @@
     overflow: auto;
 }
 .import-logs-line {
-    padding: 3px;
+    font-size: 12px;
+    padding: 1px;
+    margin: 0;
 }
 .import-toolbar {
     margin: 10px 0;

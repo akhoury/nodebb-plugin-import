@@ -264,13 +264,18 @@
 
 
         var logsEl = $wrapper.find('.import-logs');
-        var onLine = function(line) {
-            line = typeof line === 'object' ? JSON.stringify(line) : line;
-            logsEl.prepend($('<p />').text(line).addClass('import-logs-line'));
+        var line = function(msg, addClasses) {
+            msg = typeof msg === 'object' ? JSON.stringify(msg) : msg;
+            return $('<p />').text(msg).addClass('import-logs-line ' + (addClasses || ''));
         };
-
+        var onLog = function(msg) {
+            logsEl.prepend(line(msg, 'import-log import-log-info'));
+        };
+        var onWarn = function(msg) {
+            logsEl.prepend(line(msg, 'import-log import-log-warn'));
+        };
         var onError = function(error) {
-            logsEl.append(error);
+            logsEl.prepend(line(error, 'import-log import-log-error'));
             app.alertError(error);
         };
 
@@ -332,17 +337,17 @@
 
             socket.on('controller.state', onControllerState);
 
-            socket.on('exporter.tail.line', onLine);
+            socket.on('exporter.tail.line', onLog);
             socket.on('importer.tail.error', onError);
             socket.on('exporter.tail.error', onError);
 
-            socket.on('exporter.log', onLine);
-            socket.on('exporter.warn', onLine);
-            socket.on('exporter.error', onLine);
+            socket.on('exporter.log', onLog);
+            socket.on('exporter.warn', onWarn);
+            socket.on('exporter.error', onError);
 
-            socket.on('importer.log', onLine);
-            socket.on('importer.warn', onLine);
-            socket.on('importer.error', onLine);
+            socket.on('importer.log', onLog);
+            socket.on('importer.warn', onWarn);
+            socket.on('importer.error', onError);
 
             getState().done(onControllerState);
             findExporters();

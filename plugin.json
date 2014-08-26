@@ -8,11 +8,11 @@
 		{"hook": "filter:admin.header.build", "method": "hooks.filters.menu"},
 		{"hook": "static:app.load", "method": "hooks.statics.load"}
 	],
-	"templates": "assets/templates",
-	"compatibility": "0.5.0-2",
+	"compatibility": "0.5.0-3",
     "faIcon": "fa-magic",
     "staticDirs": {
-        "js": "assets/js",
-        "css": "assets/css"
-    }
+        "js": "public/js",
+        "css": "public/css"
+    },
+    "templates": "./public/templates"
 }

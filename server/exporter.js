@@ -1,3 +1,6 @@
+// resolvedpath: /Users/akhoury/code/akhoury-NodeBB/node_modules/nodebb-plugin-import-ubb/lib/export.js
+// resolvedpath: /Users/akhoury/code/akhoury-NodeBB/node_modules/nodebb-plugin-import-ubb/lib/export.js
+
 var async = require('async'),
     _ = require('underscore'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
@@ -7,6 +10,25 @@ var async = require('async'),
         }
 
         return module.split('@')[0];
+    },
+
+    searchModulesCache = function(moduleName, callback) {
+        var mod = require.resolve(moduleName);
+        if (mod && ((mod = require.cache[mod]) !== undefined)) {
+            (function run(mod) {
+                mod.children.forEach(function (child) {
+                    run(child);
+                });
+                callback(mod);
+            })(mod);
+        }
+    },
+
+    reloadModule = function(moduleName) {
+        searchModulesCache(moduleName, function(mod) {
+            delete require.cache[mod.id];
+        });
+        return require(moduleName);
     };
 
 (function(Exporter) {
@@ -21,7 +43,7 @@ var async = require('async'),
         Exporter.config = config.exporter || {} ;
         async.series([
             function(next) {
-                Exporter.install(config.exporter.module, next);
+                Exporter.install(config.exporter.module, {force: true}, next);
             },
             Exporter.setup
         ], function(err, result) {
@@ -95,48 +117,67 @@ var async = require('async'),
         });
     };
 
-    Exporter.install = function(module, next) {
+    Exporter.install = function(module, options, next) {
         Exporter.emit('exporter.install.start');
         var	npm = require('npm');
         Exporter._exporter = null;
 
-        npm.load({}, function(err) {
+        if (_.isFunction(options)) {
+            next = options;
+            options = {};
+        }
+
+        npm.load(options, function(err) {
             if (err) {
                 next(err);
             }
+            Exporter.emit('exporter.log', 'installing: ' + module);
 
             npm.config.set('spin', false);
+            npm.config.set('force', true);
+            npm.config.set('verbose', true);
+
             npm.commands.install([module], function(err) {
                 if (err) {
                     next(err);
                 }
 
                 Exporter.emit('exporter.install.done');
+                Exporter.emit('exporter.log', 'install done: ' + module + ' waiting 3 seconds before loading, don\'t ask.');
 
-                var moduleId = getModuleId(module);
-                // http://stackoverflow.com/a/9210901
-                delete require.cache[require.resolve(moduleId)];
-                var exporter = require(moduleId);
+                setTimeout(function() {
+                    var moduleId = getModuleId(module);
+                    var exporter = reloadModule(moduleId);
 
-                if (! Exporter.isCompatible(exporter)) {
-                    // no?
-                    if (module.indexOf('github.com/akhoury') === -1) {
-                        Exporter.emit('exporter.warn', {warn: module + ' is not compatible, trying github.com/akhoury\'s fork'});
+                    if (! Exporter.isCompatible(exporter)) {
+                        // no?
+                        if (module.indexOf('github.com/akhoury') === -1) {
+                            Exporter.emit('exporter.warn', {warn: module + ' is not compatible, trying github.com/akhoury\'s fork'});
 
-                        // let's try my #master fork till the PRs close and get published
-                        Exporter.install('git://github.com/akhoury/' + moduleId + '#master', next);
+                            npm.commands.uninstall([module], function(err) {
+                                if(err) {
+                                    next(err);
+                                }
+                                Exporter.emit('exporter.log', 'uninstalled: ' + module);
+
+                                setTimeout(function() {
+                                    // let's try my #master fork till the PRs close and get published
+                                    Exporter.install('git://github.com/akhoury/' + moduleId + '#master', {'no-registry': true}, next);
+                                }, 2000);
+                            });
+                        } else {
+                            Exporter.emit('exporter.error', {error: module + ' is not compatible.'});
+                            next({error: module + ' is not compatible.'});
+                        }
                     } else {
-                        Exporter.emit('exporter.error', {error: module + ' is not compatible.'});
-                        next({error: module + ' is not compatible.'});
+
+                        Exporter._exporter = exporter;
+                        Exporter._module = module;
+                        Exporter._moduleId = moduleId;
+
+                        next();
                     }
-                } else {
-
-                    Exporter._exporter = exporter;
-                    Exporter._module = module;
-                    Exporter._moduleId = moduleId;
-
-                    next();
-                }
+                }, 3000);
             });
         });
     };
@@ -155,6 +196,7 @@ var async = require('async'),
 
     Exporter.emit = function (type, b, c) {
         var args = Array.prototype.slice.call(arguments, 0);
+        console.log.apply(console, args);
         args.unshift(args[0]);
         Exporter._dispatcher.emit.apply(Exporter._dispatcher, args);
     };

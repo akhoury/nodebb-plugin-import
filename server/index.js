@@ -56,7 +56,7 @@ Plugin.settings = function(settings, callback) {
 };
 
 Plugin.render = function(req, res, next) {
-    res.render('index', {json: Plugin.json || {}, config: Plugin.config || {}});
+    res.render('admin/plugins/import', {json: Plugin.json || {}, config: Plugin.config || {}});
 };
 
 Plugin.hooks = {

@@ -2,7 +2,7 @@
 
 <div class="import-wrapper">
     <h1>
-        <i class="fa {json.faIcon}"></i> {json.name}
+        <i class="fa fa-magic"></i> Import
     </h1>
 
     <form role="form" class="import-settings">
