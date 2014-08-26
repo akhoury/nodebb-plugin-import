@@ -838,31 +838,25 @@ var async = require('async'),
 
     Importer.warn = function() {
         var args = _.toArray(arguments);
-
         args.unshift('importer.warn');
         Importer.emit.apply(Importer, args);
-
-        args[0] = logPrefix;
+        args.unshift(logPrefix);
         console.warn.apply(console, args);
     };
 
     Importer.log = function() {
         var args = _.toArray(arguments);
-
         args.unshift('importer.log');
         Importer.emit.apply(Importer, args);
-
-        args[0] = logPrefix;
+        args.unshift(logPrefix);
         console.log.apply(console, args);
     };
 
     Importer.error = function() {
         var args = _.toArray(arguments);
-
         args.unshift('importer.error');
         Importer.emit.apply(Importer, args);
-
-        args[0] = logPrefix;
+        args.unshift(logPrefix);
         console.error.apply(console, args);
     };
 
