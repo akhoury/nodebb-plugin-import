@@ -22,7 +22,7 @@ You need node module that has the following interface.
 
 ### YourModule.setup(config, callback)
 * `config`: a JS object that will be passed to `setup()` and it contains the following:
-```
+```javascript
 {
     dbhost: '127.0.0.1', // a string, db host entered by the user on the UI
     dbuser: 'admin', // a string, db username entered by the user on the UI
