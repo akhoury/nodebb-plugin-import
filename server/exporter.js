@@ -73,52 +73,52 @@ var async = require('async'),
 
         Exporter.augmentLogFunctions();
 
-        Exporter._exporter.setup(Exporter.config, function(err, map, arr) {
+        Exporter._exporter.setup(Exporter.config, function(err, map) {
             Exporter.emit('exporter.setup.done');
             Exporter.emit('exporter.ready');
-            next(err, map, arr);
+            next(err, map);
         });
     };
 
     Exporter.getUsers = function(next) {
         Exporter.emit('exporter.users.start');
-        Exporter._exporter.getUsers(function(err, map, arr) {
+        Exporter._exporter.getUsers(function(err, map) {
             Exporter.emit('exporter.users.done');
-            next(err, map, arr);
+            next(err, map);
         });
     };
 
     Exporter.getCategories = function(next) {
         Exporter.emit('exporter.categories.start');
-        Exporter._exporter.getCategories(function(err, map, arr) {
+        Exporter._exporter.getCategories(function(err, map) {
             Exporter.emit('exporter.categories.done');
-            next(err, map, arr);
+            next(err, map);
         });
 
     };
 
     Exporter.getTopics = function(next) {
         Exporter.emit('exporter.topics.start');
-        Exporter._exporter.getTopics(function(err, map, arr) {
+        Exporter._exporter.getTopics(function(err, map) {
             Exporter.emit('exporter.topics.done');
-            next(err, map, arr);
+            next(err, map);
         });
 
     };
 
     Exporter.getPosts = function(next) {
         Exporter.emit('exporter.posts.start');
-        Exporter._exporter.getPosts(function(err, map, arr) {
+        Exporter._exporter.getPosts(function(err, map) {
             Exporter.emit('exporter.posts.done');
-            next(err, map, arr);
+            next(err, map);
         });
     };
 
     Exporter.teardown = function(next) {
         Exporter.emit('exporter.teardown.start');
-        Exporter._exporter.teardown(function(err, map, arr) {
+        Exporter._exporter.teardown(function(err, map) {
             Exporter.emit('exporter.teardown.done');
-            next(err, map, arr);
+            next(err, map);
         });
     };
 

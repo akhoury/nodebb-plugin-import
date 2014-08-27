@@ -94,10 +94,10 @@ var fs = require('fs-extra'),
         Controller._exporter.once('exporter.ready', function() {
             Controller._exporter.start(function(err, results) {
                 Controller._exporter.data = {
-                    users: results[0][0],
-                    categories: results[1][0],
-                    topics: results[2][0],
-                    posts: results[3][0]
+                    users: results[0],
+                    categories: results[1],
+                    topics: results[2],
+                    posts: results[3]
                 };
                 results = null;
 
