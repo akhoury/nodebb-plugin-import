@@ -34,10 +34,13 @@ Activate it, then visit
 
 Keep in mind that some Exporters may not be compatible or updated will all versions. File an issue when it's not.
 
-* UBB: https://github.com/akhoury/nodebb-plugin-import-ubb
-* PhpBB: https://github.com/psychobunny/nodebb-plugin-import-phpbb
-* PunBB: https://github.com/patricksebastien/nodebb-plugin-import-punbb
-* vBulletin: https://github.com/MakerStudios/nodebb-plugin-vbexporter
+* UBB: https://github.com/akhoury/nodebb-plugin-import-ubb [WORKS]
+* PhpBB: https://github.com/psychobunny/nodebb-plugin-import-phpbb [NEEDS-UPDATE] [issue](https://github.com/psychobunny/nodebb-plugin-import-phpbb/issues/1), I need a DB Dumb
+* PunBB: https://github.com/patricksebastien/nodebb-plugin-import-punbb [NEEDS-UPDATE] [issue](https://github.com/patricksebastien/nodebb-plugin-import-punbb/issues/1), I need a DB Dumb
+* vBulletin: https://github.com/MakerStudios/nodebb-plugin-vbexporter [NEEDS-UPDATE] [issue](https://github.com/MakerStudios/nodebb-plugin-vbexporter/issues/2), I need a DB Dumb
+* IP.Board: next in line, I need a DB Dumb [issue](https://github.com/akhoury/nodebb-plugin-import/issues/34)
+* MyBB: after IP.Board, I need a DB Dumb [issue](https://github.com/akhoury/nodebb-plugin-import/issues/35)
+* SMF: soon! Got a Dumb! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/33)
 
 ### Can't find the exporter you need?
 File an issue, request it. We usually would want a DB Dump and some time to write one out.
