@@ -49,7 +49,7 @@ Query the users, filter them at will, then call the `callback(err, map)` wih the
 In the `map`, the `keys` are the users `_uid` (or the old userId).
 
 Each record should look like this:
-```
+```javascript
 {
        // notice how all the old variables start with an _
       // if any of the required variables fails, the user will be skipped
@@ -104,7 +104,7 @@ Query the categories, filter them at will, then call `callback(err, map)` wih th
 In the `map`, the `keys` are the categories `_cid` (or the old categorieId).
 
 Each record should look like this:
-```
+```javascript
 {
         // notice how all the old variables start with an _
         // if any of the required variables fails, the category and all of its topics/posts will be skipped
@@ -132,7 +132,7 @@ Query the topics, filter them at will, then call `callback(err, map)` wih the fo
 In the `map`, the `keys` are the topics `_tid` (or the old topicId).
 
 Each record should look like this:
-```
+```javascript
 {
        // notice how all the old variables start with an _
       // if any of the required variables fails, the topic and all of its posts will be skipped
@@ -171,7 +171,7 @@ Query the posts, filter them at will, then call `callback(err, map)` wih the fol
 In the `map`, the `keys` are the posts `_pid` (or the old postId).
 
 Each record should look like this:
-```
+```javascript
 {
       // notice how all the old variables start with an _
       // if any of the required variables fails, the post will be skipped
@@ -218,7 +218,7 @@ You do not have to do anything extra to emit the events, just implement these fu
 
 just a function for you to be able to test your module independently from __nodebb-plugin-import__
 
-```
+```javascript
 // for example
 YourModule.testrun = function(config, callback) {
         async.series([

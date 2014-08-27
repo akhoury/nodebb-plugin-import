@@ -27,7 +27,7 @@ then run nodebb
 ./nodebb start
 ```
 Activate it, then visit
-http://localhost:4567/admin/plugins/import
+[http://localhost:4567/admin/plugins/import](http://localhost:4567/admin/plugins/import)
 (or whatever URL your instance lives on)
 
 ### Source forums support:
