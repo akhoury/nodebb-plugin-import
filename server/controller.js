@@ -31,12 +31,22 @@ var fs = require('fs-extra'),
     };
 
     Controller.start = function(config, callback) {
-        fs.remove(LOG_FILE, function(err) {
-            fs.ensureFile(LOG_FILE, function() {
-                Controller.startExport(config, function(err, data) {
-                    Controller.startImport(data, config, callback);
-                });
+        Controller.config(config);
+
+        var start = function() {
+            Controller.startExport(config, function(err, data) {
+                Controller.startImport(data, config, callback);
             });
+        };
+
+        fs.remove(LOG_FILE, function(err) {
+            if (Controller.config('log').server) {
+                fs.ensureFile(LOG_FILE, function() {
+                    start();
+                });
+            } else {
+                start();
+            }
         });
     };
 
@@ -114,14 +124,6 @@ var fs = require('fs-extra'),
         });
 
         Controller._exporter.init(Controller.config());
-    };
-
-    Controller.config = function(config) {
-        if (config != null) {
-            Controller._config = config;
-            Controller.emit('controller.config', Controller._config);
-        }
-        return Controller._config;
     };
 
     Controller.state = function(state) {
@@ -242,7 +244,9 @@ var fs = require('fs-extra'),
                 }
             }).then(function() {
                 var lastCommaIdx = content.lastIndexOf(',');
-                content = content.substring(0, lastCommaIdx) + '\n';
+                if (lastCommaIdx > 0) {
+                    content = content.substring(0, lastCommaIdx) + '\n';
+                }
                 content += ']';
                 callback(null, content);
             });
@@ -285,10 +289,12 @@ var fs = require('fs-extra'),
         });
     };
 
-
     Controller.emit = function (type, b, c) {
         var args = Array.prototype.slice.call(arguments, 0);
-        Controller.filelog(args);
+
+        if (Controller.config('log').server)
+            Controller.filelog(args);
+
         args.unshift(args[0]);
         Controller._dispatcher.emit.apply(Controller._dispatcher, args);
     };
@@ -302,7 +308,24 @@ var fs = require('fs-extra'),
     };
 
     Controller.removeAllListeners = function () {
-        Controller._dispatcher.removeAllListeners();
+        if (Controller._dispatcher && Controller._dispatcher.removeAllListeners)
+            Controller._dispatcher.removeAllListeners();
+    };
+
+    Controller.config = function(config, val) {
+        if (config != null) {
+            if (typeof config === 'object') {
+                Controller._config = config;
+            } else if (typeof config === 'string') {
+                if (val != null) {
+                    Controller._config = Controller._config || {};
+                    Controller._config[config] = val;
+                }
+                return Controller._config[config];
+            }
+            Controller.emit('controller.config', Controller._config);
+        }
+        return Controller._config;
     };
 
 })(module.exports);

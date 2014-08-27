@@ -104,7 +104,7 @@ var async = require('async'),
         // setup conversion template
         Importer.convert = (function() {
             var fnNames = [];
-            (Importer.config.convert || '').split(',').forEach(function(fnName) {
+            (Importer.config().convert || '').split(',').forEach(function(fnName) {
                 fnName = fnName.trim();
                 if (typeof Importer[fnName] === 'function') {
                     fnNames.push(fnName);

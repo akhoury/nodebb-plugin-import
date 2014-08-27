@@ -221,6 +221,26 @@ Plugin.api = {
             } else {
                 res.json(500, {error: 'Could not Controller.' + fn});
             }
+        },
+
+        convert: function(req, res, next) {
+            var content = req.body.content || '',
+                config = req.body.config;
+
+            if (Plugin.controller) {
+                if (!Plugin.controller._importer) {
+                    Plugin.controller._importer = require('./importer');
+                }
+
+                Plugin.controller._importer.init({}, config.importer, function() {
+                    res.json({
+                        content: Plugin.controller._importer.convert(content),
+                        config: Plugin.controller._importer.config()
+                    });
+                });
+            } else {
+                res.json(500, {error: 'Could not Controller.convert'});
+            }
         }
     }
 };

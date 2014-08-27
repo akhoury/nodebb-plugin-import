@@ -214,7 +214,7 @@
        </button>
 
        <button
-            title="Download users.csv"
+            title="Download users.json"
             class="btn btn-lg btn-default import-download-btn pull-right disabled"
             disabled="disabled"
             data-on="click"
@@ -224,7 +224,7 @@
        </button>
 
        <button
-            title="Download users.csv"
+            title="Download redirect.map.json"
             class="btn btn-lg btn-default import-download-btn pull-right disabled"
             disabled="disabled"
             data-on="click"
@@ -232,7 +232,27 @@
             id="download-redirection-json"
             type="button">redirect.map.json
        </button>
+
+        <div class="form-inline">
+           <div class="checkbox"">
+               <label for="importer-log-control-server">
+                  <input checked class="importer-log-control" type="checkbox" id="importer-log-control-server" name="importer-log-control-server"> Log on server
+               </label>
+               <p class="help-block">
+                   Disable this if the server is crashing due to 'EMFILE too many open files'
+               </p>
+           </div>
+           <div class="checkbox">
+               <label for="importer-log-control-client">
+                  <input checked class="importer-log-control" type="checkbox" id="importer-log-control-client" name="importer-log-control-server"> Log on client
+               </label>
+               <p class="help-block">
+                   Will be lost with a page refresh or crash
+               </p>
+           </div>
+        </div>
     </div>
+
 
     <div class="import-state-container">
         <h4>

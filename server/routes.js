@@ -17,5 +17,6 @@ module.exports =  {
 
         app.get(apiPrefix + '/fn', middleware.admin.isAdmin, Plugin.api.get.fn);
         app.post(apiPrefix + '/fn', middleware.admin.isAdmin, Plugin.api.post.fn);
+        app.post(apiPrefix + '/convert', Plugin.api.post.convert);
     }
 };
