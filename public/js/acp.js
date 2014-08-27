@@ -58,7 +58,14 @@
                 return util.props(obj[prop], newProps, value);
             },
 
-            toggleVisible: function($el) {
+            toggleVisible: function($el, toggle) {
+                if (toggle === true) {
+                    return $el.show().removeClass('hidden');
+                }
+                if (toggle === false) {
+                    return $el.hide().addClass('hidden');
+                }
+
                 if ($el.is(':visible')) {
                     $el.hide().addClass('hidden');
                 } else {
@@ -66,11 +73,17 @@
                 }
             },
 
-            toggleAvailable: function($el) {
-                if ($el.prop('disabled')) {
-                    $el.prop('disabled', false);
+            toggleAvailable: function($el, toggle) {
+                if (toggle === true) {
+                    return $el.prop('disabled', false).removeClass('disabled');
+                }
+                if (toggle === false) {
+                    return $el.prop('disabled', true).addClass('disabled');
+                }
+                if ($el.prop('disabled') || $el.hasClass('disabled')) {
+                    $el.prop('disabled', false).removeClass('disabled');
                 } else {
-                    $el.prop('disabled', true);
+                    $el.prop('disabled', true).addClass('disabled')
                 }
             },
 
@@ -158,7 +171,79 @@
                 $wrapper.find('.import-logs').empty();
                 actions.saveSettings();
                 start();
+            },
+
+            downloadUsersCsv: function(e) {
+                toggleDownloadBtns(false);
+                alertPreparingDownload();
+                return $.get(plugin.apiHost + '/download/users.csv')
+                    .done(function(data) {
+                        app.alertError('Something went wrong :(');
+                        download('users.csv', data);
+                    })
+                    .fail(function() {
+                        setTimeout(canDownload, 2000);
+                    })
+                    .always(function() {
+                        toggleDownloadBtns(true);
+                    });
+            },
+
+            downloadUsersJson: function(e) {
+                toggleDownloadBtns(false);
+                alertPreparingDownload();
+                $.get(plugin.apiHost + '/download/users.json')
+                    .done(function(data) {
+                        download('users.json', data);
+                    })
+                    .fail(function() {
+                        app.alertError('Something went wrong :(');
+                        setTimeout(canDownload, 2000);
+                    })
+                    .always(function() {
+                        toggleDownloadBtns(true);
+                    });
+            },
+
+            downloadRedirectionJson: function(e) {
+                toggleDownloadBtns(false);
+                alertPreparingDownload();
+                $.get(plugin.apiHost + '/download/redirect.json')
+                    .done(function(data) {
+                        download('redirect.map.json', data);
+                    })
+                    .fail(function() {
+                        app.alertError('Something went wrong :(');
+                        setTimeout(canDownload, 2000);
+                    })
+                    .always(function() {
+                        toggleDownloadBtns(true);
+                    });
             }
+        };
+
+        var download = function(filename, text) {
+            var pom = document.createElement('a');
+            pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            pom.setAttribute('download', filename);
+            pom.click();
+        };
+
+        var alertPreparingDownload = function() {
+            app.alert({
+                message: 'Preparing file, please be patient',
+                timeout: 1000
+            });
+        };
+
+        var toggleDownloadBtns = function(bool) {
+            var usersCsvBtn = $wrapper.find('#download-users-csv');
+            var usersJsonBtn = $wrapper.find('#download-users-json');
+            var redirectionJsonBtn = $wrapper.find('#download-redirection-json');
+
+            util.toggleAvailable(usersCsvBtn, bool);
+            util.toggleAvailable(usersJsonBtn, bool);
+            util.toggleAvailable(redirectionJsonBtn, bool);
         };
 
         var fn = plugin.fn = function(fn, args) {
@@ -198,24 +283,40 @@
             return $.get(plugin.apiHost + '/state');
         };
 
+        var canDownload = plugin.canDownload = function() {
+            return $.get(plugin.apiHost + '/candownload')
+                .done(function(data) {
+                    toggleDownloadBtns(!!(data && (data.candownload || data.canDownload)));
+                })
+                .fail(function() {
+                    toggleDownloadBtns(false);
+                });
+        };
+
         var findExporters = plugin.findExporters = function() {
             var spinner = $form.find('.exporter-module-spinner').addClass('fa-spin').removeClass('hidden');
-            return $.get(plugin.apiHost + '/xxxx---exporters').always(function(data) {
-                var options = [$('<option />').attr({
-                    'value': '',
-                    'class': 'exporter-module-option'
-                }).text('')];
-
-                $.each(data, function(k, v) {
-                    options.push($('<option />').attr({
-                        'value': k,
+            return $.get(plugin.apiHost + '/exporters')
+                .done(function(data) {
+                    var options = [$('<option />').attr({
+                        'value': '',
                         'class': 'exporter-module-option'
-                    }).text(k));
-                });
+                    }).text('')];
 
-                $('#exporter-module').empty().append(options);
-                spinner.removeClass('fa-spin').addClass('hidden');
-            });
+                    $.each(data, function(k, v) {
+                        options.push($('<option />').attr({
+                            'value': k,
+                            'class': 'exporter-module-option'
+                        }).text(k));
+                    });
+
+                    $('#exporter-module').empty().append(options);
+                }).
+                fail(function() {
+                    app.alertError('Could not detect exporters via the npm registry, please enter one manually');
+                }).
+                always(function() {
+                    spinner.removeClass('fa-spin').addClass('hidden');
+                });
         };
 
 
@@ -230,7 +331,6 @@
                 }
             });
         };
-
         var onControllerState = (function() {
             var container = $wrapper.find('.import-state-container');
             var now = $wrapper.find('.controller-state-now');
@@ -255,6 +355,7 @@
                     } else if (state.now === 'idle') {
                         startBtn.prop('disabled', false).removeClass('disabled');
                         container.css({color: 'grey'});
+                        canDownload();
                     } else {
                         container.css({color: 'grey'});
                     }
@@ -349,8 +450,21 @@
             socket.on('importer.warn', onWarn);
             socket.on('importer.error', onError);
 
-            getState().done(onControllerState);
+            socket.on('importer.complete', function() {
+                setTimeout(function(){
+                    canDownload();
+                }, 2000);
+            });
+
             findExporters();
+            canDownload();
+
+            getState().done(function() {
+                setTimeout(function() {
+                    util.toggleVertical($form.find('.import-config'), false, 'down');
+                }, 1000);
+                onControllerState(data);
+            });
         });
     });
 })(this);

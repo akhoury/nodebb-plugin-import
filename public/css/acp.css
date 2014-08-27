@@ -30,3 +30,10 @@
 .import-toolbar {
     margin: 10px 0;
 }
+code.import-code-example {
+    background: gray;
+    border: 1px solid white;
+}
+.import-download-btn {
+    margin-left: 5px;
+}

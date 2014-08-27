@@ -45,7 +45,15 @@
                         <select class="form-control" id="exporter-module" name="exporter-module"></select>
 
                         <label for="exporter-module-input">Or just enter the module's name or url you want to install</label>
-                        <input type="text" class="form-control" id="exporter-module-input" name="exporter-module-input" placeholder="nodebb-plugin-vbexporter">
+                        <p class="help-block">
+                            You can enter any valid npm package name, tarball file/url etc. see <a target="_blank" href="https://www.npmjs.org/doc/cli/npm-install.html">npm docs</a>
+                            <br /> i.e.
+                            <code class="import-code-example">nodebb-plugin-vbexporter</code> or <br />
+                            <code class="import-code-example">git://github.com/psychobunny/nodebb-plugin-import-phpbb#master</code> or <br/>
+                            <code class="import-code-example">nodebb-plugin-import-ubb@0.1.0</code> etc.<br />
+                            if a value exists here, it will take precedence over the select box value right above it.
+                        </p>
+                        <input type="text" class="form-control" id="exporter-module-input" name="exporter-module-input" placeholder="nodebb-plugin-my-compatible-exporter@0.0.1">
                     </div>
 
                     <div class="form-group">
@@ -116,38 +124,55 @@
                             <hr />
 
                         <div class="form-group">
-                            <label for="importer-passwordgen-enabled">Auto Password Generation</label>
-                            <p class="help-block">Auto Generate passwords for users, if no passwords are provided. If checked, this will hit performance, if unchecked, all passwords are NULL so all users will need to reset their passwords before login in. The latter is the recommended behavior</p>
-                            <input data-on="change" data-action="visibleToggle" data-target=".importer-passwordgen-configs" type="checkbox" class="form-control" id="importer-passwordGen-enabled" name="importer-passwordGen-enabled">
-                            <div class="importer-passwordgen-configs" style="display: none;">
-                                <label for="importer-passwordgen-chars">Password generation uses these characters</label>
-                                <input value="{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890" type="text" class="form-control" id="importer-passwordgen-chars" name="importer-passwordgen-chars" placeholder="{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890">
-
-                                <label for="importer-passwordgen-len">Passwords length</label>
-                                <input value="13" type="number" min="6" max="20" class="form-control" id="importer-passwordgen-len" name="importer-passwordgen-len" placeholder="13">
+                            <div class="checkbox">
+                                <label for="importer-passwordgen-enabled">
+                                    <input
+                                        data-on="change"
+                                        data-action="visibleToggle"
+                                        data-target=".importer-passwordgen-configs"
+                                        type="checkbox"
+                                        id="importer-passwordgen-enabled"
+                                        name="importer-passwordgen-enabled">
+                                        Auto Password Generation
+                                </label>
+                                <p class="help-block">Auto Generate passwords for users, if no passwords are provided. If checked, this will hit performance, if unchecked, all passwords are NULL so all users will need to reset their passwords before login in. The latter is the recommended behavior</p>
                             </div>
                         </div>
 
-                            <hr />
-
-                        <div class="form-group">
-                            <label for="importer-autoconfirm-emails">Auto confirm user accounts</label>
-                            <p class="help-block">
-                                Let the importer auto confirm the users new email automatically
-                                <br/>
-                                It will try to set the nodebb 'email:*:confirm' records to true
-                                and also delete all the 'confirm:*KEYS*:emails'
-                            </p>
-                            <input checked type="checkbox" id="importer-autoconfirm-emails" name="importer-autoconfirm-emails" class="form-control">
+                        <div class="importer-passwordgen-configs" style="display: none;">
+                            <label for="importer-passwordgen-chars">Password generation uses these characters</label>
+                            <input value="{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890" type="text" class="form-control" id="importer-passwordgen-chars" name="importer-passwordgen-chars" placeholder="{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890">
+                            <label for="importer-passwordgen-len">Passwords length</label>
+                            <input value="13" type="number" min="6" max="20" class="form-control" id="importer-passwordgen-len" name="importer-passwordgen-len" placeholder="13">
                         </div>
-                            <hr />
+
+                        <hr />
 
                         <div class="form-group">
-                            <label for="importer-user-reputation-multiplier">Users reputation multiplier</label>
-                            <p class="help-block">If you want to boost the karma</p>
+                            <div class="checkbox">
+                                <label for="importer-autoconfirm-emails">
+                                   <input checked type="checkbox" id="importer-autoconfirm-emails" name="importer-autoconfirm-emails"> Auto confirm user accounts
+                                </label>
+                                <p class="help-block">
+                                    Let the importer auto confirm the users new email automatically
+                                    <br/>
+                                    It will try to set the nodebb 'email:*:confirm' records to true
+                                    and also delete all the 'confirm:*KEYS*:emails'
+                                </p>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="form-group">
+                            <label for="importer-user-reputation-multiplier">
+                                Users reputation multiplier
+                            </label>
                             <input value="1" type="number" min="0" id="importer-user-reputation-multiplier" name="importer-user-reputation-multiplier" class="form-control">
+                            <p class="help-block">If you want to boost the karma</p>
                         </div>
-                            <hr />
+
+                        <hr />
 
                         <div class="form-group">
                             <h4>Categories styling</h4>
@@ -174,8 +199,39 @@
         </fieldset>
     </form>
 
-    <div class="import-toolbar">
+    <div class="import-toolbar import-overflow-hidden">
        <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Start Export Then Import</button>
+       <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
+
+       <button
+            title="Download users.csv"
+            class="btn btn-lg btn-default import-download-btn pull-right disabled"
+            disabled="disabled"
+            data-on="click"
+            data-action="downloadUsersCsv"
+            id="download-users-csv"
+            type="button">users.csv
+       </button>
+
+       <button
+            title="Download users.csv"
+            class="btn btn-lg btn-default import-download-btn pull-right disabled"
+            disabled="disabled"
+            data-on="click"
+            data-action="downloadUsersJson"
+            id="download-users-json"
+            type="button">users.json
+       </button>
+
+       <button
+            title="Download users.csv"
+            class="btn btn-lg btn-default import-download-btn pull-right disabled"
+            disabled="disabled"
+            data-on="click"
+            data-action="downloadRedirectionJson"
+            id="download-redirection-json"
+            type="button">redirect.map.json
+       </button>
     </div>
 
     <div class="import-state-container">
@@ -189,10 +245,10 @@
 
     <div class="import-logs-container">
         <h4>Logs (reversed order)</h4>
-        <div class="import-logs col-sm-12">
-
-        </div>
+        <div class="import-logs col-sm-12"></div>
     </div>
+
+    <p class="help-block">For any problem, please open an issue at the plugin's <a href="https://github.com/akhoury/nodebb-plugin-import" target="_blank">gitbub repo</a></p>
 </div>
 
 <script src="/plugins/nodebb-plugin-import/js/acp.js"></script>

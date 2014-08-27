@@ -119,6 +119,14 @@ Plugin.api = {
             }
         },
 
+        candownload: function(req, res, next) {
+            if (Plugin.controller && Plugin.controller.canDownloadDeliverables()) {
+                res.json({candownload: true});
+            } else {
+                res.json({candownload: false});
+            }
+        },
+
         config: function(req, res, next) {
             Plugin.settings(function(err, config) {
                 if (err) {
@@ -143,6 +151,36 @@ Plugin.api = {
                 Plugin.controller.findModules('nodebb-plugin-import-', function(err, results) {
                     res.json(results);
                 });
+            }
+        },
+
+        redirectJson: function(req, res, next) {
+            if (Plugin.controller && Plugin.controller.canDownloadDeliverables()) {
+                Plugin.controller.getRedirectionJson(function(err, content) {
+                    res.json(content);
+                });
+            } else {
+                res.json({error: 'Cannot download now'});
+            }
+        },
+
+        usersJson: function(req, res, next) {
+            if (Plugin.controller && Plugin.controller.canDownloadDeliverables()) {
+                Plugin.controller.getUsersJson(function(err, content) {
+                    res.json(content);
+                });
+            } else {
+                res.json({error: 'Cannot download now'});
+            }
+        },
+
+        usersCsv: function(req, res, next) {
+            if (Plugin.controller && Plugin.controller.canDownloadDeliverables()) {
+                Plugin.controller.getUsersCsv(function(err, content) {
+                    res.json(content);
+                });
+            } else {
+                res.json({error: 'Cannot download now'});
             }
         }
     },
