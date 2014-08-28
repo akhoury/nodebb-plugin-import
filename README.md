@@ -41,7 +41,7 @@ Keep in mind that some Exporters may not be compatible or updated will all versi
 * vBulletin: https://github.com/MakerStudios/nodebb-plugin-vbexporter [NEEDS-UPDATE] [issue](https://github.com/MakerStudios/nodebb-plugin-vbexporter/issues/2), I need a DB Dump
 * IP.Board: next in line, I got DB Dump! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/34)
 * MyBB: after IP.Board, I need a DB Dump [issue](https://github.com/akhoury/nodebb-plugin-import/issues/35)
-* SMF: soon! Got a Dump! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/33)
+* SMF: https://github.com/a5mith/nodebb-plugin-import-smf [NEEDS UPDATE] soon, Got a Dump! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/33)
 
 ### Can't find the exporter you need?
 File an issue, request it. We usually would want a DB Dump and some time to write one out.
