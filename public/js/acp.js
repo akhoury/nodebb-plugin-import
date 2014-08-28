@@ -306,11 +306,15 @@
                                 CONTENT.write(blob);
 
                                 if (typeof callback === 'function')
-                                    callback();
+                                    callback(content);
                             })
                         });
                     });
                 });
+            } else {
+                if (typeof callback === 'function') {
+                    callback(false);
+                }
             }
         };
 
