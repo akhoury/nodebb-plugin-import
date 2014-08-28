@@ -37,3 +37,12 @@ code.import-code-example {
 .import-download-btn {
     margin-left: 5px;
 }
+.import-log-info {
+    color: #000091;
+}
+.import-log-warn {
+    color: #977000;
+}
+.import-log-error {
+    color: #970002;
+}

@@ -197,14 +197,13 @@
                 <i title="Toggle settings" data-target-visible-direction="down" data-on="click" data-action="slideVerticalToggle" data-target=".import-config" class="fa fa-bars import-hand"></i>
             </div>
         </fieldset>
-    </form>
 
     <div class="import-toolbar import-overflow-hidden">
        <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Delete all current data, export from source then import to NodeBB</button>
        <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
 
        <button
-            title="Download users.csv"
+            title="Attempts to retrieve and download users.csv from your last import run"
             class="btn btn-lg btn-default import-download-btn pull-right disabled"
             disabled="disabled"
             data-on="click"
@@ -214,7 +213,7 @@
        </button>
 
        <button
-            title="Download users.json"
+            title="Attempts to retrieve and download users.json from your last import run"
             class="btn btn-lg btn-default import-download-btn pull-right disabled"
             disabled="disabled"
             data-on="click"
@@ -224,7 +223,7 @@
        </button>
 
        <button
-            title="Download redirect.map.json"
+            title="Attempts to retrieve and download redirect.map.json of your last import run"
             class="btn btn-lg btn-default import-download-btn pull-right disabled"
             disabled="disabled"
             data-on="click"
@@ -236,22 +235,24 @@
         <div class="form-inline">
            <div class="checkbox"">
                <label for="importer-log-control-server">
-                  <input checked class="importer-log-control" type="checkbox" id="importer-log-control-server" name="importer-log-control-server"> Log on server
+                  <input class="importer-log-control" type="checkbox" id="importer-log-control-server" name="importer-log-control-server"> Save logs on server
                </label>
                <p class="help-block">
-                   Disable this if the server is crashing due to 'EMFILE too many open files'
+                   Try disabling this if the server is crashing due to 'EMFILE too many open files' or 'Segmentation fault'
                </p>
            </div>
-           <div class="checkbox">
+           <div class="checkbox pull-right" style="text-align: right;">
                <label for="importer-log-control-client">
-                  <input checked class="importer-log-control" type="checkbox" id="importer-log-control-client" name="importer-log-control-server"> Log on client
+                  <input checked class="importer-log-control" type="checkbox" id="importer-log-control-client" name="importer-log-control-client"> Log on client
                </label>
                <p class="help-block">
-                   Will be lost with a page refresh or crash
+                   May or may not be lost on a page refresh, depending on your browser. (use chrome)
                </p>
            </div>
         </div>
     </div>
+ </form>
+
 
 
     <div class="import-state-container">
@@ -268,7 +269,19 @@
         <div class="import-logs col-sm-12"></div>
     </div>
 
-    <p class="help-block">For any problem, please open an issue at the plugin's <a href="https://github.com/akhoury/nodebb-plugin-import" target="_blank">gitbub repo</a></p>
+    <p class="help-block">
+        <br/>
+
+        <h4>Some common issues:</h4>
+        <ul>
+            <li>"EMFILE too many open files" error, try disabling the server logs</li>
+            <li>"Segmentation fault" error, along with disabling server logs, try changing the "convert" option to "Don't convert", that's most likely it, then I'll file an issue, I'll help you through it.</li>
+        </ul>
+    </p>
+
+    <p class="help-block">
+        For all problems, please file an issue at the plugin's <a href="https://github.com/akhoury/nodebb-plugin-import" target="_blank">gitbub repo</a>
+    </p>
 </div>
 
 <script src="/plugins/nodebb-plugin-import/js/acp.js"></script>

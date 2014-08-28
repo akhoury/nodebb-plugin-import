@@ -34,11 +34,10 @@ var fs = require('fs-extra'),
         Controller.config(config);
 
         var start = function() {
-            Controller.startExport(config, function(err, data) {
-                Controller.startImport(data, config, callback);
+            Controller.startExport(Controller.config(), function(err, data) {
+                Controller.startImport(data, Controller.config(), callback);
             });
         };
-
         fs.remove(LOG_FILE, function(err) {
             if (Controller.config('log').server) {
                 fs.ensureFile(LOG_FILE, function() {
@@ -111,15 +110,14 @@ var fs = require('fs-extra'),
                 };
                 results = null;
 
-                fs.outputFile(
-                    path.join(__dirname, '/tmp/exporter.data.json'),
-                    JSON.stringify(Controller._exporter.data, undefined, 2),
-                    function(err) {
-                        Controller._exporter.emit('exporter.complete');
-
-                        callback(err, Controller._exporter.data);
-                    }
-                );
+//                fs.outputFile(
+//                    path.join(__dirname, '/tmp/exporter.data.json'),
+//                    JSON.stringify(Controller._exporter.data, undefined, 2),
+//                    function(err) {
+                Controller._exporter.emit('exporter.complete');
+                callback(err, Controller._exporter.data);
+//                    }
+//                );
             });
         });
 
@@ -218,7 +216,7 @@ var fs = require('fs-extra'),
             lineReader.eachLine(LOG_FILE, function(line) {
                 line = line || '';
                 idx = line.indexOf(keyword);
-                if (idx > 0) {
+                if (idx > -1) {
                     content += line.substr(idx + len + 1) + '\n';
                 }
             }).then(function() {
@@ -239,7 +237,7 @@ var fs = require('fs-extra'),
             lineReader.eachLine(LOG_FILE, function(line) {
                 line = line || '';
                 idx = line.indexOf(keyword);
-                if (idx > 0) {
+                if (idx > -1) {
                     content += line.substr(idx + len) + '\n';
                 }
             }).then(function() {
@@ -265,7 +263,7 @@ var fs = require('fs-extra'),
             lineReader.eachLine(LOG_FILE, function(line) {
                 line = line || '';
                 idx = line.indexOf(keyword);
-                if (idx > 0) {
+                if (idx > -1) {
                     content += line.substr(idx + len) + '\n';
                 }
             }).then(function() {
@@ -292,8 +290,9 @@ var fs = require('fs-extra'),
     Controller.emit = function (type, b, c) {
         var args = Array.prototype.slice.call(arguments, 0);
 
-        if (Controller.config('log').server)
+        if (Controller.config('log').server) {
             Controller.filelog(args);
+        }
 
         args.unshift(args[0]);
         Controller._dispatcher.emit.apply(Controller._dispatcher, args);
@@ -312,18 +311,55 @@ var fs = require('fs-extra'),
             Controller._dispatcher.removeAllListeners();
     };
 
+
+    // move to utils
+
+    var resolveType = function(str) {
+        var type = typeof str;
+        if (type !== 'string') {
+            return str;
+        } else {
+            var nb = parseFloat(str);
+            if (!isNaN(nb) && isFinite(str))
+                return nb;
+            if (str === 'false')
+                return false;
+            if (str === 'true')
+                return true;
+
+            try {
+                str = JSON.parse(str);
+            } catch (e) {}
+
+            return str;
+        }
+    };
+    var recursiveIteration = function(object) {
+        for (var property in object) {
+            if (object.hasOwnProperty(property)) {
+                if (typeof object[property] == "object"){
+                    recursiveIteration(object[property]);
+                }else{
+                    object[property] = resolveType(object[property]);
+                }
+            }
+        }
+    };
+
     Controller.config = function(config, val) {
         if (config != null) {
             if (typeof config === 'object') {
+                recursiveIteration(config);
                 Controller._config = config;
+                Controller.emit('controller.config', Controller._config);
             } else if (typeof config === 'string') {
                 if (val != null) {
                     Controller._config = Controller._config || {};
-                    Controller._config[config] = val;
+                    Controller._config[config] = resolveType(val);
+                    Controller.emit('controller.config', Controller._config);
                 }
                 return Controller._config[config];
             }
-            Controller.emit('controller.config', Controller._config);
         }
         return Controller._config;
     };

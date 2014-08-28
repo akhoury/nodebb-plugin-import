@@ -25,6 +25,7 @@ var async = require('async'),
     backupConfigFilepath = __dirname + '/tmp/importer.nbb.backedConfig.json',
 
     defaults = {
+        log: true,
         convert: null,
         passwordGen: {
             enabled: false,
@@ -77,6 +78,9 @@ var async = require('async'),
         Importer.emit('importer.setup.start');
 
         Importer._config = nodeExtend(true, {}, defaults, config && config.importer ? config.importer : config || {});
+
+        //todo I don't like this
+        Importer._config.log = !!config.log.server;
 
         Importer.data = data || {};
         Importer.data.users = Importer.data.users || {};
@@ -877,12 +881,19 @@ var async = require('async'),
         Importer._dispatcher.once.apply(Importer._dispatcher, arguments);
     };
 
+    Importer.removeAllListeners = function () {
+        Importer._dispatcher.removeAllListeners();
+    };
+
     Importer.warn = function() {
         var args = _.toArray(arguments);
         args.unshift('importer.warn');
         Importer.emit.apply(Importer, args);
         args.unshift(logPrefix);
-        console.warn.apply(console, args);
+
+        if (Importer._config.log) {
+            console.warn.apply(console, args);
+        }
     };
 
     Importer.log = function() {
@@ -890,7 +901,10 @@ var async = require('async'),
         args.unshift('importer.log');
         Importer.emit.apply(Importer, args);
         args.unshift(logPrefix);
-        console.log.apply(console, args);
+
+        if (Importer._config.log) {
+            console.log.apply(console, args);
+        }
     };
 
     Importer.error = function() {
