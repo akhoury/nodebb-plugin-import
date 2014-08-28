@@ -253,8 +253,6 @@
     </div>
  </form>
 
-
-
     <div class="import-state-container">
         <h4>
             State:
@@ -271,12 +269,7 @@
 
     <p class="help-block">
         <br/>
-
-        <h4>Some common issues:</h4>
-        <ul>
-            <li>"EMFILE too many open files" error, try disabling the server logs</li>
-            <li>"Segmentation fault" error, along with disabling server logs, try changing the "convert" option to "Don't convert", that's most likely it, then I'll file an issue, I'll help you through it.</li>
-        </ul>
+        <h4><a target="_blank" href="https://github.com/akhoury/nodebb-plugin-import#some-common-issues">Some common issues</a></h4>
     </p>
 
     <p class="help-block">

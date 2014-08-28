@@ -13,8 +13,10 @@ Works with NodeBB v0.5.0-3
 
 ## Screenshots
 
-![Imgur](http://i.imgur.com/GFMyfwB.png)
-![Imgur](http://i.imgur.com/EZtsPZS.png)
+![Imgur](http://i.imgur.com/aPbBTza.png)
+![Imgur](http://i.imgur.com/SzHVU2Z.png)
+![Imgur](http://i.imgur.com/uHzPvgd.png)
+![Imgur](http://i.imgur.com/soRHXM3.png)
 
 ## Usage
 
@@ -38,7 +40,7 @@ Keep in mind that some Exporters may not be compatible or updated will all versi
 * PhpBB: https://github.com/psychobunny/nodebb-plugin-import-phpbb [NEEDS-UPDATE] [issue](https://github.com/psychobunny/nodebb-plugin-import-phpbb/issues/1), I need a DB Dumb
 * PunBB: https://github.com/patricksebastien/nodebb-plugin-import-punbb [NEEDS-UPDATE] [issue](https://github.com/patricksebastien/nodebb-plugin-import-punbb/issues/1), I need a DB Dumb
 * vBulletin: https://github.com/MakerStudios/nodebb-plugin-vbexporter [NEEDS-UPDATE] [issue](https://github.com/MakerStudios/nodebb-plugin-vbexporter/issues/2), I need a DB Dumb
-* IP.Board: next in line, I need a DB Dumb [issue](https://github.com/akhoury/nodebb-plugin-import/issues/34)
+* IP.Board: next in line, I got DB Dumb! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/34)
 * MyBB: after IP.Board, I need a DB Dumb [issue](https://github.com/akhoury/nodebb-plugin-import/issues/35)
 * SMF: soon! Got a Dumb! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/33)
 
@@ -86,6 +88,12 @@ NodeBB prefers using Markdown as the *content language format*, and since most W
 - Posts Content
 
 *If you are importing already 'markdownified' content, just don't set the `convert` option to skip the conversion, also if you are importing some other format, feel free to submit a pull request or open an issue, if there is a Node module to it, or there is some pre-built JS "function" to convert the content, I'll add it*
+
+### Some common issues</h4>
+
+* "EMFILE too many open files" error, try disabling the server logs, there is an option for that
+* "Segmentation fault" error, along with disabling server logs, try changing the "convert" option to "Don't convert", that's most likely it, then I'll file an issue, I'll help you through it.
+* "Error: MISCONF Redis is configured to save RDB snapshots, but is currently not able to persist on disk." see [the redis note](https://github.com/akhoury/nodebb-plugin-import#redis-note), it might help
 
 ### Test
 
