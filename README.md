@@ -35,13 +35,13 @@ Activate it, then visit
 
 Keep in mind that some Exporters may not be compatible or updated will all versions. File an issue when it's not.
 
-* UBB: https://github.com/akhoury/nodebb-plugin-import-ubb [WORKS]
-* PhpBB: https://github.com/psychobunny/nodebb-plugin-import-phpbb [NEEDS-UPDATE] [issue](https://github.com/psychobunny/nodebb-plugin-import-phpbb/issues/1), I need a DB Dump
-* PunBB: https://github.com/patricksebastien/nodebb-plugin-import-punbb [NEEDS-UPDATE] [issue](https://github.com/patricksebastien/nodebb-plugin-import-punbb/issues/1), I need a DB Dump
-* vBulletin: https://github.com/MakerStudios/nodebb-plugin-vbexporter [NEEDS-UPDATE] [issue](https://github.com/MakerStudios/nodebb-plugin-vbexporter/issues/2), I need a DB Dump
-* IP.Board: next in line, I got DB Dump! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/34)
-* MyBB: after IP.Board, I need a DB Dump [issue](https://github.com/akhoury/nodebb-plugin-import/issues/35)
-* SMF: https://github.com/a5mith/nodebb-plugin-import-smf [NEEDS UPDATE] soon, Got a Dump! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/33)
+* __UBB__: https://github.com/akhoury/nodebb-plugin-import-ubb [WORKS]
+* __PhpBB__: https://github.com/psychobunny/nodebb-plugin-import-phpbb [NEEDS-UPDATE] [issue](https://github.com/psychobunny/nodebb-plugin-import-phpbb/issues/1), I need a DB Dump
+* __PunBB__: https://github.com/patricksebastien/nodebb-plugin-import-punbb [NEEDS-UPDATE] [issue](https://github.com/patricksebastien/nodebb-plugin-import-punbb/issues/1), I need a DB Dump
+* __vBulletin__: https://github.com/MakerStudios/nodebb-plugin-vbexporter [NEEDS-UPDATE] [issue](https://github.com/MakerStudios/nodebb-plugin-vbexporter/issues/2), I need a DB Dump
+* __IP.Board__: next in line, I got DB Dump! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/34)
+* __MyBB__: after IP.Board, I need a DB Dump [issue](https://github.com/akhoury/nodebb-plugin-import/issues/35)
+* __SMF__: https://github.com/a5mith/nodebb-plugin-import-smf [NEEDS UPDATE] soon, Got a Dump! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/33)
 
 ### Can't find the exporter you need?
 File an issue, request it. We usually would want a DB Dump and some time to write one out.
