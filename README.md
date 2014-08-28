@@ -80,13 +80,16 @@ see [Redis Note](https://github.com/akhoury/nodebb-plugin-import#redis-note), an
 
 ### Markdown Note
 
-NodeBB prefers using Markdown as the *content language format*, and since most Web 1.0 forums use either straight out __HTML__ or __BB Code__, there is a config option called `"convert"` which you can set to either `"html-to-md"` or `"bbcode-to-md"` and the while importing, the importer will convert the following:
+NodeBB prefers using Markdown as the *content language format*, and since most Web 1.0 forums use either straight out __HTML__ or __BB Code__, there is a config option called `"convert"` which you can set to either `"html-to-md"` or `"bbcode-to-md"` and  while importing, the importer will convert the following:
 
 - Users signatures
-- Topics Content, but NOT titles
+- Topics Content
+- Topics Title
+- Categories Names
+- Categories Descriptions
 - Posts Content
 
-*If you are importing already 'markdownified' content, just don't set the `convert` option to skip the conversion, also if you are importing some other format, feel free to submit a pull request or open an issue, if there is a Node module to it, or there is some pre-built JS "function" to convert the content, I'll add it*
+*If you are importing already 'markdownified' content, just don't set the `convert` option, or select "Don't convert" to skip the conversion, also if you are importing some other format, feel free to submit a pull request or open an issue, if there is a Node Module to it, or if there is some pre-built JS "function" to convert the content, I'll add it*
 
 ### Some common issues</h4>
 
