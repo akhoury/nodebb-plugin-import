@@ -35,13 +35,9 @@ Activate it, then visit
 
 Keep in mind that some Exporters may not be compatible or updated will all versions. File an issue when it's not.
 
-* __UBB__: https://github.com/akhoury/nodebb-plugin-import-ubb [WORKS]
-* __PhpBB__: https://github.com/psychobunny/nodebb-plugin-import-phpbb [WORKS]
-* __SMF__: https://github.com/a5mith/nodebb-plugin-import-smf [WORKS]
-* __IP.Board__: next in line, I got DB Dump! [issue](https://github.com/akhoury/nodebb-plugin-import/issues/34)
-* __PunBB__: https://github.com/patricksebastien/nodebb-plugin-import-punbb [NEEDS-UPDATE] [issue](https://github.com/patricksebastien/nodebb-plugin-import-punbb/issues/1), I need a DB Dump
-* __vBulletin__: https://github.com/MakerStudios/nodebb-plugin-vbexporter [NEEDS-UPDATE] [issue](https://github.com/MakerStudios/nodebb-plugin-vbexporter/issues/2), I need a DB Dump
-* __MyBB__: after IP.Board, I need a DB Dump [issue](https://github.com/akhoury/nodebb-plugin-import/issues/35)
+* [Works](https://github.com/akhoury/nodebb-plugin-import/issues?q=label%3AExporter+is%3Aclosed)
+* [In Progress, Needs testing or blocked (I need db dumps)](https://github.com/akhoury/nodebb-plugin-import/labels/Exporter)
+
 
 
 ### Can't find the exporter you need?
