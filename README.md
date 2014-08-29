@@ -53,7 +53,7 @@ Or even better, write your own, see [write-my-own-exporter](./write-my-own-expor
 I will try to keep supporting future NodeBB versions, since it's still very young and I'm a fan,
 but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can, or a pull request if you find an issue or a missing feature
 
-### Imported now what?
+### Imported, now what?
 
 Once the importer is done, 3 Files will be available for you to download *(depending on your config, they may not be persisted for too long, so download them as soon as the import is done)*
 
