@@ -207,17 +207,18 @@ Plugin.api = {
         fn: function(req, res, next) {
             var fn = req.body.fn,
                 args = req.body.args || [];
-
-            args.push(function(err) {
-                if (err) {
-                    res.json(500, err);
-                } else {
-                    res.json.apply(res, arguments);
-                }
-            });
+//
+//            args.push(function(err) {
+//                if (err) {
+//                    res.json(500, err);
+//                } else {
+//                    res.json.apply(res, arguments);
+//                }
+//            });
 
             if (Plugin.controller && typeof Plugin.controller[fn] === 'function') {
                 Plugin.controller[fn].apply(Plugin.controller, args);
+                res.json({started: true});
             } else {
                 res.json(500, {error: 'Could not Controller.' + fn});
             }
