@@ -418,7 +418,9 @@ var async = require('async'),
                 order: category._order || count + 1,
 
                 disabled: category._disabled || 0,
-
+                
+                parentCid: category._parent || category._parentCid || undefined,
+                
                 link: category._link || 0,
 
                 // roulette, that too,
