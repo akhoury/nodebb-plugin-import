@@ -294,6 +294,19 @@
                         }
                     });
                 }
+            },
+
+            toggleVerboseLogs: function(e) {
+                var verbose = $('#importer-log-control-client-verbose').is(':checked');
+                if (verbose) {
+                    $('.import-log-info').removeClass('hidden');
+                } else {
+                    $('.import-log-info').addClass('hidden');
+                }
+            },
+
+            toggleVerboseLogsBox: function(e) {
+                util.toggleAvailable($wrapper.find('#importer-log-control-client-verbose'), $wrapper.find('#importer-log-control-client').is(':checked'));
             }
         };
 
@@ -344,9 +357,11 @@
         var toggleLogBtns = function(bool) {
             var serverBtn = $wrapper.find('#importer-log-control-server');
             var clientBtn = $wrapper.find('#importer-log-control-client');
+            var clientVerboseBtn = $wrapper.find('#importer-log-control-client-verbose');
 
             util.toggleAvailable(serverBtn, bool);
             util.toggleAvailable(clientBtn, bool);
+            util.toggleAvailable(clientVerboseBtn, bool);
         };
 
 
@@ -574,25 +589,35 @@
 
         var logsEl = $wrapper.find('.import-logs');
         var logOptionEl = $('#importer-log-control-client');
-        var line = function(msg, addClasses) {
+        var logVerboseOptionEl = $('#importer-log-control-client-verbose');
+        var line = function(msg, level) {
             if (!logOptionEl.is(':checked')) return;
             msg = typeof msg === 'object' ? JSON.stringify(msg) : msg;
-            return $('<p />').text(msg).addClass('import-logs-line ' + (addClasses || ''));
+
+            return $('<p />').text(msg).addClass('import-logs-line import-log '
+                + (level ? 'import-log-' + level + ' ': '')
+                + (!logVerboseOptionEl.is(':checked') && level === 'info' ? 'hidden' : ''));
         };
         var onLog = function(msg) {
-            var l = line(msg, 'import-log import-log-info');
+            var l = line(msg, 'info');
             if (l) {
                 logsEl.prepend(l);
             }
         };
         var onWarn = function(msg) {
-            var l = line(msg, 'import-log import-log-warn');
+            var l = line(msg, 'warn');
+            if (l) {
+                logsEl.prepend(l);
+            }
+        };
+        var onSuccess = function(msg) {
+            var l = line(msg, 'success');
             if (l) {
                 logsEl.prepend(l);
             }
         };
         var onError = function(error) {
-            var l = line(error, 'import-log import-log-error');
+            var l = line(error, 'error');
             if (l) {
                 logsEl.prepend(l);
             }
@@ -653,6 +678,7 @@
                 importer: importer,
                 log: {
                     client: $wrapper.find('#importer-log-control-client').is(':checked'),
+                    clientVerbose: $wrapper.find('#importer-log-control-client-verbose').is(':checked'),
                     server: $wrapper.find('#importer-log-control-server').is(':checked')
                 }
             };
@@ -665,10 +691,6 @@
 
             socket.on('controller.state', onControllerState);
 
-            socket.on('exporter.tail.line', onLog);
-            socket.on('importer.tail.error', onError);
-            socket.on('exporter.tail.error', onError);
-
             socket.on('exporter.log', onLog);
             socket.on('exporter.warn', onWarn);
             socket.on('exporter.error', onError);
@@ -676,6 +698,7 @@
             socket.on('importer.log', onLog);
             socket.on('importer.warn', onWarn);
             socket.on('importer.error', onError);
+            socket.on('importer.success', onSuccess);
 
             socket.on('importer.complete', function() {
                 setTimeout(function(){

@@ -37,6 +37,9 @@ code.import-code-example {
 .import-download-btn {
     margin-left: 5px;
 }
+.import-log-success {
+    color: #00910b;
+}
 .import-log-info {
     color: #000091;
 }

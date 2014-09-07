@@ -232,7 +232,7 @@
             type="button">redirect.map.json
        </button>
 
-        <div class="form-inline">
+        <div class="form">
            <div class="checkbox"">
                <label for="importer-log-control-server">
                   <input class="importer-log-control" type="checkbox" id="importer-log-control-server" name="importer-log-control-server"> Save logs on server
@@ -241,13 +241,21 @@
                    Try disabling this if the server is crashing due to 'EMFILE too many open files' or 'Segmentation fault'
                </p>
            </div>
-           <div class="checkbox pull-right" style="text-align: right;">
+           <div class="checkbox">
                <label for="importer-log-control-client">
-                  <input checked class="importer-log-control" type="checkbox" id="importer-log-control-client" name="importer-log-control-client"> Log on client
+                  <input data-on="click" data-action="toggleVerboseLogsBox" checked class="importer-log-control" type="checkbox" id="importer-log-control-client" name="importer-log-control-client"> Log on client
                </label>
                <p class="help-block">
                    May or may not be lost on a page refresh, depending on your browser. (use chrome)
                </p>
+           </div>
+           <div class="checkbox">
+               <label for="importer-log-control-client-verbose">
+                  <input data-on="click" data-action="toggleVerboseLogs" checked class="importer-log-control" type="checkbox" id="importer-log-control-client-verbose" name="importer-log-control-client-verbose"> Show verbose logs
+               </label>
+                  <p class="help-block">
+                      Only applicable if 'Log on client' is enabled
+                  </p>
            </div>
         </div>
     </div>

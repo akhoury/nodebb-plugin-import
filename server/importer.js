@@ -76,13 +76,11 @@ var async = require('async'),
     };
 
     Importer.setup = function(data, config, callback) {
-
-        Importer.emit('importer.setup.start');
-
         Importer._config = nodeExtend(true, {}, defaults, config && config.importer ? config.importer : config || {});
-
         //todo I don't like this
         Importer._config.log = !!config.log.server;
+
+        Importer.emit('importer.setup.start');
 
         Importer.data = data || {};
         Importer.data.users = Importer.data.users || {};
@@ -184,20 +182,20 @@ var async = require('async'),
         Importer.log('importer.purge.start');
         async.series([
             function(next){
-                Importer.log('importer.purge.categories-topics-posts.start');
+                Importer.success('importer.purge.categories-topics-posts.start', '...that might take a while');
                 DB.getSortedSetRange('categories:cid', 0, -1, function(err, cids){
                     async.eachLimit(cids || [], 5, function(cid, done) {
                             Categories.purge(cid, done);
                         },
                         function(){
-                            Importer.log('importer.purge.categories-topics-posts.done');
+                            Importer.success('importer.purge.categories-topics-posts.done');
                             next();
                         }
                     );
                 });
             },
             function(next) {
-                Importer.log('importer.purge.users.start');
+                Importer.success('importer.purge.users.start', '...that might take a while');
                 DB.getSortedSetRange('users:joindate', 0, -1, function(err, uids) {
                     async.eachLimit(uids || [], 5, function(uid, done) {
                             if (parseInt(uid, 10) !== 1) {
@@ -207,7 +205,7 @@ var async = require('async'),
                             }
                         },
                         function(){
-                            Importer.log('importer.purge.users.done');
+                            Importer.success('importer.purge.users.done');
                             next();
                         }
                     );
@@ -215,7 +213,7 @@ var async = require('async'),
 
             },
             function(next) {
-                Importer.log('importer.purge.reset.globals.start');
+                Importer.success('importer.purge.reset.globals.start');
                 async.parallel([
                     function(done) {
                         DB.setObjectField('global', 'nextUid', 1, done);
@@ -251,7 +249,7 @@ var async = require('async'),
                 Importer.error(err);
                 throw err;
             }
-            Importer.log('importer.purge.done');
+            Importer.success('importer.purge.done');
             next();
         });
     };
@@ -271,7 +269,7 @@ var async = require('async'),
                 },
             users = Importer.data.users;
 
-        Importer.log('Importing ' + users._uids.length + ' users.');
+        Importer.success('Importing ' + users._uids.length + ' users.');
 
         async.eachLimit(users._uids, 10, function(_uid, done) {
             count++;
@@ -368,7 +366,7 @@ var async = require('async'),
                 throw err;
             }
 
-            Importer.log('Importing ' + imported + '/' + users._uids.length + ' users took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
+            Importer.success('Importing ' + imported + '/' + users._uids.length + ' users took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
 
             if (config.autoConfirmEmails && Importer.DBkeys) {
                 async.parallel([
@@ -407,7 +405,7 @@ var async = require('async'),
             config = Importer.config(),
             categories = Importer.data.categories;
 
-        Importer.log('Importing ' + categories._cids.length + ' categories.');
+        Importer.success('Importing ' + categories._cids.length + ' categories.');
 
         async.eachLimit(categories._cids, 10, function(_cid, done) {
             count++;
@@ -459,7 +457,7 @@ var async = require('async'),
             if (err) {
                 throw err;
             }
-            Importer.log('Importing ' + imported + '/' + categories._cids.length + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+            Importer.success('Importing ' + imported + '/' + categories._cids.length + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
             Importer.emit('importer.categories.done');
             next();
         });
@@ -475,7 +473,7 @@ var async = require('async'),
             categories = Importer.data.categories,
             topics = Importer.data.topics;
 
-        Importer.log('Importing ' + topics._tids.length + ' topics.');
+        Importer.success('Importing ' + topics._tids.length + ' topics.');
 
         async.eachLimit(topics._tids, 10, function(_tid, done) {
             count++;
@@ -567,7 +565,7 @@ var async = require('async'),
             if (err) {
                 throw err;
             }
-            Importer.log('Importing ' + imported + '/' + topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+            Importer.success('Importing ' + imported + '/' + topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
             Importer.emit('importer.topics.done');
             next();
         });
@@ -583,7 +581,7 @@ var async = require('async'),
             topics = Importer.data.topics,
             posts = Importer.data.posts;
 
-        Importer.log('Importing ' + posts._pids.length + ' posts.');
+        Importer.success('Importing ' + posts._pids.length + ' posts.');
 
         async.eachLimit(posts._pids, 10, function(_pid, done) {
             count++;
@@ -644,7 +642,7 @@ var async = require('async'),
                 });
             }
         }, function(){
-            Importer.log('Importing ' + imported + '/' + posts._pids.length + ' posts took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
+            Importer.success('Importing ' + imported + '/' + posts._pids.length + ' posts took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
             Importer.emit('importer.posts.done');
             next();
         });
@@ -656,13 +654,14 @@ var async = require('async'),
         Importer.emit('importer.teardown.done');
         Importer.emit('importer.complete');
 
-        Importer.log('Importer completed');
+        Importer.success('Importer completed');
         next();
     };
 
     Importer.relockUnlockedTopics = function(next) {
         var count = 0,
             startTime = +new Date();
+        Importer.success('Relocking ' + Importer.data.topics._tids.length + ' topics');
 
         async.eachLimit(Importer.data.topics._tids, 5, function(_tid, done) {
             count++;
@@ -688,13 +687,14 @@ var async = require('async'),
         }, function(err) {
             if (err) throw err;
 
-            Importer.log('Relocking ' + Importer.data.topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+            Importer.success('Relocking ' + Importer.data.topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
             next();
         });
     };
 
     Importer.fixTopicTimestamps = function(next) {
         var startTime = +new Date();
+        Importer.success('Fixing  ' + Importer.data.topics._tids.length + ' topic timestamps');
 
         async.eachLimit(Importer.data.topics._tids, 10, function(_tid, done) {
             DB.getSortedSetRevRange('tid:' + _tid + ':posts', 0, -1, function(err, pids) {
@@ -723,7 +723,7 @@ var async = require('async'),
         }, function(err) {
             if (err) throw err;
 
-            Importer.log('Fixing  ' + Importer.data.topics._tids.length + ' topic timestamps took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+            Importer.success('Fixing  ' + Importer.data.topics._tids.length + ' topic timestamps took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
             next();
         });
     };
@@ -781,7 +781,7 @@ var async = require('async'),
                     return next();
                 }
 
-                Importer.log('Config restored:' + JSON.stringify(Importer.config().backedConfig));
+                Importer.success('Config restored:' + JSON.stringify(Importer.config().backedConfig));
                 fs.removeSync(backupConfigFilepath);
 
                 Meta.configs.init(function(err) {
@@ -904,8 +904,15 @@ var async = require('async'),
         }
     };
 
-    Importer.emit = function (type, b, c) {
+    Importer.emit = function () {
         var args = Array.prototype.slice.call(arguments, 0);
+
+        if (args && args[args.length - 1] !== 'logged') {
+            Importer.log.apply(Importer, args);
+        } else {
+            args.pop();
+        }
+
         args.unshift(args[0]);
         Importer._dispatcher.emit.apply(Importer._dispatcher, args);
     };
@@ -924,9 +931,12 @@ var async = require('async'),
 
     Importer.warn = function() {
         var args = _.toArray(arguments);
+
         args.unshift('importer.warn');
+        args.push('logged');
         Importer.emit.apply(Importer, args);
         args.unshift(logPrefix);
+        args.pop();
 
         if (Importer._config.log) {
             console.warn.apply(console, args);
@@ -935,9 +945,26 @@ var async = require('async'),
 
     Importer.log = function() {
         var args = _.toArray(arguments);
+
         args.unshift('importer.log');
+        args.push('logged');
         Importer.emit.apply(Importer, args);
         args.unshift(logPrefix);
+        args.pop();
+
+        if (Importer._config.log) {
+            console.log.apply(console, args);
+        }
+    };
+
+    Importer.success = function() {
+        var args = _.toArray(arguments);
+
+        args.unshift('importer.success');
+        args.push('logged');
+        Importer.emit.apply(Importer, args);
+        args.unshift(logPrefix);
+        args.pop();
 
         if (Importer._config.log) {
             console.log.apply(console, args);
@@ -946,9 +973,13 @@ var async = require('async'),
 
     Importer.error = function() {
         var args = _.toArray(arguments);
+
         args.unshift('importer.error');
+        args.push('logged');
         Importer.emit.apply(Importer, args);
         args.unshift(logPrefix);
+        args.pop();
+
         console.error.apply(console, args);
     };
 
