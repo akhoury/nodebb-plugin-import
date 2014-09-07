@@ -20,6 +20,8 @@ var async = require('async'),
         setTimeout(cb, 0);
     },
 
+    BATCH_SIZE = 10,
+
     logPrefix = '[nodebb-plugin-import]',
 
     backupConfigFilepath = __dirname + '/tmp/importer.nbb.backedConfig.json',
@@ -31,21 +33,6 @@ var async = require('async'),
             enabled: false,
             chars: '{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890',
             len: 13
-        },
-        redirectionTemplates: {
-            users: {
-                oldPath: null,
-                newPath: '/user/<%= userslug %>'
-            },
-            categories: {
-                oldPath: null,
-                newPath: '/category/<%= cid %>'
-            },
-            topics: {
-                oldPath: null,
-                newPath: '/topic/<%= tid %>'
-            },
-            posts: null
         },
         categoriesTextColors: ['#FFFFFF'],
         categoriesBgColors: ['#ab1290','#004c66','#0059b2'],
@@ -79,6 +66,7 @@ var async = require('async'),
         Importer._config = nodeExtend(true, {}, defaults, config && config.importer ? config.importer : config || {});
         //todo I don't like this
         Importer._config.log = !!config.log.server;
+        Importer._config.verbose = !!config.log.verbose;
 
         Importer.emit('importer.setup.start');
 
@@ -95,17 +83,8 @@ var async = require('async'),
         Importer.data.posts = Importer.data.posts || {};
         Importer.data.posts._pids = Object.keys(Importer.data.posts);
 
-        //precompile redirection templates
-        Importer.redirectTemplates = {categories: {}, users: {}, topics: {}, posts: {}};
-        Object.keys(Importer.config().redirectionTemplates || {}).forEach(function(key) {
-            var model = Importer.config().redirectionTemplates[key];
-            if (model && model.oldPath && model.newPath) {
-                Importer.redirectTemplates[key].oldPath = _.template(model.oldPath);
-                Importer.redirectTemplates[key].newPath = _.template(model.newPath);
-            }
-        });
 
-        // setup conversion template
+        // setup conversion function
         Importer.convert = (function() {
             var fnNames = [];
             (Importer.config().convert || '').split(',').forEach(function(fnName) {
@@ -271,7 +250,7 @@ var async = require('async'),
 
         Importer.success('Importing ' + users._uids.length + ' users.');
 
-        async.eachLimit(users._uids, 10, function(_uid, done) {
+        async.eachLimit(users._uids, BATCH_SIZE, function(_uid, done) {
             count++;
 
             var user = users[_uid];
@@ -320,7 +299,13 @@ var async = require('async'),
                             birthday: user._birthday || '',
                             showemail: user._showemail ? 1 : 0,
                             // this is a migration script, no one is online
-                            status: 'offline'
+                            status: 'offline',
+
+                            _imported_uid: _uid,
+                            _imported_username: user._username || '',
+                            _imported_email: user._email || '',
+                            _imported_slug: user._slug || user._userslug || '',
+                            _imported_pwd: userData.password || ''
                         };
 
                         var keptPicture = false;
@@ -330,9 +315,6 @@ var async = require('async'),
                             keptPicture = true;
                         }
 
-                        Importer.log('[user-json] {"email":"' + userData.email + '","username":"' + userData.username + '","pwd":"' + userData.password + '",_uid":' + _uid + ',"uid":' + uid +',"ms":' + fields.joindate + '},');
-                        Importer.log('[user-csv] ' + userData.email + ',' + userData.username + ',' + userData.password + ',' + _uid + ',' + uid + ',' + fields.joindate);
-
                         User.setUserFields(uid, fields, function(err, result) {
                             if (err) { done(err); throw err; }
 
@@ -341,12 +323,6 @@ var async = require('async'),
                             user = nodeExtend(true, {}, user, fields);
                             user.keptPicture = keptPicture;
                             user.userslug = u.userslug;
-
-                            var oldPath = Importer.redirectTemplates.users.oldPath;
-                            var newPath = Importer.redirectTemplates.users.newPath;
-                            if (oldPath && newPath) {
-                                user.redirect = Importer.redirect(user, oldPath, newPath);
-                            }
 
                             users[_uid] = user;
 
@@ -407,7 +383,7 @@ var async = require('async'),
 
         Importer.success('Importing ' + categories._cids.length + ' categories.');
 
-        async.eachLimit(categories._cids, 10, function(_cid, done) {
+        async.eachLimit(categories._cids, BATCH_SIZE, function(_cid, done) {
             count++;
 
             var category = categories[_cid];
@@ -438,18 +414,25 @@ var async = require('async'),
                     Importer.warn('skipping category:_cid: ' + _cid + ' : ' + err);
                     nextTick(done);
                 } else {
-                    category.imported = true;
-                    imported++;
-                    category = nodeExtend(true, {}, category, categoryReturn);
 
-                    var oldPath = Importer.redirectTemplates.categories.oldPath;
-                    var newPath = Importer.redirectTemplates.categories.newPath;
-                    if (oldPath && newPath) {
-                        category.redirect = Importer.redirect(category, oldPath, newPath);
-                    }
+                    var fields = {
+                        _imported_cid: _cid,
+                        _imported_name: category._name || '',
+                        _imported_slug: category._slug || '',
+                        _imported_link: category._link || ''
+                    };
 
-                    categories[_cid] = category;
-                    nextTick(done);
+                    DB.setObject('category:' + categoryReturn.cid, fields, function(err) {
+                        if (err) {
+                            Importer.warn(err);
+                        }
+
+                        category.imported = true;
+                        imported++;
+                        category = nodeExtend(true, {}, category, categoryReturn);
+                        categories[_cid] = category;
+                        nextTick(done);
+                    });
                 }
             });
 
@@ -475,7 +458,7 @@ var async = require('async'),
 
         Importer.success('Importing ' + topics._tids.length + ' topics.');
 
-        async.eachLimit(topics._tids, 10, function(_tid, done) {
+        async.eachLimit(topics._tids, BATCH_SIZE, function(_tid, done) {
             count++;
 
             var topic = topics[_tid];
@@ -524,7 +507,12 @@ var async = require('async'),
 
                             // todo: not sure if I need these two
                             teaser_timestamp: relativeTime,
-                            relativeTime: relativeTime
+                            relativeTime: relativeTime,
+
+                            _imported_tid: _tid,
+                            _imported_uid: topic._uid || '',
+                            _imported_cid: topic._cid,
+                            _imported_slug: topic._slug || ''
                         };
 
                         var postFields = {
@@ -546,14 +534,6 @@ var async = require('async'),
 
                             Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
                                 topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
-
-                                var oldPath = Importer.redirectTemplates.topics.oldPath;
-                                var newPath = Importer.redirectTemplates.topics.newPath;
-
-                                if (oldPath && newPath) {
-                                    topic.redirect = Importer.redirect(topic, oldPath, newPath);
-                                }
-
                                 topics[_tid] = topic;
                                 nextTick(done);
                             });
@@ -583,7 +563,7 @@ var async = require('async'),
 
         Importer.success('Importing ' + posts._pids.length + ' posts.');
 
-        async.eachLimit(posts._pids, 10, function(_pid, done) {
+        async.eachLimit(posts._pids, BATCH_SIZE, function(_pid, done) {
             count++;
 
             var post = posts[_pid];
@@ -622,19 +602,15 @@ var async = require('async'),
                             deleted: post._deleted || 0,
 
                             // todo: not sure if I need this
-                            relativeTime: new Date(post._timestamp || startTime).toISOString()
+                            relativeTime: new Date(post._timestamp || startTime).toISOString(),
+
+                            _imported_pid: _pid,
+                            _imported_uid: post._uid || '',
+                            _imported_tid: post._tid
                         };
                         Posts.setPostFields(postReturn.pid, fields, function(){
-
                             post = nodeExtend(true, {}, post, fields, postReturn);
                             post.imported = true;
-
-                            var oldPath = Importer.redirectTemplates.posts.oldPath;
-                            var newPath = Importer.redirectTemplates.posts.newPath;
-                            if (oldPath && newPath) {
-                                post.redirect = Importer.redirect(post, oldPath, newPath);
-                            }
-
                             posts[_pid] = post;
                             nextTick(done);
                         });
@@ -823,17 +799,6 @@ var async = require('async'),
         });
     };
 
-    Importer.redirect = function(data, oldPath, newPath) {
-        var o = oldPath(data);
-        var n = newPath(data);
-
-        //todo: save them somewhere more than the just logs
-        // that'll make them for a quick json map
-        // gotta replace the [redirect] though
-        Importer.log('[redirect] "' + o + '":"' + n +'",');
-        return {oldPath: o, newPath: n};
-    };
-
     // which of the values is falsy
     Importer.whichIsFalsy = function(arr){
         for (var i = 0; i < arr.length; i++) {
@@ -938,9 +903,7 @@ var async = require('async'),
         args.unshift(logPrefix);
         args.pop();
 
-        if (Importer._config.log) {
-            console.warn.apply(console, args);
-        }
+        console.warn.apply(console, args);
     };
 
     Importer.log = function() {
@@ -951,8 +914,7 @@ var async = require('async'),
         Importer.emit.apply(Importer, args);
         args.unshift(logPrefix);
         args.pop();
-
-        if (Importer._config.log) {
+        if (Importer.config.log && Importer.config.verbose) {
             console.log.apply(console, args);
         }
     };
@@ -966,9 +928,7 @@ var async = require('async'),
         args.unshift(logPrefix);
         args.pop();
 
-        if (Importer._config.log) {
-            console.log.apply(console, args);
-        }
+        console.log.apply(console, args);
     };
 
     Importer.error = function() {

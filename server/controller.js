@@ -5,8 +5,35 @@ var fs = require('fs-extra'),
     _ = require('underscore'),
     async = require('async'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
+    nodeExtend = require('node.extend'),
+
     noop = function(){},
-    LOG_FILE = path.join(__dirname, '/tmp/import.log');
+
+    DB = module.parent.require('../../../src/database.js'),
+    User = require('../../../src/user.js'),
+    Topics = require('../../../src/topics.js'),
+    Posts = require('../../../src/posts.js'),
+    Categories = require('../../../src/categories.js'),
+
+    LOG_FILE = path.join(__dirname, '/tmp/import.log'),
+
+    defaults = {
+        redirectionTemplates: {
+            users: {
+                oldPath: null,
+                newPath: '/user/<%= userslug %>'
+            },
+            categories: {
+                oldPath: null,
+                newPath: '/category/<%= cid %>'
+            },
+            topics: {
+                oldPath: null,
+                newPath: '/topic/<%= tid %>'
+            },
+            posts: null
+        }
+    };
 
 (function(Controller) {
     Controller._dispatcher = new EventEmitter2({
@@ -22,8 +49,7 @@ var fs = require('fs-extra'),
         return state.now === 'idle'
             && (state.event === 'importer.complete'
                 || state.event === 'none'
-                || !state.event)
-            && fs.existsSync(LOG_FILE);
+                || !state.event);
     };
 
     Controller.clean = function() {
@@ -110,14 +136,8 @@ var fs = require('fs-extra'),
                 };
                 results = null;
 
-//                fs.outputFile(
-//                    path.join(__dirname, '/tmp/exporter.data.json'),
-//                    JSON.stringify(Controller._exporter.data, undefined, 2),
-//                    function(err) {
                 Controller._exporter.emit('exporter.complete');
                 callback(err, Controller._exporter.data);
-//                    }
-//                );
             });
         });
 
@@ -206,77 +226,6 @@ var fs = require('fs-extra'),
         });
     };
 
-    Controller.getUsersCsv = function(callback) {
-        var keyword = '[user-csv]',
-            len = keyword.length,
-            idx = -1,
-            content = 'email,username,pwd,_uid,uid,ms\n';
-
-        if (Controller.canDownloadDeliverables()) {
-            lineReader.eachLine(LOG_FILE, function(line) {
-                line = line || '';
-                idx = line.indexOf(keyword);
-                if (idx > -1) {
-                    content += line.substr(idx + len + 1) + '\n';
-                }
-            }).then(function() {
-                callback(null, content);
-            });
-        } else {
-            callback({error: 'Cannot download files.'});
-        }
-    };
-
-    Controller.getUsersJson = function(callback) {
-        var keyword = '[user-json]',
-            len = keyword.length,
-            idx = -1,
-            content = '[\n';
-
-        if (Controller.canDownloadDeliverables()) {
-            lineReader.eachLine(LOG_FILE, function(line) {
-                line = line || '';
-                idx = line.indexOf(keyword);
-                if (idx > -1) {
-                    content += line.substr(idx + len) + '\n';
-                }
-            }).then(function() {
-                var lastCommaIdx = content.lastIndexOf(',');
-                if (lastCommaIdx > 0) {
-                    content = content.substring(0, lastCommaIdx) + '\n';
-                }
-                content += ']';
-                callback(null, content);
-            });
-        } else {
-            callback({error: 'Cannot download files.'});
-        }
-    };
-
-    Controller.getRedirectionJson = function(callback) {
-        var keyword = '[redirect]',
-            len = keyword.length,
-            idx = -1,
-            content = '{\n';
-
-        if (Controller.canDownloadDeliverables()) {
-            lineReader.eachLine(LOG_FILE, function(line) {
-                line = line || '';
-                idx = line.indexOf(keyword);
-                if (idx > -1) {
-                    content += line.substr(idx + len) + '\n';
-                }
-            }).then(function() {
-                var lastCommaIdx = content.lastIndexOf(',');
-                content = content.substring(0, lastCommaIdx) + '\n';
-                content += '}';
-                callback(null, content);
-            });
-        } else {
-            callback({error: 'Cannot download files.'});
-        }
-    };
-
     Controller.filelog = function() {
         var args = Array.prototype.slice.call(arguments, 0);
         var line = args.join(' ') + '\n';
@@ -292,6 +241,10 @@ var fs = require('fs-extra'),
 
         if (Controller.config('log').server) {
             Controller.filelog(args);
+        }
+
+        if (Controller.config('log').verbose) {
+            console.log.apply(console, args);
         }
 
         args.unshift(args[0]);
@@ -311,6 +264,10 @@ var fs = require('fs-extra'),
             Controller._dispatcher.removeAllListeners();
     };
 
+    Controller.log = function() {
+        var args = Array.prototype.slice.call(arguments, 0);
+        console.log.apply(console, args);
+    };
 
     // move to utils
 
@@ -326,6 +283,10 @@ var fs = require('fs-extra'),
                 return false;
             if (str === 'true')
                 return true;
+            if (str === 'undefined')
+                return undefined;
+            if (str === 'null')
+                return null;
 
             try {
                 str = JSON.parse(str);
@@ -346,11 +307,16 @@ var fs = require('fs-extra'),
         }
     };
 
+    // alias
+    Controller.saveConfig = function(config, val) {
+        return Controller.config(config, val);
+    };
+
     Controller.config = function(config, val) {
         if (config != null) {
             if (typeof config === 'object') {
                 recursiveIteration(config);
-                Controller._config = config;
+                Controller._config = nodeExtend(true, {}, defaults, config);
                 Controller.emit('controller.config', Controller._config);
             } else if (typeof config === 'string') {
                 if (val != null) {
@@ -362,6 +328,249 @@ var fs = require('fs-extra'),
             }
         }
         return Controller._config;
+    };
+
+    Controller.getUsersCsv = function(callback) {
+        if (Controller.canDownloadDeliverables()) {
+            var content = 'index,email,username,pwd,_uid,uid,joindate\n';
+            async.waterfall([
+                function (next) {
+                    DB.getObjectValues('username:uid', next);
+                },
+                function (uids, next) {
+                    User.getMultipleUserFields(
+                        uids,
+                        [
+                            'uid', 'email', 'username', 'joindate',
+                            '_imported_uid', '_imported_username', '_imported_email', '_imported_slug'
+                        ],
+                        next
+                    );
+                },
+                function (usersData, next) {
+                    usersData.forEach(function (user, index) {
+                        if (user && user._imported_uid) {
+                            content += index + ',' + user.email + ',' + user.username + ',' + user._imported_pwd + ',' + user._imported_uid + ',' + user.uid + ',' + user.joindate + '\n';
+                        }
+                    });
+
+                    next(null, content);
+                }
+            ], callback);
+        } else {
+            callback({error: 'Cannot download files at the moment.'});
+        }
+    };
+
+    Controller.getUsersJson = function(callback) {
+
+        if (Controller.canDownloadDeliverables()) {
+            var content = '[\n';
+            async.waterfall([
+                function (next) {
+                    DB.getObjectValues('username:uid', next);
+                },
+                function (uids, next) {
+                    User.getMultipleUserFields(
+                        uids,
+                        [
+                            'uid', 'email', 'username', 'joindate',
+                            '_imported_uid', '_imported_username', '_imported_email', '_imported_slug'
+                        ],
+                        next
+                    );
+                },
+                function (usersData, next) {
+                    var len = usersData.length;
+                    usersData.forEach(function (user, index) {
+                        if (user && user._imported_uid) {
+                            content += '{'
+                                + '"index":' + index + ','
+                                + '"email":"' + user.email + '",'
+                                + '"username":"' + user.username + '",'
+                                + '"pwd":' + (user._imported_pwd ? '"' + user._imported_pwd + '"' : null) + ','
+                                + '"_uid":' + user._imported_uid + ','
+                                + '"uid":' + user.uid + ','
+                                + '"joindate":' + user.joindate
+                                + '}';
+                            if (index !== len - 1) {
+                                content += ',\n'
+                            }
+                        }
+                    });
+                    content += '\n]';
+                    next(null, content);
+                }
+            ], callback);
+        } else {
+            callback({error: 'Cannot download files at the moment.'});
+        }
+    };
+
+    Controller.getRedirectionJson = function(callback) {
+
+        //precompile redirection templates
+        Controller.redirectTemplates = {categories: {}, users: {}, topics: {}, posts: {}};
+        Object.keys(Controller.config().redirectionTemplates || {}).forEach(function(key) {
+            var model = Controller.config().redirectionTemplates[key];
+            if (model && model.oldPath && model.newPath) {
+                Controller.redirectTemplates[key].oldPath = _.template(model.oldPath);
+                Controller.redirectTemplates[key].newPath = _.template(model.newPath);
+            }
+        });
+
+        var content = '';
+        if (Controller.canDownloadDeliverables()) {
+
+            content += '{\n';
+            async.series([
+                function(done) {
+                    if (Controller.redirectTemplates.users.oldPath && Controller.redirectTemplates.users.newPath) {
+                        Controller.emit('redirection.templates.users.start');
+                        async.waterfall([
+                            function (next) {
+                                DB.getObjectValues('username:uid', next);
+                            },
+                            function (uids, next) {
+                                User.getMultipleUserFields(
+                                    uids,
+                                    [
+                                        'uid', 'email', 'username', 'userslug',
+                                        '_imported_uid', '_imported_username', '_imported_email', '_imported_slug'
+                                    ],
+                                    next
+                                );
+                            },
+                            function (usersData, next) {
+                                usersData.forEach(function (user) {
+                                    if (user && user._imported_uid) {
+                                        // map some aliases
+                                        user._uid = user._imported_uid;
+                                        user._username = user._imported_username;
+                                        user._email = user._imported_email;
+                                        user._slug = user._imported_slug;
+                                        user._userslug = user._imported_slug;
+
+                                        var oldPath = Controller.redirectTemplates.users.oldPath(user);
+                                        var newPath = Controller.redirectTemplates.users.newPath(user);
+                                        content += '"' + oldPath + '":"' + newPath + '",\n';
+                                    }
+                                });
+                                Controller.emit('redirection.templates.users.done');
+                                next();
+                            }
+                        ], done);
+                    } else {
+                        done();
+                    }
+                },
+                function(done) {
+                    if (Controller.redirectTemplates.categories.oldPath && Controller.redirectTemplates.categories.newPath) {
+                        Controller.emit('redirection.templates.categories.start');
+
+                        async.waterfall([
+                            function (next) {
+                                DB.getSortedSetRange('categories:cid', 0, -1, next);
+                            },
+                            function (cids, next) {
+                                Categories.getCategoriesData(cids, function(err, categories) {
+                                    categories.forEach(function(category) {
+                                        if (category && category._imported_cid) {
+                                            // map some aliases
+                                            category._cid = category._imported_cid;
+                                            category._slug = category._imported_slug;
+                                            category._name = category._imported_name;
+                                            category._link = category._imported_link;
+
+                                            var oldPath = Controller.redirectTemplates.categories.oldPath(category);
+                                            var newPath = Controller.redirectTemplates.categories.newPath(category);
+                                            content += '"' + oldPath + '":"' + newPath + '",\n';
+                                        }
+                                    });
+                                    Controller.emit('redirection.templates.categories.done');
+                                    next();
+                                });
+                            }
+                        ], done);
+                    } else {
+                        done();
+                    }
+                },
+                function(done) {
+                    if (Controller.redirectTemplates.topics.oldPath && Controller.redirectTemplates.topics.newPath) {
+                        Controller.emit('redirection.templates.topics.start');
+                        async.waterfall([
+                            function (next) {
+                                DB.getSortedSetRange('topics:tid', 0, -1, next);
+                            },
+                            function (tids, next) {
+                                Topics.getTopicsData(tids, function(err, topics) {
+                                    topics.forEach(function(topic) {
+                                        if (topic && topic._imported_tid) {
+                                            // map some aliases
+                                            topic._uid = topic._imported_uid;
+                                            topic._tid = topic._imported_tid;
+                                            topic._cid = topic._imported_cid;
+                                            topic._slug = topic._imported_slug;
+
+                                            var oldPath = Controller.redirectTemplates.topics.oldPath(topic);
+                                            var newPath = Controller.redirectTemplates.topics.newPath(topic);
+                                            content += '"' + oldPath + '":"' + newPath + '",\n';
+                                        }
+                                    });
+                                    Controller.emit('redirection.templates.topics.done');
+                                    next();
+                                });
+                            }
+                        ], done);
+                    } else {
+                        done();
+                    }
+                },
+                function(done) {
+                    if (Controller.redirectTemplates.posts.oldPath && Controller.redirectTemplates.posts.newPath) {
+                        Controller.emit('redirection.templates.posts.start');
+                        async.waterfall([
+                            function (next) {
+                                DB.getSortedSetRange('posts:tid', 0, -1, next);
+                            },
+                            function (pids, next) {
+                                Posts.getPostsByPids(pids, function(err, posts) {
+                                    posts.forEach(function(post) {
+                                        if (post && post._imported_pid) {
+                                            // map some aliases
+                                            post._pid = post._imported_pid;
+                                            post._uid = post._imported_uid;
+                                            post._tid = post._imported_tid;
+
+                                            var oldPath = Controller.redirectTemplates.posts.oldPath(post);
+                                            var newPath = Controller.redirectTemplates.posts.newPath(post);
+                                            content += '"' + oldPath + '":"' + newPath + '",\n';
+                                        }
+                                    });
+                                    Controller.emit('redirection.templates.posts.done');
+                                    next();
+                                });
+                            }
+                        ], done);
+                    } else {
+                        done();
+                    }
+                }
+            ], function(err, results) {
+                if (err) {
+                    return callback(err);
+                }
+                var lastCommaIdx = content.lastIndexOf(',');
+                if (lastCommaIdx > -1) {
+                    content = content.substring(0, lastCommaIdx);
+                }
+                content += '\n}';
+                callback(null, content);
+            });
+        } else {
+            callback({error: 'Cannot download files.'});
+        }
     };
 
 })(module.exports);

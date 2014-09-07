@@ -88,23 +88,23 @@
                                 <br />
                                 Note the templating syntax, it uses the <a href="http://underscorejs.org/#template" target="_blank">Underscore.js's template</a>
                             </p>
-                            <div class="importer-templates-configs">
-                                <label for="importer-templates-users-oldpath">Users old path</label>
-                                <input value="/forums/ubbthreads.php/users/<%= _uid %>" type="text" class="form-control" id="importer-templates-users-oldpath" name="importer-templates-users-oldpath" placeholder="/forums/ubbthreads.php/users/<%= _uid %>">
-                                <label for="importer-templates-users-newpath">Users new path</label>
-                                <input disabled="disabled" value="/user/<%= userslug %>" type="text" class="form-control" id="importer-templates-users-newpath" name="importer-templates-users-newpath" placeholder="/user/<%= userslug %>">
+                            <div class="redirection-templates-configs">
+                                <label for="redirection-templates-users-oldpath">Users old path</label>
+                                <input value="/forums/ubbthreads.php/users/<%= _uid %>" type="text" class="form-control" id="redirection-templates-users-oldpath" name="redirection-templates-users-oldpath" placeholder="/forums/ubbthreads.php/users/<%= _uid %>">
+                                <label for="redirection-templates-users-newpath">Users new path</label>
+                                <input disabled="disabled" value="/user/<%= userslug %>" type="text" class="form-control" id="redirection-templates-users-newpath" name="redirection-templates-users-newpath" placeholder="/user/<%= userslug %>">
 
-                                <label for="importer-templates-categories-oldpath">Categories old path</label>
-                                <input value="/forums/ubbthreads.php/forums/<%= _cid %>" type="text" class="form-control" id="importer-templates-categories-oldpath" name="importer-templates-categories-oldpath" placeholder="/forums/ubbthreads.php/forums/<%= _cid %>">
-                                <label for="importer-templates-categories-newpath">Categories new path</label>
-                                <input disabled="disabled" value="/category/<%= cid %>" type="text" class="form-control" id="importer-templates-categories-newpath" name="importer-templates-categories-newpath" placeholder="/category/<%= cid %>">
+                                <label for="redirection-templates-categories-oldpath">Categories old path</label>
+                                <input value="/forums/ubbthreads.php/forums/<%= _cid %>" type="text" class="form-control" id="redirection-templates-categories-oldpath" name="redirection-templates-categories-oldpath" placeholder="/forums/ubbthreads.php/forums/<%= _cid %>">
+                                <label for="redirection-templates-categories-newpath">Categories new path</label>
+                                <input disabled="disabled" value="/category/<%= cid %>" type="text" class="form-control" id="redirection-templates-categories-newpath" name="redirection-templates-categories-newpath" placeholder="/category/<%= cid %>">
 
-                                <label for="importer-templates-topics-oldpath">Topics old path</label>
-                                <input value="/forums/ubbthreads.php/topics/<%= _tid %>" type="text" class="form-control" id="importer-templates-topics-oldpath" name="importer-templates-topics-oldpath" placeholder="/forums/ubbthreads.php/topics/<%= _tid %>">
-                                <label for="importer-templates-topics-newpath">Topics new path</label>
-                                <input disabled="disabled" value="/topic/<%= tid %>" type="text" class="form-control" id="importer-templates-topics-newpath" name="importer-templates-topics-newpath" placeholder="/topic/<%= tid %>">
+                                <label for="redirection-templates-topics-oldpath">Topics old path</label>
+                                <input value="/forums/ubbthreads.php/topics/<%= _tid %>" type="text" class="form-control" id="redirection-templates-topics-oldpath" name="redirection-templates-topics-oldpath" placeholder="/forums/ubbthreads.php/topics/<%= _tid %>">
+                                <label for="redirection-templates-topics-newpath">Topics new path</label>
+                                <input disabled="disabled" value="/topic/<%= tid %>" type="text" class="form-control" id="redirection-templates-topics-newpath" name="redirection-templates-topics-newpath" placeholder="/topic/<%= tid %>">
 
-                                <label for="importer-templates-posts-oldpath">Posts old path</label>
+                                <label for="redirection-templates-posts-oldpath">Posts old path</label>
                                 <p class="help-block">
                                      Most Forums uses the '#' (location.hash) to add the post id to the path, this cannot be easily redirected
                                      without some client side JS 'Redirector' that grabs that # value and add to the query string or something
@@ -115,9 +115,9 @@
                                      and this require string processing, so if
                                      you're okay with redirecting oldTopicPaths and oldPostsPaths to the newTopicPaths without scrolling to the right post in the topic, leave this empty.
                                 </p>
-                                <input value="" type="text" class="form-control" id="importer-templates-posts-oldpath" name="importer-templates-posts-oldpath" placeholder="/topics/<%= _tid %>/*#Post<%= _pid %>" >
-                                <label for="importer-templates-posts-newpath">Posts new path</label>
-                                <input disabled="disabled" value="/topic/<%= tid %>/#<%= pid %>" type="text" class="form-control" id="importer-templates-posts-newpath" name="importer-templates-posts-newpath" placeholder="/topic/<%= tid %>/#<%= pid %>">
+                                <input value="" type="text" class="form-control" id="redirection-templates-posts-oldpath" name="redirection-templates-posts-oldpath" placeholder="/topics/<%= _tid %>/*#Post<%= _pid %>" >
+                                <label for="redirection-templates-posts-newpath">Posts new path</label>
+                                <input disabled="disabled" value="/topic/<%= tid %>/#<%= pid %>" type="text" class="form-control" id="redirection-templates-posts-newpath" name="redirection-templates-posts-newpath" placeholder="/topic/<%= tid %>/#<%= pid %>">
                             </div>
                         </div>
 
@@ -243,19 +243,16 @@
            </div>
            <div class="checkbox">
                <label for="importer-log-control-client">
-                  <input data-on="click" data-action="toggleVerboseLogsBox" checked class="importer-log-control" type="checkbox" id="importer-log-control-client" name="importer-log-control-client"> Log on client
+                  <input class="importer-log-control" type="checkbox" id="importer-log-control-client" name="importer-log-control-client"> Log on client
                </label>
                <p class="help-block">
-                   May or may not be lost on a page refresh, depending on your browser. (use chrome)
+                   May crash your page.
                </p>
            </div>
            <div class="checkbox">
-               <label for="importer-log-control-client-verbose">
-                  <input data-on="click" data-action="toggleVerboseLogs" checked class="importer-log-control" type="checkbox" id="importer-log-control-client-verbose" name="importer-log-control-client-verbose"> Show verbose logs
+               <label for="importer-log-control-verbose">
+                  <input data-on="click" data-action="toggleVerboseLogs" class="importer-log-control" type="checkbox" id="importer-log-control-verbose" name="importer-log-control-verbose"> Verbose
                </label>
-                  <p class="help-block">
-                      Only applicable if 'Log on client' is enabled
-                  </p>
            </div>
         </div>
     </div>

@@ -183,161 +183,80 @@
             downloadUsersCsv: function(e) {
                 toggleDownloadBtns(false);
                 alertPreparingDownload();
-                if ($('#importer-log-control-server').is(':checked')) {
-                    $.get(plugin.apiHost + '/download/users.csv')
-                        .done(function(data) {
-                            app.alertError('Something went wrong :(');
-                            download('users.csv', data);
-                        })
-                        .fail(function() {
-                            setTimeout(canDownload, 2000);
-                        })
-                        .always(function() {
-                            toggleDownloadBtns(true);
-                        });
-                } else {
-                    clientHasDownloadableLogs(function(lines) {
-                        if (lines && lines.length) {
-                            var content = 'email,username,pwd,_uid,uid,ms\n';
-                            var keyword = '[user-csv]',
-                                len = keyword.length,
-                                idx = -1;
-                            lines.forEach(function(line) {
-                                idx = line.indexOf(keyword);
-                                if (idx > -1) {
-                                    content += line.substr(idx + len + 1) + '\n';
-                                }
-                            });
-                            download('users.csv', content);
-                            toggleDownloadBtns(true);
+                saveConfig().done(function() {
+                    canDownload().done(function (data) {
+                        if (data && data.candownload) {
+                            $.get(plugin.apiHost + '/download/users.csv')
+                                .done(function (data) {
+                                    app.alertError('Something went wrong :(');
+                                    download('users.csv', data);
+                                })
+                                .fail(function () {
+                                })
+                                .always(function () {
+                                    toggleDownloadBtns(true);
+                                });
+                        } else {
+                            app.alertError('Cannot download file at the moment', 1000);
                         }
                     });
-                }
+                });
             },
 
             downloadUsersJson: function(e) {
                 toggleDownloadBtns(false);
                 alertPreparingDownload();
-                if ($('#importer-log-control-server').is(':checked')) {
-                    $.get(plugin.apiHost + '/download/users.json')
-                        .done(function (data) {
-                            download('users.json', data);
-                        })
-                        .fail(function () {
-                            app.alertError('Something went wrong :(');
-                            setTimeout(canDownload, 2000);
-                        })
-                        .always(function () {
-                            toggleDownloadBtns(true);
-                        });
-                } else {
-                    clientHasDownloadableLogs(function(lines) {
-                        if (lines && lines.length) {
-                            var content = '[\n';
-                            var keyword = '[user-json]',
-                                len = keyword.length,
-                                idx = -1;
-                            lines.forEach(function(line) {
-                                idx = line.indexOf(keyword);
-                                if (idx > -1) {
-                                    content += line.substr(idx + len) + '\n';
-                                }
-                            });
-                            var lastCommaIdx = content.lastIndexOf(',');
-                            if (lastCommaIdx > 0) {
-                                content = content.substring(0, lastCommaIdx) + '\n';
-                            }
-                            content += ']';
-                            download('users.json', content);
-                            toggleDownloadBtns(true);
+                saveConfig().done(function() {
+                    canDownload().done(function (data) {
+                        if (data && data.candownload) {
+                            $.get(plugin.apiHost + '/download/users.json')
+                                .done(function (data) {
+                                    download('users.json', data);
+                                })
+                                .fail(function () {
+                                    app.alertError('Something went wrong :(');
+                                })
+                                .always(function () {
+                                    toggleDownloadBtns(true);
+                                });
+                        } else {
+                            app.alertError('Cannot download file at the moment', 1000);
                         }
                     });
-                }
-
+                });
             },
 
             downloadRedirectionJson: function(e) {
                 toggleDownloadBtns(false);
                 alertPreparingDownload();
-                if ($('#importer-log-control-server').is(':checked')) {
-                    $.get(plugin.apiHost + '/download/redirect.json')
-                        .done(function(data) {
-                            download('redirect.map.json', data);
-                        })
-                        .fail(function() {
-                            app.alertError('Something went wrong :(');
-                            setTimeout(canDownload, 2000);
-                        })
-                        .always(function() {
-                            toggleDownloadBtns(true);
-                        });
-                } else {
-                    clientHasDownloadableLogs(function(lines) {
-                        if (lines && lines.length) {
-                            var content = '{\n';
-                            var keyword = '[redirect]',
-                                len = keyword.length,
-                                idx = -1;
-                            lines.forEach(function(line) {
-                                idx = line.indexOf(keyword);
-                                if (idx > -1) {
-                                    content += line.substr(idx + len) + '\n';
-                                }
-                            });
-                            var lastCommaIdx = content.lastIndexOf(',');
-                            if (lastCommaIdx > 0) {
-                                content = content.substring(0, lastCommaIdx) + '\n';
-                            }
-                            content += '}';
-                            download('redirect.map.json', content);
-                            toggleDownloadBtns(true);
+                saveConfig().done(function() {
+                    canDownload().done(function (data) {
+                        if (data && data.candownload) {
+                            $.get(plugin.apiHost + '/download/redirect.json')
+                                .done(function (data) {
+                                    download('redirect.map.json', data);
+                                })
+                                .fail(function () {
+                                    app.alertError('Something went wrong :(');
+                                })
+                                .always(function () {
+                                    toggleDownloadBtns(true);
+                                });
+                        } else {
+                            app.alertError('Cannot download file at the moment', 1000);
                         }
                     });
-                }
+                });
             },
 
             toggleVerboseLogs: function(e) {
-                var verbose = $('#importer-log-control-client-verbose').is(':checked');
+                var verbose = $('#importer-log-control-verbose').is(':checked');
                 if (verbose) {
                     $('.import-log-info').removeClass('hidden');
                 } else {
                     $('.import-log-info').addClass('hidden');
                 }
-            },
-
-            toggleVerboseLogsBox: function(e) {
-                util.toggleAvailable($wrapper.find('#importer-log-control-client-verbose'), $wrapper.find('#importer-log-control-client').is(':checked'));
             }
-        };
-
-        var tryToSaveToFileSystem = function(content, callback) {
-            if (navigator.webkitPersistentStorage && window.webkitRequestFileSystem && window.Blob) {
-                navigator.webkitPersistentStorage.requestQuota(content.length * 2 + 10000000 /* chars.length * 2bytes + 10mb */, function(QUOTA) {
-                    window.webkitRequestFileSystem(window.PERSISTENT , QUOTA, function(FS) {
-                        FS.root.getFile(LOG_FILE, {create: true}, function(FILE) {
-                            FILE.createWriter(function(CONTENT) {
-                                var blob = new Blob([content], {type: 'text/plain'});
-                                CONTENT.write(blob);
-
-                                if (typeof callback === 'function')
-                                    callback(content);
-                            })
-                        });
-                    });
-                });
-            } else {
-                if (typeof callback === 'function') {
-                    callback(false);
-                }
-            }
-        };
-
-        var tryToGetFromFileSystem = function(callback) {
-            $.get('filesystem:' + location.protocol + '//' + location.host + '/persistent/'+ LOG_FILE)
-                .done(callback)
-                .fail(function() {
-                    callback(false);
-                });
         };
 
         var download = function(filename, text) {
@@ -357,11 +276,11 @@
         var toggleLogBtns = function(bool) {
             var serverBtn = $wrapper.find('#importer-log-control-server');
             var clientBtn = $wrapper.find('#importer-log-control-client');
-            var clientVerboseBtn = $wrapper.find('#importer-log-control-client-verbose');
+            var verboseBtn = $wrapper.find('#importer-log-control-verbose');
 
             util.toggleAvailable(serverBtn, bool);
             util.toggleAvailable(clientBtn, bool);
-            util.toggleAvailable(clientVerboseBtn, bool);
+            // util.toggleAvailable(verboseBtn, bool);
         };
 
 
@@ -409,7 +328,10 @@
             } else {
                 return false;
             }
+        };
 
+        var saveConfig = plugin.saveConfig = function() {
+            return fn('config', [gatherConfigs(true)]);
         };
 
         var startExport = plugin.startExport = function() {
@@ -431,48 +353,18 @@
         };
 
         var canDownload = plugin.canDownload = function() {
-            var canClientDownload = function() {
-                clientHasDownloadableLogs(function(lines) {
-                    if (lines && lines.length) {
+            return $.get(plugin.apiHost + '/candownload')
+                .done(function(data) {
+                    var serverCan = !!(data && data.candownload);
+                    if (serverCan) {
                         toggleDownloadBtns(true);
                     } else {
                         toggleDownloadBtns(false);
                     }
-                });
-            };
-            return $.get(plugin.apiHost + '/candownload')
-                .done(function(data) {
-                    var serverCan = (!!(data && (data.candownload || data.canDownload))
-                        && $('#importer-log-control-server').is(':checked'));
-                    if (serverCan) {
-                        toggleDownloadBtns(true);
-                    } else {
-                        canClientDownload();
-                    }
                 })
                 .fail(function() {
-                    canClientDownload();
+                    toggleDownloadBtns(false);
                 });
-        };
-
-        var clientHasDownloadableLogs = function(callback) {
-            var lines = [], text = ($('.import-logs').text() || '');
-
-            $('.import-logs .import-logs-line').each(function(i, p) {
-                lines.push($(p).text());
-            });
-
-            if (lines.length && text.indexOf('[user-csv]') > -1 && text.indexOf('[user-json]')) {
-                callback(lines);
-            } else {
-                tryToGetFromFileSystem(function(content) {
-                    if (!content) {
-                        callback(false);
-                    } else {
-                        callback(content.split('\n'));
-                    }
-                });
-            }
         };
 
         var getLocalStorage = function(key) {
@@ -589,7 +481,7 @@
 
         var logsEl = $wrapper.find('.import-logs');
         var logOptionEl = $('#importer-log-control-client');
-        var logVerboseOptionEl = $('#importer-log-control-client-verbose');
+        var logVerboseOptionEl = $('#importer-log-control-verbose');
         var line = function(msg, level) {
             if (!logOptionEl.is(':checked')) return;
             msg = typeof msg === 'object' ? JSON.stringify(msg) : msg;
@@ -624,7 +516,7 @@
             app.alertError(error);
         };
 
-        var gatherConfigs = function() {
+        var gatherConfigs = function(ignoreErrors) {
             var exporter = {
                 dbhost: $('#exporter-dbhost').val(),
                 dbname: $('#exporter-dbname').val(),
@@ -637,24 +529,6 @@
 
             var importer = {
                 convert: $('#importer-convert').val(),
-                redirectionTemplates: {
-                    users: {
-                        oldPath: $('#importer-templates-users-oldpath').val(),
-                        newPath: $('#importer-templates-users-newpath').val()
-                    },
-                    categories: {
-                        oldPath: $('#importer-templates-categories-oldpath').val(),
-                        newPath: $('#importer-templates-categories-newpath').val()
-                    },
-                    topics: {
-                        oldPath: $('#importer-templates-topics-oldpath').val(),
-                        newPath: $('#importer-templates-topics-newpath').val()
-                    },
-                    posts: {
-                        oldPath: $('#importer-templates-posts-oldpath').val(),
-                        newPath: $('#importer-templates-posts-newpath').val()
-                    }
-                },
                 passwordGen: {
                     enabled: $('#importer-passwordGen-enabled').is(':checked'),
                     chars: $('#importer-passwordgen-chars').val(),
@@ -668,7 +542,7 @@
                 categoriesIcons: (($('#importer-categories-icons').val() || '')).replace(/ /g,'').split(',')
             };
 
-            if (!exporter.module) {
+            if (!exporter.module && !ignoreErrors) {
                 app.alertError('You must select an Exporter module or enter one');
                 return null;
             }
@@ -678,8 +552,26 @@
                 importer: importer,
                 log: {
                     client: $wrapper.find('#importer-log-control-client').is(':checked'),
-                    clientVerbose: $wrapper.find('#importer-log-control-client-verbose').is(':checked'),
+                    verbose: $wrapper.find('#importer-log-control-verbose').is(':checked'),
                     server: $wrapper.find('#importer-log-control-server').is(':checked')
+                },
+                redirectionTemplates: {
+                    users: {
+                        oldPath: $('#redirection-templates-users-oldpath').val(),
+                        newPath: $('#redirection-templates-users-newpath').val()
+                    },
+                    categories: {
+                        oldPath: $('#redirection-templates-categories-oldpath').val(),
+                        newPath: $('#redirection-templates-categories-newpath').val()
+                    },
+                    topics: {
+                        oldPath: $('#redirection-templates-topics-oldpath').val(),
+                        newPath: $('#redirection-templates-topics-newpath').val()
+                    },
+                    posts: {
+                        oldPath: $('#redirection-templates-posts-oldpath').val(),
+                        newPath: $('#redirection-templates-posts-newpath').val()
+                    }
                 }
             };
         };
@@ -701,15 +593,7 @@
             socket.on('importer.success', onSuccess);
 
             socket.on('importer.complete', function() {
-                setTimeout(function(){
-                    var content = '';
-                    $('.import-logs .import-logs-line').each(function(i, p) {
-                        content += $(p).text() + '\n';
-                    });
-                    tryToSaveToFileSystem(content);
-
-                    canDownload();
-                }, 2000);
+                setTimeout(canDownload, 1500);
             });
 
             findExporters();

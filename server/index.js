@@ -112,7 +112,7 @@ Plugin.api = {
                 }
             });
 
-            if (Plugin.controller && typeof Plugin.controller[fn] === 'function') {
+            if (typeof Plugin.controller[fn] === 'function') {
                 Plugin.controller[fn].apply(Plugin.controller, args);
             } else {
                 res.json(500, {error: 'Could not Controller.' + fn});
@@ -120,7 +120,7 @@ Plugin.api = {
         },
 
         candownload: function(req, res, next) {
-            if (Plugin.controller && Plugin.controller.canDownloadDeliverables()) {
+            if (Plugin.controller.canDownloadDeliverables()) {
                 res.json({candownload: true});
             } else {
                 res.json({candownload: false});
@@ -138,24 +138,18 @@ Plugin.api = {
         },
 
         state: function(req, res, next) {
-            if (Plugin.controller) {
-                var state = Plugin.controller.state();
-                res.json(state);
-            } else {
-                res.json(500, {error: 'No state'});
-            }
+            var state = Plugin.controller.state();
+            res.json(state);
         },
 
         exporters: function(req, res, next) {
-            if (Plugin.controller) {
-                Plugin.controller.findModules('nodebb-plugin-import-', function(err, results) {
-                    res.json(results);
-                });
-            }
+            Plugin.controller.findModules('nodebb-plugin-import-', function(err, results) {
+                res.json(results);
+            });
         },
 
         redirectJson: function(req, res, next) {
-            if (Plugin.controller && Plugin.controller.canDownloadDeliverables()) {
+            if (Plugin.controller.canDownloadDeliverables()) {
                 Plugin.controller.getRedirectionJson(function(err, content) {
                     res.json(content);
                 });
@@ -165,7 +159,7 @@ Plugin.api = {
         },
 
         usersJson: function(req, res, next) {
-            if (Plugin.controller && Plugin.controller.canDownloadDeliverables()) {
+            if (Plugin.controller.canDownloadDeliverables()) {
                 Plugin.controller.getUsersJson(function(err, content) {
                     res.json(content);
                 });
@@ -175,7 +169,7 @@ Plugin.api = {
         },
 
         usersCsv: function(req, res, next) {
-            if (Plugin.controller && Plugin.controller.canDownloadDeliverables()) {
+            if (Plugin.controller.canDownloadDeliverables()) {
                 Plugin.controller.getUsersCsv(function(err, content) {
                     res.json(content);
                 });
@@ -204,21 +198,22 @@ Plugin.api = {
             })
         },
 
+        // todo: get rid of fn route, too much crap and complexity for nothing
         fn: function(req, res, next) {
             var fn = req.body.fn,
                 args = req.body.args || [];
-//
-//            args.push(function(err) {
-//                if (err) {
-//                    res.json(500, err);
-//                } else {
-//                    res.json.apply(res, arguments);
-//                }
-//            });
 
-            if (Plugin.controller && typeof Plugin.controller[fn] === 'function') {
-                Plugin.controller[fn].apply(Plugin.controller, args);
-                res.json({started: true});
+            if (typeof Plugin.controller[fn] === 'function') {
+                if (fn === 'saveConfig') {
+                    Plugin.controller[fn].apply(Plugin.controller, args);
+                    res.json(Plugin.controller.config());
+                } else {
+                    Plugin.controller[fn].apply(Plugin.controller, args);
+                    var response = {};
+                    response[fn] = true;
+                    response[fn + 'ed'] = true;
+                    res.json(response);
+                }
             } else {
                 res.json(500, {error: 'Could not Controller.' + fn});
             }
@@ -228,20 +223,16 @@ Plugin.api = {
             var content = req.body.content || '',
                 config = req.body.config;
 
-            if (Plugin.controller) {
-                if (!Plugin.controller._importer) {
-                    Plugin.controller._importer = require('./importer');
-                }
-
-                Plugin.controller._importer.init({}, config.importer, function() {
-                    res.json({
-                        content: Plugin.controller._importer.convert(content),
-                        config: Plugin.controller._importer.config()
-                    });
-                });
-            } else {
-                res.json(500, {error: 'Could not Controller.convert'});
+            if (!Plugin.controller._importer) {
+                Plugin.controller._importer = require('./importer');
             }
+
+            Plugin.controller._importer.init({}, config.importer, function() {
+                res.json({
+                    content: Plugin.controller._importer.convert(content),
+                    config: Plugin.controller._importer.config()
+                });
+            });
         }
     }
 };
