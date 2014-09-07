@@ -52,6 +52,7 @@ var async = require('async'),
         categoriesIcons: ['fa-comment'],
         autoConfirmEmails: true,
         userReputationMultiplier: 1,
+
         nbbTmpConfig: {
             postDelay: 0,
             minimumPostLength: 1,
@@ -59,6 +60,7 @@ var async = require('async'),
             minimumTitleLength: 1,
             maximumTitleLength: 300,
             maximumUsernameLength: 100,
+            requireEmailConfirmation: 0,
             allowGuestPosting: 1
         }
     };
@@ -269,6 +271,8 @@ var async = require('async'),
                 },
             users = Importer.data.users;
 
+        Importer.log('Importing ' + users._uids.length + ' users.');
+
         async.eachLimit(users._uids, 10, function(_uid, done) {
             count++;
 
@@ -403,6 +407,8 @@ var async = require('async'),
             config = Importer.config(),
             categories = Importer.data.categories;
 
+        Importer.log('Importing ' + categories._cids.length + ' categories.');
+
         async.eachLimit(categories._cids, 10, function(_cid, done) {
             count++;
 
@@ -466,6 +472,8 @@ var async = require('async'),
             users = Importer.data.users,
             categories = Importer.data.categories,
             topics = Importer.data.topics;
+
+        Importer.log('Importing ' + topics._tids.length + ' topics.');
 
         async.eachLimit(topics._tids, 10, function(_tid, done) {
             count++;
@@ -572,6 +580,8 @@ var async = require('async'),
             users = Importer.data.users,
             topics = Importer.data.topics,
             posts = Importer.data.posts;
+
+        Importer.log('Importing ' + posts._pids.length + ' posts.');
 
         async.eachLimit(posts._pids, 10, function(_pid, done) {
             count++;
@@ -717,14 +727,20 @@ var async = require('async'),
     };
 
     Importer.backupConfig = function(next) {
-        DB.getObject('config', function(err, data) {
-            if (err) throw err;
-            Importer.config('backedConfig', data || {});
-            if (!fs.existsSync(backupConfigFilepath)) {
-                fs.outputJsonSync(backupConfigFilepath, Importer.config().backedConfig);
-            }
+        // if the
+        if (fs.existsSync(backupConfigFilepath)) {
+            Importer.config('backedConfig', fs.readJsonSync(backupConfigFilepath) || {});
             next();
-        });
+        } else {
+            DB.getObject('config', function(err, data) {
+                if (err) {
+                    throw err;
+                }
+                Importer.config('backedConfig', data || {});
+                fs.outputJsonSync(backupConfigFilepath, Importer.config('backedConfig'));
+                next();
+            });
+        }
     };
 
     Importer.setTmpConfig = function(next) {
@@ -741,24 +757,42 @@ var async = require('async'),
         }
 
         DB.setObject('config', config, function(err){
-            if (err) throw err;
-            next();
+            if (err) {
+                throw err;
+            }
+
+            Meta.configs.init(next);
         });
     };
 
     // im nice
     Importer.restoreConfig = function(next) {
-        Importer.config('backedConfig', fs.readJsonFileSync(backupConfigFilepath));
-        DB.setObject('config', Importer.config().backedConfig, function(err){
-            if (err) {
-                Importer.warn('Something went wrong while restoring your nbb configs');
-                Importer.warn('here are your backed-up configs, you do it.');
-                Importer.warn(JSON.stringify(Importer.config().backedConfig));
-            }
+        if (fs.existsSync(backupConfigFilepath)) {
+            Importer.config('backedConfig', fs.readJsonFileSync(backupConfigFilepath));
 
-            Importer.log('Config restored:' + JSON.stringify(Importer.config().backedConfig));
+            DB.setObject('config', Importer.config().backedConfig, function(err){
+                if (err) {
+                    Importer.warn('Something went wrong while restoring your nbb configs');
+                    Importer.warn('here are your backed-up configs, you do it manually');
+                    Importer.warn(JSON.stringify(Importer.config().backedConfig));
+                    return next();
+                }
+
+                Importer.log('Config restored:' + JSON.stringify(Importer.config().backedConfig));
+                fs.removeSync(backupConfigFilepath);
+
+                Meta.configs.init(function(err) {
+                    if (err) {
+                        Importer.warn('Could not re-init Meta configs, just restart NodeBB, you\'ll be fine');
+                    }
+
+                    next();
+                });
+            });
+        } else {
+            Importer.warn('Could not restore NodeBB tmp configs, because ' + backupConfigFilepath + ' does not exist');
             next();
-        });
+        }
     };
 
     // using my fork of html-md, we create the window via jsdom once at the top, then just pass the reference,

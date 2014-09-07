@@ -173,10 +173,11 @@
             },
 
             start: function(e) {
-                $wrapper.find('#import-start').prop('disabled', true).addClass('disabled');
-                $wrapper.find('.import-logs').empty();
                 actions.saveSettings();
-                start();
+                if (start()) {
+                    $wrapper.find('#import-start').prop('disabled', true).addClass('disabled');
+                    $wrapper.find('.import-logs').empty();
+                }
             },
 
             downloadUsersCsv: function(e) {
@@ -388,8 +389,12 @@
         var start = plugin.start = function() {
             var configs = gatherConfigs();
             if (configs) {
-                return fn('start', [configs]);
+                fn('start', [configs]);
+                return true;
+            } else {
+                return false;
             }
+
         };
 
         var startExport = plugin.startExport = function() {
