@@ -424,7 +424,9 @@ var async = require('async'),
                 order: category._order || count + 1,
 
                 disabled: category._disabled || 0,
-
+                
+                parentCid: category._parent || category._parentCid || undefined,
+                
                 link: category._link || 0,
 
                 // roulette, that too,
@@ -727,7 +729,8 @@ var async = require('async'),
     };
 
     Importer.backupConfig = function(next) {
-        // if the
+        // if the backedConfig file exists, that means we did not complete the restore config last time,
+        // so don't overwrite it, assuming the nodebb config in the DB are the tmp ones
         if (fs.existsSync(backupConfigFilepath)) {
             Importer.config('backedConfig', fs.readJsonSync(backupConfigFilepath) || {});
             next();
