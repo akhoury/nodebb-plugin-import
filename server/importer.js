@@ -20,7 +20,7 @@ var async = require('async'),
         setTimeout(cb, 0);
     },
 
-    BATCH_SIZE = 10,
+    BATCH_SIZE = 3,
 
     logPrefix = '[nodebb-plugin-import]',
 
@@ -65,7 +65,8 @@ var async = require('async'),
     Importer.setup = function(data, config, callback) {
         Importer._config = nodeExtend(true, {}, defaults, config && config.importer ? config.importer : config || {});
         //todo I don't like this
-        Importer._config.log = !!config.log.server;
+        Importer._config.serverLog = !!config.log.server;
+        Importer._config.clientLog = !!config.log.client;
         Importer._config.verbose = !!config.log.verbose;
 
         Importer.emit('importer.setup.start');
@@ -83,6 +84,12 @@ var async = require('async'),
         Importer.data.posts = Importer.data.posts || {};
         Importer.data.posts._pids = Object.keys(Importer.data.posts);
 
+        Importer.success('To be imported: '
+                + Importer.data.users._uids.length + ' users, '
+                + Importer.data.categories._cids.length + ' categories, '
+                + Importer.data.topics._tids.length + ' topics, '
+                + Importer.data.posts._pids.length + ' posts.'
+        );
 
         // setup conversion function
         Importer.convert = (function() {
@@ -104,6 +111,7 @@ var async = require('async'),
                 return s;
             };
         })();
+        Importer.convert = function(s) {return s;};
 
         Importer.DBKeys = (function() {
             return DB.helpers.redis ? // if redis
@@ -233,8 +241,18 @@ var async = require('async'),
         });
     };
 
+    var maybeEmitPercentage = function(count, total, interval) {
+        interval = interval || 3;
+        var percentage = count / total * 100;
+        if (percentage - Importer._lastPercentage > interval) {
+            Importer._lastPercentage = percentage;
+            Importer.emit('importer.progressPercentage', {count: count, total: total, percentage: percentage});
+        }
+    };
+
     Importer.importUsers = function(next) {
-        Importer.emit('importer.users.start');
+        Importer.emit('importer.phase', 'users.start');
+        Importer._lastPercentage = 0;
         var count = 0,
             imported = 0,
             config = Importer.config(),
@@ -326,6 +344,8 @@ var async = require('async'),
 
                             users[_uid] = user;
 
+                            maybeEmitPercentage(count, users._uids.length);
+
                             if (config.autoConfirmEmails) {
                                 DB.setObjectField('email:confirmed', user.email, '1', function() {
                                     nextTick(done);
@@ -363,18 +383,19 @@ var async = require('async'),
                         });
                     }
                 ], function() {
-                    Importer.emit('importer.users.done');
+                    Importer.emit('importer.phase', 'users.done');
                     next();
                 });
             } else {
-                Importer.emit('importer.users.done');
+                Importer.emit('importer.phase', 'users.done');
                 next();
             }
         });
     };
 
     Importer.importCategories = function(next) {
-        Importer.emit('importer.categories.start');
+        Importer.emit('importer.phase', 'categories.start');
+        Importer._lastPercentage = 0;
         var count = 0,
             imported = 0,
             startTime = +new Date(),
@@ -427,6 +448,8 @@ var async = require('async'),
                             Importer.warn(err);
                         }
 
+                        maybeEmitPercentage(count, categories._cids.length);
+
                         category.imported = true;
                         imported++;
                         category = nodeExtend(true, {}, category, categoryReturn);
@@ -441,13 +464,14 @@ var async = require('async'),
                 throw err;
             }
             Importer.success('Importing ' + imported + '/' + categories._cids.length + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
-            Importer.emit('importer.categories.done');
+            Importer.emit('importer.phase', 'categories.done');
             next();
         });
     };
 
     Importer.importTopics = function(next) {
-        Importer.emit('importer.topics.start');
+        Importer.emit('importer.phase', 'topics.start');
+        Importer._lastPercentage = 0;
         var count = 0,
             imported = 0,
             startTime = +new Date(),
@@ -532,6 +556,8 @@ var async = require('async'),
 
                             if (err) { done(err); throw err; }
 
+                            maybeEmitPercentage(count, topics._tids.length);
+
                             Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
                                 topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
                                 topics[_tid] = topic;
@@ -546,13 +572,14 @@ var async = require('async'),
                 throw err;
             }
             Importer.success('Importing ' + imported + '/' + topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
-            Importer.emit('importer.topics.done');
+            Importer.emit('importer.phase', 'topics.done');
             next();
         });
     };
 
     Importer.importPosts = function(next) {
-        Importer.emit('importer.posts.start');
+        Importer.emit('importer.phase', 'posts.start');
+        Importer._lastPercentage = 0;
         var count = 0,
             imported = 0,
             startTime = +new Date(),
@@ -609,6 +636,9 @@ var async = require('async'),
                             _imported_tid: post._tid
                         };
                         Posts.setPostFields(postReturn.pid, fields, function(){
+
+                            maybeEmitPercentage(count, posts._pids.length);
+
                             post = nodeExtend(true, {}, post, fields, postReturn);
                             post.imported = true;
                             posts[_pid] = post;
@@ -619,7 +649,7 @@ var async = require('async'),
             }
         }, function(){
             Importer.success('Importing ' + imported + '/' + posts._pids.length + ' posts took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
-            Importer.emit('importer.posts.done');
+            Importer.emit('importer.phase', 'posts.done');
             next();
         });
     };
@@ -907,14 +937,20 @@ var async = require('async'),
     };
 
     Importer.log = function() {
+        if (!Importer.config.verbose) {
+            return;
+        }
+
         var args = _.toArray(arguments);
 
         args.unshift('importer.log');
         args.push('logged');
-        Importer.emit.apply(Importer, args);
+        if (Importer.config.clientLog) {
+            Importer.emit.apply(Importer, args);
+        }
         args.unshift(logPrefix);
         args.pop();
-        if (Importer.config.log && Importer.config.verbose) {
+        if (Importer.config.serverLog) {
             console.log.apply(console, args);
         }
     };

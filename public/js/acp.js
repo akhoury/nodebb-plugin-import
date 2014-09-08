@@ -516,6 +516,17 @@
             app.alertError(error);
         };
 
+        var $progress = $wrapper.find('.controller-progress');
+        var $progressPercentage = $wrapper.find('.controller-progress-percentage');
+        var $progressPhase = $wrapper.find('.controller-progress-phase');
+
+        var onProgressPhase = function(phase) {
+            $progressPhase.text(phase);
+        };
+        var onProgressPercentage = function(data) {
+            $progressPercentage.text((data.percentage || 0).toFixed(2));
+        };
+
         var gatherConfigs = function(ignoreErrors) {
             var exporter = {
                 dbhost: $('#exporter-dbhost').val(),
@@ -591,7 +602,8 @@
             socket.on('importer.warn', onWarn);
             socket.on('importer.error', onError);
             socket.on('importer.success', onSuccess);
-
+            socket.on('importer.phase', onProgressPhase);
+            socket.on('importer.progressPercentage', onProgressPercentage);
             socket.on('importer.complete', function() {
                 setTimeout(canDownload, 1500);
             });

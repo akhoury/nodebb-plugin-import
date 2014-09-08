@@ -246,13 +246,16 @@
                   <input class="importer-log-control" type="checkbox" id="importer-log-control-client" name="importer-log-control-client"> Log on client
                </label>
                <p class="help-block">
-                   May crash your page.
+                    Show logs on in the logs area below
                </p>
            </div>
            <div class="checkbox">
                <label for="importer-log-control-verbose">
                   <input data-on="click" data-action="toggleVerboseLogs" class="importer-log-control" type="checkbox" id="importer-log-control-verbose" name="importer-log-control-verbose"> Verbose
                </label>
+              <p class="help-block">
+                  May crash your page.
+              </p>
            </div>
         </div>
     </div>
@@ -261,9 +264,13 @@
     <div class="import-state-container">
         <h4>
             State:
-            <span class="controller-state-now">Idle</span> <i class="fa controller-state-icon"></i>,
+            <span class="controller-state-now">Idle</span><i class="fa controller-state-icon"></i>,
             by event:
-            <span class="controller-state-event">none</span>
+            <span class="controller-state-event">none</span> |
+            Progress: <span class="controller-progress">
+                <span class="controller-progress-phase"></span>
+                <span class="controller-progress-percentage">0</span>%
+            </span>
         </h4>
     </div>
 
