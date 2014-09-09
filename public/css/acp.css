@@ -57,8 +57,8 @@ code.import-code-example {
 .import-log-error {
     color: #970002;
 }
-#importer-parse-before,
-#importer-parse-after {
+#content-convert-parse-before,
+#content-convert-parse-after {
     width: 100%;
     color: white;
     background-color: black;
