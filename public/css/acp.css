@@ -6,10 +6,18 @@
     cursor: pointer;
 }
 .import-config,
-.import-config-wrapper {
+.import-tools,
+.import-config-wrapper,
+.import-tools-wrapper {
     background: #EEEEEE;
 }
-.import-config {
+.import-config-wrapper,
+.import-tools-wrapper {
+    border: 1px solid gray;
+    padding: 5px;
+}
+.import-config,
+.import-tools {
     max-height: 400px;
     overflow: auto;
 }
@@ -48,4 +56,8 @@ code.import-code-example {
 }
 .import-log-error {
     color: #970002;
+}
+#importer-parse-before,
+#importer-parse-after {
+    width: 100%;
 }

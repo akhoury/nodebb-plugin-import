@@ -1,13 +1,12 @@
 var async = require('async'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
     _ = require('underscore'),
-    window = require("jsdom").jsdom(null, null, {features: {FetchExternalResources: false}}).createWindow(),
-    htmlMd = require('html-md-optional_window'),
     nodeExtend = require('node.extend'),
     fs = require('fs-extra'),
     parse = require('./parse'),
 
-    utils = require('../../../public/src/utils.js'),
+    utils = require('../public/js/utils.js'),
+
     Group = require('../../../src/groups.js'),
     Meta = require('../../../src/meta.js'),
     User = require('../../../src/user.js'),
@@ -28,7 +27,6 @@ var async = require('async'),
 
     defaults = {
         log: true,
-        convert: null,
         passwordGen: {
             enabled: false,
             chars: '{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890',
@@ -39,6 +37,11 @@ var async = require('async'),
         categoriesIcons: ['fa-comment'],
         autoConfirmEmails: true,
         userReputationMultiplier: 1,
+
+        adminTakeOwnership: {
+            enable: false,
+            username: 'admin'
+        },
 
         nbbTmpConfig: {
             postDelay: 0,
@@ -90,28 +93,6 @@ var async = require('async'),
                 + Importer.data.topics._tids.length + ' topics, '
                 + Importer.data.posts._pids.length + ' posts.'
         );
-
-        // setup conversion function
-        Importer.convert = (function() {
-            var fnNames = [];
-            (Importer.config().convert || '').split(',').forEach(function(fnName) {
-                fnName = fnName.trim();
-                if (typeof Importer[fnName] === 'function') {
-                    fnNames.push(fnName);
-                }
-            });
-            return function(s) {
-                s = parse.before(s);
-
-                fnNames.forEach(function(fnName) {
-                    s = Importer[fnName](s);
-                });
-
-                s = parse.after(s);
-                return s;
-            };
-        })();
-        Importer.convert = function(s) {return s;};
 
         Importer.DBKeys = (function() {
             return DB.helpers.redis ? // if redis
@@ -256,6 +237,7 @@ var async = require('async'),
         var count = 0,
             imported = 0,
             config = Importer.config(),
+            oldOwnerNotFound = config.adminTakeOwnership.enable,
             startTime = +new Date(),
             passwordGen = config.passwordGen.enabled ?
                 function() {
@@ -287,7 +269,7 @@ var async = require('async'),
             } else {
                 Importer.log('[count: ' + count + '] saving user:_uid: ' + _uid);
 
-                User.create(userData, function(err, uid) {
+                var onCreate = function(err, uid) {
                     if (err) {
                         Importer.warn('skipping username: "' + user.username + '" ' + err);
                         nextTick(done);
@@ -306,7 +288,7 @@ var async = require('async'),
 
                         var fields = {
                             // preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
-                            signature: Importer.convert(Importer.truncateStr(user._signature || '', 252)),
+                            signature: utils.truncateStr(user._signature || '', 252),
                             website: user._website || '',
                             banned: user._banned ? 1 : 0,
                             location: user._location || '',
@@ -316,14 +298,14 @@ var async = require('async'),
                             fullname: user._fullname || '',
                             birthday: user._birthday || '',
                             showemail: user._showemail ? 1 : 0,
+
                             // this is a migration script, no one is online
                             status: 'offline',
 
                             _imported_uid: _uid,
                             _imported_username: user._username || '',
-                            _imported_email: user._email || '',
                             _imported_slug: user._slug || user._userslug || '',
-                            _imported_pwd: userData.password || ''
+                            _imported_signature: user._signature
                         };
 
                         var keptPicture = false;
@@ -355,7 +337,31 @@ var async = require('async'),
                             }
                         });
                     }
-                });
+                };
+
+                if (oldOwnerNotFound && (user._username || '').toLowerCase() === config.adminTakeOwnership.username.toLowerCase()) {
+                    Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" because it was revoked ownership');
+
+                    // cache the _uid for the next phases
+                    Importer.config('adminTakeOwnership', {
+                        enable: true,
+                        username: user._username,
+                        // just an alias in this case
+                        _username: user._username,
+                        _uid: user._uid
+                    });
+
+                    // no need to make it a mod or an admin, it already is
+                    user._level = null;
+
+                    // set to false so we don't have to match all users
+                    oldOwnerNotFound = false;
+
+                    // dont create, but set the fields
+                    return onCreate(null, 1);
+                } else {
+                    User.create(userData, onCreate);
+                }
             }
         }, function(err) {
             if (err) {
@@ -412,8 +418,8 @@ var async = require('async'),
             Importer.log('[count:' + count + '] saving category:_cid: ' + _cid);
 
             var categoryData = {
-                name: Importer.convert(category._name || ('Category ' + (count + 1))),
-                description: Importer.convert(category._description || 'no description available'),
+                name: category._name || ('Category ' + (count + 1)),
+                description: category._description || 'no description available',
 
                 // you can fix the order later, nbb/admin
                 order: category._order || count + 1,
@@ -440,6 +446,7 @@ var async = require('async'),
                         _imported_cid: _cid,
                         _imported_name: category._name || '',
                         _imported_slug: category._slug || '',
+                        _imported_description: category._description || '',
                         _imported_link: category._link || ''
                     };
 
@@ -498,9 +505,9 @@ var async = require('async'),
                 Importer.log('[count:' + count + '] saving topic:_tid: ' + _tid);
 
                 Topics.post({
-                    uid: user.uid,
-                    title: Importer.convert(topic._title),
-                    content: Importer.convert(topic._content),
+                    uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === topic._uid ? 1 : user.uid,
+                    title: topic._title || '',
+                    content: topic._content || '',
                     cid: category.cid,
                     thumb: topic._thumb
                 }, function(err, returnTopic){
@@ -536,7 +543,9 @@ var async = require('async'),
                             _imported_tid: _tid,
                             _imported_uid: topic._uid || '',
                             _imported_cid: topic._cid,
-                            _imported_slug: topic._slug || ''
+                            _imported_slug: topic._slug || '',
+                            _imported_title: topic._title || '',
+                            _imported_content: topic._content || ''
                         };
 
                         var postFields = {
@@ -605,9 +614,9 @@ var async = require('async'),
                 Importer.log('[count: ' + count + '] saving post: ' + _pid);
 
                 Posts.create({
-                    uid: user.uid,
+                    uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
                     tid: topic.tid,
-                    content: Importer.convert(post._content || ''),
+                    content: post._content || '',
                     timestamp: post._timestamp || startTime,
 
                     // i seriously doubt you have this, but it's ok if you don't
@@ -633,8 +642,10 @@ var async = require('async'),
 
                             _imported_pid: _pid,
                             _imported_uid: post._uid || '',
-                            _imported_tid: post._tid
+                            _imported_tid: post._tid || '',
+                            _imported_content: post._content || ''
                         };
+
                         Posts.setPostFields(postReturn.pid, fields, function(){
 
                             maybeEmitPercentage(count, posts._pids.length);
@@ -804,17 +815,6 @@ var async = require('async'),
         }
     };
 
-    // using my fork of html-md, we create the window via jsdom once at the top, then just pass the reference,
-    // which will avoid jsdom.jsdom().createWindow() every time, much, much faster, and avoids memory leaks
-    Importer['html-to-md'] = (function(window){
-        var brRe = /<br\s*(\/)?>/gmi;
-        return function(str){
-            return htmlMd(str, {window: window}).replace(brRe, "\n");
-        }
-    })(window);
-
-    Importer['bbcode-to-md'] = require('bbcode-to-markdown');
-
     // aka forums
     Importer.makeModeratorOnAllCategories = function(uid) {
         Importer.data.categories._cids.forEach(function(cid) {
@@ -842,16 +842,6 @@ var async = require('async'),
     Importer.genRandPwd = function(len, chars) {
         var index = (Math.random() * (chars.length - 1)).toFixed(0);
         return len > 0 ? chars[index] + Importer.genRandPwd(len - 1, chars) : '';
-    };
-
-    Importer.truncateStr = function (str, len) {
-        if (typeof str != 'string') return str;
-        len = Importer.isNumber(len) && len > 3 ? len : 20;
-        return str.length <= len ? str : str.substr(0, len - 3) + '...';
-    };
-
-    Importer.isNumber  = function (n) {
-        return !isNaN(parseFloat(n)) && isFinite(n);
     };
 
     // todo: i think I got that right?

@@ -8,7 +8,9 @@ module.exports =  {
 
         app.get(apiPrefix + '/state', Plugin.api.get.state);
 
-        app.get(apiPrefix + '/candownload', Plugin.api.get.candownload);
+        app.get(apiPrefix + '/postImportTools', Plugin.api.get.postImportTools);
+        app.get(apiPrefix + '/deleteAugmentedOriginalData', Plugin.api.get.deleteAugmentedOriginalData);
+
         app.get(apiPrefix + '/exporters', Plugin.api.get.exporters);
 
         app.get(apiPrefix + '/download/users.csv', Plugin.api.get.usersCsv);
@@ -17,6 +19,8 @@ module.exports =  {
 
         app.get(apiPrefix + '/fn', middleware.admin.isAdmin, Plugin.api.get.fn);
         app.post(apiPrefix + '/fn', middleware.admin.isAdmin, Plugin.api.post.fn);
-        app.post(apiPrefix + '/convert', Plugin.api.post.convert);
+
+        app.get(apiPrefix + '/convert/all', Plugin.api.get.convert);
+        app.post(apiPrefix + '/convert/content', Plugin.api.post.convert);
     }
 };

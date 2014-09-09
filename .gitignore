@@ -16,5 +16,5 @@ node_modules
 .idea
 .tmp
 config.json
-server/tmp/*.json
+server/tmp/*
 server/logs/*.log

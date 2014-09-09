@@ -2,134 +2,18 @@
     require(['settings'], function(Settings) {
 
         scope.plugins = scope.plugins || {};
+        var plugin = plugins.import = plugins.import || {};
 
-        var PLUGIN_NAME = 'import';
-
-        plugins[PLUGIN_NAME] = plugins[PLUGIN_NAME] || {};
-
-        var plugin = plugins[PLUGIN_NAME];
-        plugin.name = PLUGIN_NAME;
-        plugin.apiHost = '/api/admin/plugins/' + PLUGIN_NAME;
+        plugin.name = 'import';
+        plugin.apiHost = '/api/admin/plugins/' + 'import';
 
         var STORAGE_KEY = 'nodebb-plugin-' + plugin.name + ':exporters';
         var STORAGE_TTL = 1 * 24 * 60 * 60 * 1000; // 1 day
-        var LOG_FILE = 'nodebb-plugin-' + plugin.name + '-log.txt';
 
         var $wrapper = $('.' + plugin.name + '-wrapper');
         var $form = $('.' + plugin.name + '-settings');
-
+        var utils = plugin.utils;
         var _settings = null;
-
-        var util = plugin.util = {
-            customName: function(options) {
-                options = options || {};
-                options.delim = options.delim || '-';
-                options.prefix = options.prefix || PLUGIN_NAME;
-
-                var parts = (name || '')
-                    .replace(/\s{2,}/g, ' ')
-                    .split(' ');
-
-                return $.map(parts, function(v, i) {
-                    return options.prefix + (v ? options.delim + v : '');
-                }).join(' ');
-            },
-
-            cssName: function(name) {
-                return this.customName(name);
-            },
-
-            eventName: function(name) {
-                return this.customName(name, {delim: '.'});
-            },
-
-            // github.com/gkindel
-            props: function(obj, props, value) {
-                if(obj === undefined)
-                    obj = window;
-                if(props == null)
-                    return undefined;
-                var i = props.indexOf('.');
-                if( i == -1 ) {
-                    if(value !== undefined)
-                        obj[props] = value;
-                    return obj[props];
-                }
-                var prop = props.slice(0, i),
-                    newProps = props.slice(i + 1);
-
-                if(props !== undefined && !(obj[prop] instanceof Object) )
-                    obj[prop] = {};
-
-                return util.props(obj[prop], newProps, value);
-            },
-
-            toggleVisible: function($el, toggle) {
-                if (toggle === true) {
-                    return $el.show().removeClass('hidden');
-                }
-                if (toggle === false) {
-                    return $el.hide().addClass('hidden');
-                }
-
-                if ($el.is(':visible')) {
-                    $el.hide().addClass('hidden');
-                } else {
-                    $el.show().removeClass('hidden');
-                }
-            },
-
-            toggleAvailable: function($el, toggle) {
-                if (toggle === true) {
-                    return $el.prop('disabled', false).removeClass('disabled');
-                }
-                if (toggle === false) {
-                    return $el.prop('disabled', true).addClass('disabled');
-                }
-                if ($el.prop('disabled') || $el.hasClass('disabled')) {
-                    $el.prop('disabled', false).removeClass('disabled');
-                } else {
-                    $el.prop('disabled', true).addClass('disabled')
-                }
-            },
-
-            toggleHorizontal: function($el, toggle) {
-                if (!$el || !$el.length) return;
-                var visible = $el.is(':visible'),
-                    show = function() {
-                        $el.stop().css({opacity: 1}).show().animate({width: $el.data('width') || '100%'});
-                        return true;
-                    },
-                    hide = function() {
-                        $el.data('width', $el.width());
-                        $el.stop().css({opacity: 0}).animate({width: 0}, {done: $el.hide.bind($el)});
-                        return false;
-                    };
-
-                return (toggle === false || visible) && toggle !== true ? hide() : show();
-            },
-
-            toggleVertical: function($el, toggle, visibleDirection) {
-                var show, hide;
-
-                if (!$el) return;
-
-                if (toggle === 'up' || toggle === 'down') {
-                    visibleDirection = toggle;
-                    toggle = undefined;
-                }
-                visibleDirection = visibleDirection || 'down';
-
-                if (visibleDirection === 'down') {
-                    show = function() { $el.slideDown(); return true; };
-                    hide = function() { $el.slideUp(); return false; };
-                } else {
-                    show = function() { $el.slideUp(); return true; };
-                    hide = function() { $el.slideDown(); return false; };
-                }
-                return (toggle === false || $el.is(':visible')) && toggle !== true ? hide() : show();
-            }
-        };
 
         var actions = plugin.actions = {
 
@@ -137,28 +21,28 @@
                 var btn = $(e.target),
                     target = $wrapper.find(btn.attr('data-target')),
                     visibleDirection = btn.attr('data-target-visible-direction');
-                return util.toggleVertical(target, visibleDirection);
+                return utils.toggleVertical(target, visibleDirection);
             },
 
             slideHorizontalToggle: function(e) {
                 var btn = $(e.target),
                     target = $wrapper.find(btn.attr('data-target'));
 
-                return util.toggleHorizontal(target);
+                return utils.toggleHorizontal(target);
             },
 
             visibleToggle: function(e) {
                 var btn = $(e.target),
                     target = $wrapper.find(btn.attr('data-target'));
 
-                return util.toggleVisible(target);
+                return utils.toggleVisible(target);
             },
 
             availableToggle: function(e) {
                 var btn = $(e.target),
                     target = $wrapper.find(btn.attr('data-target'));
 
-                return util.toggleAvailable(target);
+                return utils.toggleAvailable(target);
             },
 
             saveSettings: function(e) {
@@ -168,7 +52,7 @@
                 $form.find('.form-group').removeClass('has-error');
 
                 Settings.save(plugin.name, $form, function() {
-                    util.toggleVertical($form.find('.import-config'), false, 'down');
+                    utils.toggleVertical($form.find('.import-config'), false, 'down');
                 });
             },
 
@@ -181,21 +65,20 @@
             },
 
             downloadUsersCsv: function(e) {
-                toggleDownloadBtns(false);
-                alertPreparingDownload();
+                togglePostImportTools(false);
+
+                app.alert({
+                    message: 'Preparing users.csv, please be patient',
+                    timeout: 1000
+                });
+
                 saveConfig().done(function() {
-                    canDownload().done(function (data) {
-                        if (data && data.candownload) {
+                    postImportToolsAvailable().done(function (data) {
+                        if (data && data.available) {
                             $.get(plugin.apiHost + '/download/users.csv')
-                                .done(function (data) {
-                                    app.alertError('Something went wrong :(');
-                                    download('users.csv', data);
-                                })
                                 .fail(function () {
+                                    app.alertError('Something went wrong :(');
                                 })
-                                .always(function () {
-                                    toggleDownloadBtns(true);
-                                });
                         } else {
                             app.alertError('Cannot download file at the moment', 1000);
                         }
@@ -204,21 +87,20 @@
             },
 
             downloadUsersJson: function(e) {
-                toggleDownloadBtns(false);
-                alertPreparingDownload();
+                togglePostImportTools(false);
+
+                app.alert({
+                    message: 'Preparing users.json, please be patient',
+                    timeout: 1000
+                });
+
                 saveConfig().done(function() {
-                    canDownload().done(function (data) {
-                        if (data && data.candownload) {
+                    postImportToolsAvailable().done(function (data) {
+                        if (data && data.available) {
                             $.get(plugin.apiHost + '/download/users.json')
-                                .done(function (data) {
-                                    download('users.json', data);
-                                })
                                 .fail(function () {
                                     app.alertError('Something went wrong :(');
                                 })
-                                .always(function () {
-                                    toggleDownloadBtns(true);
-                                });
                         } else {
                             app.alertError('Cannot download file at the moment', 1000);
                         }
@@ -227,21 +109,37 @@
             },
 
             downloadRedirectionJson: function(e) {
-                toggleDownloadBtns(false);
-                alertPreparingDownload();
+                togglePostImportTools(false);
+                app.alert({
+                    message: 'Preparing redirect.map.json, please be patient',
+                    timeout: 1000
+                });
                 saveConfig().done(function() {
-                    canDownload().done(function (data) {
-                        if (data && data.candownload) {
+                    postImportToolsAvailable().done(function (data) {
+                        if (data && data.available) {
                             $.get(plugin.apiHost + '/download/redirect.json')
-                                .done(function (data) {
-                                    download('redirect.map.json', data);
-                                })
                                 .fail(function () {
                                     app.alertError('Something went wrong :(');
                                 })
-                                .always(function () {
-                                    toggleDownloadBtns(true);
-                                });
+                        } else {
+                            app.alertError('Cannot download file at the moment', 1000);
+                        }
+                    });
+                });
+            },
+
+            convertContent: function(e) {
+                app.alert({
+                    message: 'Starting content conversion, please be patient',
+                    timeout: 1000
+                });
+                saveConfig().done(function() {
+                    postImportToolsAvailable().done(function (data) {
+                        if (data && data.available) {
+                            $.get(plugin.apiHost + '/convert/all')
+                                .fail(function () {
+                                    app.alertError('Something went wrong :(');
+                                })
                         } else {
                             app.alertError('Cannot download file at the moment', 1000);
                         }
@@ -250,48 +148,45 @@
             },
 
             toggleVerboseLogs: function(e) {
-                var verbose = $('#importer-log-control-verbose').is(':checked');
+                var verbose = $('#log-control-verbose').is(':checked');
                 if (verbose) {
                     $('.import-log-info').removeClass('hidden');
                 } else {
                     $('.import-log-info').addClass('hidden');
                 }
+            },
+
+            deleteAugmentedOriginalData: function() {
+                saveConfig().done(function() {
+                    postImportToolsAvailable().done(function (data) {
+                        if (data && data.available) {
+                            $.get(plugin.apiHost + '/deleteAugmentedOriginalData')
+                                .fail(function () {
+                                    app.alertError('Something went wrong :(');
+                                });
+                            app.alertError('Not implemented yet');
+                        } else {
+                            app.alertError('Cannot download file at the moment', 1000);
+                        }
+                    });
+                }); 
             }
         };
 
-        var download = function(filename, text) {
-            var pom = document.createElement('a');
-            pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-            pom.setAttribute('download', filename);
-            pom.click();
-        };
-
-        var alertPreparingDownload = function() {
-            app.alert({
-                message: 'Preparing file, please be patient',
-                timeout: 1000
-            });
-        };
-
         var toggleLogBtns = function(bool) {
-            var serverBtn = $wrapper.find('#importer-log-control-server');
-            var clientBtn = $wrapper.find('#importer-log-control-client');
-            var verboseBtn = $wrapper.find('#importer-log-control-verbose');
+            var serverBtn = $wrapper.find('#log-control-server');
+            var clientBtn = $wrapper.find('#log-control-client');
+            var verboseBtn = $wrapper.find('#log-control-verbose');
 
-            util.toggleAvailable(serverBtn, bool);
-            util.toggleAvailable(clientBtn, bool);
-            // util.toggleAvailable(verboseBtn, bool);
+            utils.toggleAvailable(serverBtn, bool);
+            utils.toggleAvailable(clientBtn, bool);
+            // utils.toggleAvailable(verboseBtn, bool);
         };
 
-
-        var toggleDownloadBtns = function(bool) {
-            var usersCsvBtn = $wrapper.find('#download-users-csv');
-            var usersJsonBtn = $wrapper.find('#download-users-json');
-            var redirectionJsonBtn = $wrapper.find('#download-redirection-json');
-
-            util.toggleAvailable(usersCsvBtn, bool);
-            util.toggleAvailable(usersJsonBtn, bool);
-            util.toggleAvailable(redirectionJsonBtn, bool);
+        var togglePostImportTools = function(bool) {
+            $wrapper.find('.import-tools').find('button, input, textarea').each(function(i, el) {
+                utils.toggleAvailable($(el), bool);
+            });
         };
 
         var convert = plugin.convert = function(content) {
@@ -347,23 +242,23 @@
                 return fn('startImport', [configs]);
             }
         };
+       
 
         var getState = plugin.getState = function() {
             return $.get(plugin.apiHost + '/state');
         };
 
-        var canDownload = plugin.canDownload = function() {
-            return $.get(plugin.apiHost + '/candownload')
+        var postImportToolsAvailable = plugin.postImportToolsAvailable = function() {
+            return $.get(plugin.apiHost + '/postImportTools')
                 .done(function(data) {
-                    var serverCan = !!(data && data.candownload);
-                    if (serverCan) {
-                        toggleDownloadBtns(true);
+                    if (data && data.available) {
+                        togglePostImportTools(true);
                     } else {
-                        toggleDownloadBtns(false);
+                        togglePostImportTools(false);
                     }
                 })
                 .fail(function() {
-                    toggleDownloadBtns(false);
+                    togglePostImportTools(false);
                 });
         };
 
@@ -460,7 +355,7 @@
                         startBtn.prop('disabled', true).addClass('disabled');
                         container.css({color: 'blue'});
                         toggleLogBtns(false);
-                        toggleDownloadBtns(false);
+                        togglePostImportTools(false);
                     } else if (state.now === 'errored') {
                         startBtn.prop('disabled', false).removeClass('disabled');
                         icon.addClass('fa-warning');
@@ -469,10 +364,14 @@
                     } else if (state.now === 'idle') {
                         startBtn.prop('disabled', false).removeClass('disabled');
                         container.css({color: 'grey'});
-                        canDownload();
+                        postImportToolsAvailable();
                         toggleLogBtns(true);
                     } else {
                         container.css({color: 'grey'});
+                    }
+
+                    if (state.details) {
+                        console.warn(state.details);
                     }
                 }
             };
@@ -480,8 +379,8 @@
 
 
         var logsEl = $wrapper.find('.import-logs');
-        var logOptionEl = $('#importer-log-control-client');
-        var logVerboseOptionEl = $('#importer-log-control-verbose');
+        var logOptionEl = $('#log-control-client');
+        var logVerboseOptionEl = $('#log-control-verbose');
         var line = function(msg, level) {
             if (!logOptionEl.is(':checked')) return;
             msg = typeof msg === 'object' ? JSON.stringify(msg) : msg;
@@ -527,6 +426,15 @@
             $progressPercentage.text((data.percentage || 0).toFixed(2));
         };
 
+        var onDownload = function(data) {
+            if (data) {
+                var pom = document.createElement('a');
+                pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(data.content || ''));
+                pom.setAttribute('download', data.filename || 'file');
+                pom.click();
+            }
+        };
+
         var gatherConfigs = function(ignoreErrors) {
             var exporter = {
                 dbhost: $('#exporter-dbhost').val(),
@@ -539,11 +447,14 @@
             };
 
             var importer = {
-                convert: $('#importer-convert').val(),
                 passwordGen: {
                     enabled: $('#importer-passwordGen-enabled').is(':checked'),
                     chars: $('#importer-passwordgen-chars').val(),
                     len: parseInt($('#importer-passwordgen-len').val(), 10)
+                },
+                adminTakeOwnership: {
+                    enable: $wrapper.find('#importer-admin-take-ownership').is(':checked'),
+                    username: $wrapper.find('#importer-admin-take-ownership-username').val()
                 },
                 autoConfirmEmails: $('#importer-autoconfirm-emails').is('checked'),
                 userReputationMultiplier: parseInt($('#importer-user-reputation-multiplier').val(), 10),
@@ -553,35 +464,61 @@
                 categoriesIcons: (($('#importer-categories-icons').val() || '')).replace(/ /g,'').split(',')
             };
 
-            if (!exporter.module && !ignoreErrors) {
-                app.alertError('You must select an Exporter module or enter one');
-                return null;
+            if (!ignoreErrors) {
+                if (!exporter.module) {
+                    app.alertError('You must select an Exporter module or enter one');
+                    return null;
+                }
+
+                if (importer.adminTakeOwnership.enable && !importer.adminTakeOwnership.username) {
+                    app.alertError('You must enter the old username that you want to take posts ownerships from');
+                    return null;
+                }
             }
 
             return {
                 exporter: exporter,
                 importer: importer,
                 log: {
-                    client: $wrapper.find('#importer-log-control-client').is(':checked'),
-                    verbose: $wrapper.find('#importer-log-control-verbose').is(':checked'),
-                    server: $wrapper.find('#importer-log-control-server').is(':checked')
+                    client: $wrapper.find('#log-control-client').is(':checked'),
+                    server: $wrapper.find('#log-control-server').is(':checked'),
+                    verbose: $wrapper.find('#log-control-verbose').is(':checked')
                 },
                 redirectionTemplates: {
                     users: {
-                        oldPath: $('#redirection-templates-users-oldpath').val(),
-                        newPath: $('#redirection-templates-users-newpath').val()
+                        oldPath: $wrapper.find('#redirection-templates-users-oldpath').val(),
+                        newPath: $wrapper.find('#redirection-templates-users-newpath').val()
                     },
                     categories: {
-                        oldPath: $('#redirection-templates-categories-oldpath').val(),
-                        newPath: $('#redirection-templates-categories-newpath').val()
+                        oldPath: $wrapper.find('#redirection-templates-categories-oldpath').val(),
+                        newPath: $wrapper.find('#redirection-templates-categories-newpath').val()
                     },
                     topics: {
-                        oldPath: $('#redirection-templates-topics-oldpath').val(),
-                        newPath: $('#redirection-templates-topics-newpath').val()
+                        oldPath: $wrapper.find('#redirection-templates-topics-oldpath').val(),
+                        newPath: $wrapper.find('#redirection-templates-topics-newpath').val()
                     },
                     posts: {
-                        oldPath: $('#redirection-templates-posts-oldpath').val(),
-                        newPath: $('#redirection-templates-posts-newpath').val()
+                        oldPath: $wrapper.find('#redirection-templates-posts-oldpath').val(),
+                        newPath: $wrapper.find('#redirection-templates-posts-newpath').val()
+                    }
+                },
+                contentConvert: {
+                    parseBefore: {
+                        enabled: $wrapper.find('#content-convert-use-parse-before').is(':checked'),
+                        js: $wrapper.find('#content-convert-parse-before').val()
+                    },
+                    mainConvert: $('#content-convert-main').val(),
+                    parseAfter: {
+                        enabled: $wrapper.find('#content-convert-use-parse-after').is(':checked'),
+                        js: $wrapper.find('#content-convert-parse-after').val()
+                    },
+                    convertReconds: {
+                        usersSignatures: $wrapper.find('#content-convert-users-signatures').is(':checked'),
+                        categoriesNames: $wrapper.find('#content-convert-categories-names').is(':checked'),
+                        categoriesDescriptions: $wrapper.find('#content-convert-categories-descriptions').is(':checked'),
+                        topicsTitle: $wrapper.find('#content-convert-topics-titles').is(':checked'),
+                        topicsContent: $wrapper.find('#content-convert-topics-content').is(':checked'),
+                        postsContent: $wrapper.find('#content-convert-posts-content').is(':checked')
                     }
                 }
             };
@@ -590,7 +527,30 @@
         bindActions();
 
         Settings.load(plugin.name, $form, function(err, data) {
-            _settings = data;
+
+            socket.emit('admin.settings.get', {
+                hash: 'import'
+            }, function (err, values) {
+                if (!err) {
+                    values = values || {};
+                    Object.keys(values).forEach(function(id) {
+                        var val = values[id];
+                        if ( val === 'on' || val[id] === 'off') {
+                            val = val === 'on';
+                            var checkbox = $wrapper.find('#' + id);
+                            var on = checkbox.attr('data-on');
+                            var action = checkbox.attr('data-action');
+
+                            checkbox.prop('checked', val);
+                            if (on && typeof actions[action] === 'function') {
+                                checkbox.trigger(on);
+                            }
+                        }
+                    });
+                } else {
+                    console.log('[settings] Unable to load settings for hash: ', hash);
+                }
+            });
 
             socket.on('controller.state', onControllerState);
 
@@ -604,16 +564,33 @@
             socket.on('importer.success', onSuccess);
             socket.on('importer.phase', onProgressPhase);
             socket.on('importer.progressPercentage', onProgressPercentage);
+
             socket.on('importer.complete', function() {
-                setTimeout(canDownload, 1500);
+                setTimeout(postImportToolsAvailable, 1500);
+            });
+
+            socket.on('controller.download', onDownload);
+
+            socket.on('convert.done', function() {
+                app.alert({
+                    message: 'Content convert done',
+                    timeout: 1500
+                });
+            });
+            socket.on('redirectionTemplates.done', function() {
+                app.alert({
+                    message: 'Redirection map done',
+                    timeout: 1500
+                });
             });
 
             findExporters();
-            canDownload();
+            postImportToolsAvailable();
 
             getState().done(function() {
                 setTimeout(function() {
-                    util.toggleVertical($form.find('.import-config'), false, 'down');
+                    utils.toggleVertical($form.find('.import-config'), false, 'down');
+                    utils.toggleVertical($form.find('.import-tools'), false, 'down');
                 }, 500);
                 onControllerState(data);
             });
