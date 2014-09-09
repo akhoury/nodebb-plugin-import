@@ -60,4 +60,6 @@ code.import-code-example {
 #importer-parse-before,
 #importer-parse-after {
     width: 100%;
+    color: white;
+    background-color: black;
 }
