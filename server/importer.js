@@ -223,9 +223,9 @@ var async = require('async'),
     };
 
     var maybeEmitPercentage = function(count, total, interval) {
-        interval = interval || 3;
+        interval = interval || 2;
         var percentage = count / total * 100;
-        if (percentage - Importer._lastPercentage > interval) {
+        if (percentage - Importer._lastPercentage > interval || percentage >= 100) {
             Importer._lastPercentage = percentage;
             Importer.emit('importer.progressPercentage', {count: count, total: total, percentage: percentage});
         }
