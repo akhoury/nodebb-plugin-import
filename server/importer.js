@@ -222,18 +222,25 @@ var async = require('async'),
         });
     };
 
-    var maybeEmitPercentage = function(count, total, interval) {
+    Importer.phasePercentage = 0;
+
+    Importer.progress = function(count, total, interval) {
         interval = interval || 2;
         var percentage = count / total * 100;
-        if (percentage - Importer._lastPercentage > interval || percentage >= 100) {
-            Importer._lastPercentage = percentage;
-            Importer.emit('importer.progressPercentage', {count: count, total: total, percentage: percentage});
+        if (percentage - Importer.phasePercentage > interval || percentage >= 100) {
+            Importer.phasePercentage = percentage;
+            Importer.emit('importer.progress', {count: count, total: total, percentage: percentage});
         }
     };
 
+    Importer.phase = function(phase, data) {
+        Importer.phasePercentage = 0;
+        Importer.emit('importer.phase', {phase: phase, data: data});
+    };
+
     Importer.importUsers = function(next) {
-        Importer.emit('importer.phase', 'users.start');
         Importer._lastPercentage = 0;
+        Importer.phase('usersImportStart');
         var count = 0,
             imported = 0,
             config = Importer.config(),
@@ -326,7 +333,7 @@ var async = require('async'),
 
                             users[_uid] = user;
 
-                            maybeEmitPercentage(count, users._uids.length);
+                            Importer.progress(count, users._uids.length);
 
                             if (config.autoConfirmEmails) {
                                 DB.setObjectField('email:confirmed', user.email, '1', function() {
@@ -389,18 +396,19 @@ var async = require('async'),
                         });
                     }
                 ], function() {
-                    Importer.emit('importer.phase', 'users.done');
+                    Importer.phase('usersImportDone');
                     next();
                 });
             } else {
-                Importer.emit('importer.phase', 'users.done');
+                Importer.phase('usersImportDone');
                 next();
             }
         });
     };
 
     Importer.importCategories = function(next) {
-        Importer.emit('importer.phase', 'categories.start');
+        Importer.phase('categoriesImportStart');
+
         Importer._lastPercentage = 0;
         var count = 0,
             imported = 0,
@@ -455,7 +463,7 @@ var async = require('async'),
                             Importer.warn(err);
                         }
 
-                        maybeEmitPercentage(count, categories._cids.length);
+                        Importer.progress(count, categories._cids.length);
 
                         category.imported = true;
                         imported++;
@@ -471,13 +479,14 @@ var async = require('async'),
                 throw err;
             }
             Importer.success('Importing ' + imported + '/' + categories._cids.length + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
-            Importer.emit('importer.phase', 'categories.done');
+            Importer.phase('categoriesImportDone');
             next();
         });
     };
 
     Importer.importTopics = function(next) {
-        Importer.emit('importer.phase', 'topics.start');
+        Importer.phase('topicsImportStart');
+
         Importer._lastPercentage = 0;
         var count = 0,
             imported = 0,
@@ -565,7 +574,7 @@ var async = require('async'),
 
                             if (err) { done(err); throw err; }
 
-                            maybeEmitPercentage(count, topics._tids.length);
+                            Importer.progress(count, topics._tids.length);
 
                             Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
                                 topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
@@ -581,13 +590,13 @@ var async = require('async'),
                 throw err;
             }
             Importer.success('Importing ' + imported + '/' + topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
-            Importer.emit('importer.phase', 'topics.done');
+            Importer.phase('topicsImportDone');
             next();
         });
     };
 
     Importer.importPosts = function(next) {
-        Importer.emit('importer.phase', 'posts.start');
+        Importer.phase('postsImportStart');
         Importer._lastPercentage = 0;
         var count = 0,
             imported = 0,
@@ -648,7 +657,7 @@ var async = require('async'),
 
                         Posts.setPostFields(postReturn.pid, fields, function(){
 
-                            maybeEmitPercentage(count, posts._pids.length);
+                            Importer.progress(count, posts._pids.length);
 
                             post = nodeExtend(true, {}, post, fields, postReturn);
                             post.imported = true;
@@ -660,18 +669,16 @@ var async = require('async'),
             }
         }, function(){
             Importer.success('Importing ' + imported + '/' + posts._pids.length + ' posts took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
-            Importer.emit('importer.phase', 'posts.done');
             next();
         });
     };
 
     Importer.teardown = function(next) {
-        Importer.emit('importer.teardown.start');
+        Importer.phase('importerTeardownStart');
+        Importer.phase('importerTeardownDone');
+        Importer.phase('importerComplete');
 
-        Importer.emit('importer.teardown.done');
         Importer.emit('importer.complete');
-
-        Importer.success('Importer completed');
         next();
     };
 

@@ -156,20 +156,22 @@
                 }
             },
 
-            deleteAugmentedOriginalData: function() {
-                saveConfig().done(function() {
-                    postImportToolsAvailable().done(function (data) {
-                        if (data && data.available) {
-                            $.get(plugin.apiHost + '/deleteAugmentedOriginalData')
-                                .fail(function () {
-                                    app.alertError('Something went wrong :(');
-                                });
-                            app.alertError('Not implemented yet');
-                        } else {
-                            app.alertError('Cannot download file at the moment', 1000);
-                        }
+            deleteExtraFields: function() {
+                var sure = confirm("Are you sure you want to delete the added fields? You will not longer be able to use the Post-Import tools, unless you run the import process from the beginning.");
+                if (sure) {
+                    saveConfig().done(function() {
+                        postImportToolsAvailable().done(function (data) {
+                            if (data && data.available) {
+                                $.get(plugin.apiHost + '/deleteExtraFields')
+                                    .fail(function () {
+                                        app.alertError('Something went wrong :(');
+                                    });
+                            } else {
+                                app.alertError('Cannot download file at the moment', 1000);
+                            }
+                        });
                     });
-                }); 
+                }
             }
         };
 
@@ -195,30 +197,25 @@
                 data: {
                     _csrf: $('#csrf_token').val(),
                     content: content,
-                    config: gatherConfigs()
+                    config: gatherConfig()
                 },
                 url: plugin.apiHost + '/convert',
                 cache: false
             });
         };
 
-        var fn = plugin.fn = function(fn, args) {
-            return $.ajax({
-                type: 'post',
-                data: {
-                    _csrf: $('#csrf_token').val(),
-                    fn: fn,
-                    args: args
-                },
-                url: plugin.apiHost + '/fn',
-                cache: false
-            });
-        };
-
         var start = plugin.start = function() {
-            var configs = gatherConfigs();
-            if (configs) {
-                fn('start', [configs]);
+            var config = gatherConfig();
+            if (config) {
+                $.ajax({
+                    type: 'post',
+                    data: {
+                        _csrf: $('#csrf_token').val(),
+                        config: config
+                    },
+                    url: plugin.apiHost + '/start',
+                    cache: false
+                });
                 return true;
             } else {
                 return false;
@@ -226,21 +223,18 @@
         };
 
         var saveConfig = plugin.saveConfig = function() {
-            return fn('config', [gatherConfigs(true)]);
-        };
+            utils.toggleVertical($form.find('.import-config'), false, 'down');
+            utils.toggleVertical($form.find('.import-tools'), false, 'down');
 
-        var startExport = plugin.startExport = function() {
-            var configs = gatherConfigs();
-            if (configs) {
-                return fn('startExport', [configs]);
-            }
-        };
-
-        var startImport = plugin.startImport = function() {
-            var configs = gatherConfigs();
-            if (configs) {
-                return fn('startImport', [configs]);
-            }
+            return $.ajax({
+                type: 'post',
+                data: {
+                    _csrf: $('#csrf_token').val(),
+                    config: gatherConfig(true)
+                },
+                url: plugin.apiHost + '/config',
+                cache: false
+            });
         };
        
 
@@ -419,10 +413,12 @@
         var $progressPercentage = $wrapper.find('.controller-progress-percentage');
         var $progressPhase = $wrapper.find('.controller-progress-phase');
 
-        var onProgressPhase = function(phase) {
-            $progressPhase.text(phase);
+        var onPhase = function(data) {
+            onSuccess('current phase: ' + data.phase);
+            $progressPhase.text(data.phase);
         };
-        var onProgressPercentage = function(data) {
+
+        var onProgress = function(data) {
             $progressPercentage.text((data.percentage || 0).toFixed(2));
         };
 
@@ -435,7 +431,7 @@
             }
         };
 
-        var gatherConfigs = function(ignoreErrors) {
+        var gatherConfig = function(ignoreErrors) {
             var exporter = {
                 dbhost: $('#exporter-dbhost').val(),
                 dbname: $('#exporter-dbname').val(),
@@ -562,8 +558,11 @@
             socket.on('importer.warn', onWarn);
             socket.on('importer.error', onError);
             socket.on('importer.success', onSuccess);
-            socket.on('importer.phase', onProgressPhase);
-            socket.on('importer.progressPercentage', onProgressPercentage);
+
+            socket.on('controller.phase', onPhase);
+            socket.on('controller.progress', onProgress);
+            socket.on('importer.phase', onPhase);
+            socket.on('importer.progress', onProgress);
 
             socket.on('importer.complete', function() {
                 setTimeout(postImportToolsAvailable, 1500);
@@ -577,11 +576,20 @@
                     timeout: 1500
                 });
             });
+
             socket.on('redirectionTemplates.done', function() {
                 app.alert({
                     message: 'Redirection map done',
                     timeout: 1500
                 });
+            });
+
+            socket.on('delete.done', function() {
+                app.alert({
+                    message: 'Deletion done',
+                    timeout: 1500
+                });
+                postImportToolsAvailable();
             });
 
             findExporters();

@@ -332,22 +332,8 @@ var fs = require('fs-extra'),
             return htmlMd(str, {window: window}).replace(brRe, "\n");
         }
     })(window);
+
     Controller['bbcode-to-md'] = require('bbcode-to-markdown');
-
-
-    // todo: refactor convert, redirectMap and deleteAll here
-    var getAllUsers = function(cb) {
-
-    };
-    var getAllCategories = function(cb) {
-
-    };
-    var getAllTopics = function(cb) {
-
-    };
-    var getAllPosts = function(cb) {
-
-    };
 
     Controller.convertAll = function(callback) {
         callback = _.isFunction(callback) ? callback : noop;
@@ -358,12 +344,12 @@ var fs = require('fs-extra'),
         Controller.setupConvert();
 
         if (Controller.postImportToolsAvailble()) {
-            Controller.emit('convert.start');
+            Controller.phase('convertStart');
 
             async.series([
                 function(done) {
                     if (rconf.usersSignatures) {
-                        Controller.emit('convert.usersStart');
+                        Controller.phase('convertUsersStart');
                         async.waterfall([
                             function (next) {
                                 DB.getObjectValues('username:uid', next);
@@ -379,7 +365,9 @@ var fs = require('fs-extra'),
                                 );
                             },
                             function (users, next) {
+                                var index = 0, len = users.length;
                                 async.eachLimit(users, CONVERT_BATCH_SIZE, function(user, done) {
+                                        Controller.progress(index++, len);
                                         if (user && user._imported_uid && user._imported_signature) {
                                             User.setUserField(
                                                 user.uid,
@@ -392,7 +380,7 @@ var fs = require('fs-extra'),
                                         }
                                     },
                                     function() {
-                                        Controller.emit('convert.usersDone');
+                                        Controller.phase('convertUsersDone');
                                         next();
                                     }
                                 );
@@ -404,7 +392,7 @@ var fs = require('fs-extra'),
                 },
                 function(done) {
                     if (rconf.categoriesNames || rconf.categoriesDescriptions) {
-                        Controller.emit('convert.categoriesStart');
+                        Controller.phase('convertCategoriesStart');
 
                         async.waterfall([
                             function (next) {
@@ -412,7 +400,9 @@ var fs = require('fs-extra'),
                             },
                             function (cids, next) {
                                 Categories.getCategoriesData(cids, function(err, categories) {
+                                    var index = 0, len = categories.length;
                                     async.eachLimit(categories, CONVERT_BATCH_SIZE, function(category, done) {
+                                        Controller.progress(index++, len);
                                         if (category._imported_cid) {
                                             async.parallel([
                                                 function(cb) {
@@ -434,7 +424,7 @@ var fs = require('fs-extra'),
                                             done();
                                         }
                                     }, function() {
-                                        Controller.emit('convert.categoriesDone');
+                                        Controller.phase('convertCategoriesDone');
                                         next();
                                     });
                                 });
@@ -446,7 +436,7 @@ var fs = require('fs-extra'),
                 },
                 function(done) {
                     if (rconf.topicsTitle || rconf.topicsContent || rconf.postsContent) {
-                        Controller.emit('convert.topicsStart');
+                        Controller.phase('convertTopicsStart');
 
                         async.waterfall([
                             function (next) {
@@ -454,7 +444,9 @@ var fs = require('fs-extra'),
                             },
                             function (tids, next) {
                                 Topics.getTopicsData(tids, function(err, topics) {
+                                    var index = 0, len = topics.length;
                                     async.eachLimit(topics, CONVERT_BATCH_SIZE, function(topic, done) {
+                                        Controller.progress(index++, len);
 
                                         // cache mainPids anyways
                                         _mainPids[topic.mainPid] = 1;
@@ -466,7 +458,8 @@ var fs = require('fs-extra'),
                                                         var title = Controller.convert(topic._imported_title);
                                                         DB.setObjectField('topic:' + topic.tid, 'title', title, function() {
                                                             if (err) return cb(err);
-                                                            DB.setObjectField('topic:' + topic.tid, 'slug', utils.slugify(title), cb);
+                                                            // DB.setObjectField('topic:' + topic.tid, 'slug', utils.slugify(title), cb);
+                                                            cb();
                                                         });
                                                     } else {
                                                         cb();
@@ -484,7 +477,7 @@ var fs = require('fs-extra'),
                                             done();
                                         }
                                     }, function() {
-                                        Controller.emit('convert.topicsDone');
+                                        Controller.phase('convertTopicsDone');
                                         next();
                                     });
                                 });
@@ -496,7 +489,7 @@ var fs = require('fs-extra'),
                 },
                 function(done) {
                     if (rconf.postsContent) {
-                        Controller.emit('convert.postsStart');
+                        Controller.phase('convertPostsStart');
 
                         async.waterfall([
                             function (next) {
@@ -507,16 +500,17 @@ var fs = require('fs-extra'),
                                 for(var x=0, numPids=pids.length; x<numPids; ++x) {
                                     keys.push('post:' + pids[x]);
                                 }
-
                                 DB.getObjects(keys, function(err, posts) {
+                                    var index = 0, len = posts.length;
                                     async.eachLimit(posts, CONVERT_BATCH_SIZE, function(post, done) {
+                                        Controller.progress(index++, len);
                                         if (post && post._imported_pid && ! _mainPids[post.pid] && post._imported_content) {
                                             DB.setObjectField('post:' + post.pid, 'content', Controller.convert(post._imported_content), done);
                                         } else {
                                             done();
                                         }
                                     }, function() {
-                                        Controller.emit('convert.postsDone');
+                                        Controller.phase('convertPostsDone');
                                         next();
                                     });
                                 });
@@ -527,6 +521,7 @@ var fs = require('fs-extra'),
                     }
                 }
             ], function(err, results) {
+                Controller.phase('convertDone');
                 if (err) {
                     Controller.state({
                         now: 'errored',
@@ -535,7 +530,6 @@ var fs = require('fs-extra'),
                     });
                     callback(err);
                 } else {
-                    Controller.emit('convert.done');
                     Controller.state({
                         now: 'idle',
                         event: 'convert.done'
@@ -544,6 +538,7 @@ var fs = require('fs-extra'),
                 }
             });
         } else {
+            Controller.phase('convertDone');
             var err = {error: 'Cannot convert now.'};
             Controller.state({
                 now: 'errored',
@@ -554,8 +549,26 @@ var fs = require('fs-extra'),
         }
     };
 
+    Controller.phasePercentage = 0;
+
+    Controller.progress = function(count, total, interval) {
+        interval = interval || 2;
+        var percentage = count / total * 100;
+        if (percentage - Controller.phasePercentage > interval || percentage >= 100) {
+            Controller.phasePercentage = percentage;
+            Controller.emit('controller.progress', {count: count, total: total, percentage: percentage});
+        }
+    };
+
+    Controller.phase = function(phase, data) {
+        Controller.phasePercentage = 0;
+        Controller.emit('controller.phase', {phase: phase, data: data});
+    };
+
     Controller.getUsersCsv = function(callback) {
         callback = _.isFunction(callback) ? callback : noop;
+
+        Controller.phase('usersCsvStart');
 
         if (Controller.postImportToolsAvailble()) {
             var content = 'index,email,username,pwd,_uid,uid,joindate\n';
@@ -574,15 +587,19 @@ var fs = require('fs-extra'),
                     );
                 },
                 function (usersData, next) {
+                    var len = usersData.length;
                     usersData.forEach(function (user, index) {
                         if (user && user._imported_uid) {
                             content += index + ',' + user.email + ',' + user.username + ',' + user._imported_pwd + ',' + user._imported_uid + ',' + user.uid + ',' + user.joindate + '\n';
                         }
+
+                        Controller.progress(index + 1, len);
                     });
 
                     next(null, content);
                 }
             ], function(err, content) {
+                Controller.phase('usersCsvDone');
                 if (err) {
                     Controller.state({
                         now: 'errored',
@@ -606,12 +623,14 @@ var fs = require('fs-extra'),
                 event: 'controller.downloadError',
                 details: err
             });
+            Controller.phase('usersCsvDone');
             callback(err);
         }
     };
 
     Controller.getUsersJson = function(callback) {
         callback = _.isFunction(callback) ? callback : noop;
+        Controller.phase('usersJsonStart');
 
         if (Controller.postImportToolsAvailble()) {
             var content = '[\n';
@@ -646,11 +665,13 @@ var fs = require('fs-extra'),
                                 content += ',\n'
                             }
                         }
+                        Controller.progress(index + 1, len);
                     });
                     content += '\n]';
                     next(null, content);
                 }
             ], function(err, content) {
+                Controller.phase('usersJsonDone');
                 if (err) {
                     Controller.state({
                         now: 'errored',
@@ -668,6 +689,7 @@ var fs = require('fs-extra'),
                 }
             });
         } else {
+            Controller.phase('usersJsonDone');
             var err = {error: 'Cannot download files at the moment.'};
             Controller.state({
                 now: 'errored',
@@ -680,6 +702,8 @@ var fs = require('fs-extra'),
 
     Controller.getRedirectionJson = function(callback) {
         callback = _.isFunction(callback) ? callback : noop;
+
+        Controller.phase('redirectionMapStart');
 
         var _mainPids = {};
 
@@ -695,13 +719,12 @@ var fs = require('fs-extra'),
 
         var content = '';
         if (Controller.postImportToolsAvailble()) {
-            Controller.emit('redirectionTemplates.start');
 
             content += '{\n';
             async.series([
                 function(done) {
                     if (Controller.redirectTemplates.users.oldPath && Controller.redirectTemplates.users.newPath) {
-                        Controller.emit('redirectionTemplates.usersStart');
+                        Controller.phase('redirectionMapUsersStart');
                         async.waterfall([
                             function (next) {
                                 DB.getObjectValues('username:uid', next);
@@ -717,7 +740,8 @@ var fs = require('fs-extra'),
                                 );
                             },
                             function (usersData, next) {
-                                usersData.forEach(function (user) {
+                                var len = usersData.length;
+                                usersData.forEach(function (user, index) {
                                     if (user && user._imported_uid) {
                                         // map some aliases
                                         user._uid = user._imported_uid;
@@ -729,8 +753,9 @@ var fs = require('fs-extra'),
                                         var newPath = Controller.redirectTemplates.users.newPath(user);
                                         content += '"' + oldPath + '":"' + newPath + '",\n';
                                     }
+                                    Controller.progress(index + 1, len);
                                 });
-                                Controller.emit('redirectionTemplates.usersDone');
+                                Controller.phase('redirectionMapUsersDone');
                                 next();
                             }
                         ], done);
@@ -740,15 +765,15 @@ var fs = require('fs-extra'),
                 },
                 function(done) {
                     if (Controller.redirectTemplates.categories.oldPath && Controller.redirectTemplates.categories.newPath) {
-                        Controller.emit('redirectionTemplates.categoriesStart');
-
+                        Controller.phase('redirectionMapCategoriesStart');
                         async.waterfall([
                             function (next) {
                                 DB.getSortedSetRange('categories:cid', 0, -1, next);
                             },
                             function (cids, next) {
                                 Categories.getCategoriesData(cids, function(err, categories) {
-                                    categories.forEach(function(category) {
+                                    var len = categories.length;
+                                    categories.forEach(function(category, index) {
                                         if (category && category._imported_cid) {
                                             // map some aliases
                                             category._cid = category._imported_cid;
@@ -760,8 +785,9 @@ var fs = require('fs-extra'),
                                             var newPath = Controller.redirectTemplates.categories.newPath(category);
                                             content += '"' + oldPath + '":"' + newPath + '",\n';
                                         }
+                                        Controller.progress(index + 1, len);
                                     });
-                                    Controller.emit('redirectionTemplates.categoriesDone');
+                                    Controller.phase('redirectionMapCategoriesDone');
                                     next();
                                 });
                             }
@@ -772,14 +798,15 @@ var fs = require('fs-extra'),
                 },
                 function(done) {
                     if (Controller.redirectTemplates.topics.oldPath && Controller.redirectTemplates.topics.newPath) {
-                        Controller.emit('redirectionTemplates.topicsStart');
+                        Controller.phase('redirectionMapTopicsStart');
                         async.waterfall([
                             function (next) {
                                 DB.getSortedSetRange('topics:tid', 0, -1, next);
                             },
                             function (tids, next) {
                                 Topics.getTopicsData(tids, function(err, topics) {
-                                    topics.forEach(function(topic) {
+                                    var len = topics.length;
+                                    topics.forEach(function(topic, index) {
 
                                         // cache mainPids
                                         _mainPids[topic.mainPid] = 1;
@@ -795,8 +822,9 @@ var fs = require('fs-extra'),
                                             var newPath = Controller.redirectTemplates.topics.newPath(topic);
                                             content += '"' + oldPath + '":"' + newPath + '",\n';
                                         }
+                                        Controller.progress(index + 1, len);
                                     });
-                                    Controller.emit('redirectionTemplates.topicsDone');
+                                    Controller.phase('redirectionMapTopicsDone');
                                     next();
                                 });
                             }
@@ -807,7 +835,7 @@ var fs = require('fs-extra'),
                 },
                 function(done) {
                     if (Controller.redirectTemplates.posts.oldPath && Controller.redirectTemplates.posts.newPath) {
-                        Controller.emit('redirectionTemplates.postsStart');
+                        Controller.phase('redirectionMapPostsStart');
                         async.waterfall([
                             function (next) {
                                 DB.getSortedSetRange('posts:pid', 0, -1, next);
@@ -818,7 +846,8 @@ var fs = require('fs-extra'),
                                     keys.push('post:' + pids[x]);
                                 }
                                 DB.getObjects(keys, function(err, posts) {
-                                    posts.forEach(function(post) {
+                                    var len = posts.length;
+                                    posts.forEach(function(post, index) {
                                         if (post && post._imported_pid && !_mainPids[post.pid] ) {
                                             // map some aliases
                                             post._pid = post._imported_pid;
@@ -829,8 +858,9 @@ var fs = require('fs-extra'),
                                             var newPath = Controller.redirectTemplates.posts.newPath(post);
                                             content += '"' + oldPath + '":"' + newPath + '",\n';
                                         }
+                                        Controller.progress(index + 1, len);
                                     });
-                                    Controller.emit('redirectionTemplates.postsDone');
+                                    Controller.phase('redirectionMapPostsDone');
                                     next();
                                 });
                             }
@@ -840,6 +870,7 @@ var fs = require('fs-extra'),
                     }
                 }
             ], function(err, results) {
+                Controller.phase('redirectionMapDone');
                 if (err) {
                     Controller.state({
                         now: 'errored',
@@ -848,7 +879,6 @@ var fs = require('fs-extra'),
                     });
                     callback(err);
                 } else {
-                    Controller.emit('redirectionTemplates.done');
                     var lastCommaIdx = content.lastIndexOf(',');
                     if (lastCommaIdx > -1) {
                         content = content.substring(0, lastCommaIdx);
@@ -863,6 +893,7 @@ var fs = require('fs-extra'),
                 }
             });
         } else {
+            Controller.phase('redirectionMapDone');
             var err = {error: 'Cannot download files.'};
             Controller.state({
                 now: 'errored',
@@ -873,8 +904,225 @@ var fs = require('fs-extra'),
         }
     };
 
-    Controller.deleteAugmentedOriginalData = function() {
 
-    }
+    Controller.deleteExtraFields = function(callback) {
+
+        callback = _.isFunction(callback) ? callback : noop;
+
+        var _mainPids = {};
+
+        if (Controller.postImportToolsAvailble()) {
+            Controller.phase('deleteExtraFieldsStart');
+
+            async.series([
+                function(done) {
+                    Controller.phase('deleteExtraFieldsUsersStart');
+                    async.waterfall([
+                        function (next) {
+                            DB.getObjectValues('username:uid', next);
+                        },
+                        function (uids, next) {
+                            User.getMultipleUserFields(
+                                uids,
+                                [
+                                    'uid',
+                                    '_imported_uid', '_imported_username', '_imported_slug', '_imported_signature'
+                                ],
+                                next
+                            );
+                        },
+                        function (users, next) {
+                            var index = 0, len = users.length;
+                            async.eachLimit(users, CONVERT_BATCH_SIZE, function(user, done) {
+                                    Controller.progress(index++, len);
+                                    if (user && user._imported_uid) {
+                                        async.parallel([
+                                            function(cb) {
+                                                DB.deleteObjectField('user:' + user.uid, '_imported_uid', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('user:' + user.uid, '_imported_username', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('user:' + user.uid, '_imported_slug', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('user:' + user.uid, '_imported_signature', cb);
+                                            }
+                                        ], done);
+                                    } else {
+                                        done();
+                                    }
+                                },
+                                function() {
+                                    Controller.phase('deleteExtraFieldsUsersDone');
+                                    next();
+                                }
+                            );
+                        }
+                    ], done);
+
+                },
+                function(done) {
+                    Controller.phase('deleteExtraFieldsCategoriesStart');
+
+                    async.waterfall([
+                        function (next) {
+                            DB.getSortedSetRange('categories:cid', 0, -1, next);
+                        },
+                        function (cids, next) {
+                            Categories.getCategoriesData(cids, function(err, categories) {
+                                var index = 0, len = categories.length;
+                                async.eachLimit(categories, CONVERT_BATCH_SIZE, function(category, done) {
+                                    Controller.progress(index++, len);
+                                    if (category._imported_cid) {
+                                        async.parallel([
+                                            function(cb) {
+                                                DB.deleteObjectField('category:' + category.cid, '_imported_cid', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('category:' + category.cid, '_imported_name', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('category:' + category.cid, '_imported_description', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('category:' + category.cid, '_imported_slug', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('category:' + category.cid, '_imported_link', cb);
+                                            }
+                                        ], done);
+                                    } else {
+                                        done();
+                                    }
+                                }, function() {
+                                    Controller.phase('deleteExtraFieldsCategoriesDone');
+                                    next();
+                                });
+                            });
+                        }
+                    ], done);
+
+                },
+                function(done) {
+                    Controller.phase('deleteExtraFieldsTopicsStart');
+
+                    async.waterfall([
+                        function (next) {
+                            DB.getSortedSetRange('topics:tid', 0, -1, next);
+                        },
+                        function (tids, next) {
+                            Topics.getTopicsData(tids, function(err, topics) {
+                                var index = 0, len = topics.length;
+                                async.eachLimit(topics, CONVERT_BATCH_SIZE, function(topic, done) {
+                                    Controller.progress(index++, len);
+                                    if (topic && topic._imported_tid) {
+                                        _mainPids[topic.mainPid] = 1;
+
+                                        async.parallel([
+                                            function(cb) {
+                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_tid', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_cid', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_uid', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_slug', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_title', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_content', cb);
+                                            }
+                                        ], done);
+                                    } else {
+                                        done();
+                                    }
+                                }, function() {
+                                    Controller.phase('deleteExtraFieldsTopicsDone');
+                                    next();
+                                });
+                            });
+                        }
+                    ], done);
+                },
+                function(done) {
+                    Controller.phase('deleteExtraFieldsPostsStart');
+
+                    async.waterfall([
+                        function (next) {
+                            DB.getSortedSetRange('posts:pid', 0, -1, next);
+                        },
+                        function (pids, next) {
+                            var keys = [];
+                            for(var x=0, numPids=pids.length; x<numPids; ++x) {
+                                keys.push('post:' + pids[x]);
+                            }
+                            DB.getObjects(keys, function(err, posts) {
+                                var index = 0, len = posts.length;
+                                async.eachLimit(posts, CONVERT_BATCH_SIZE, function(post, done) {
+                                    Controller.progress(index++, len);
+                                    if (post && post._imported_pid) {
+                                        async.parallel([
+                                            function(cb) {
+                                                DB.deleteObjectField('post:' + post.pid, '_imported_pid', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('post:' + post.pid, '_imported_tid', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('post:' + post.pid, '_imported_uid', cb);
+                                            },
+                                            function(cb) {
+                                                DB.deleteObjectField('post:' + post.pid, '_imported_content', cb);
+                                            }
+                                        ], done);
+                                    } else {
+                                        done();
+                                    }
+                                }, function() {
+                                    Controller.phase('deleteExtraFieldsPostsDone');
+                                    next();
+                                });
+                            });
+                        }
+                    ], done);
+
+                }
+            ], function(err, results) {
+                Controller.phase('deleteExtraFieldsDone');
+                if (err) {
+                    Controller.state({
+                        now: 'errored',
+                        event: 'controller.deletingExtraFieldsError',
+                        details: err
+                    });
+                    callback(err);
+                } else {
+                    fs.remove(LAST_IMPORT_TIMESTAMP_FILE, function(err) {
+                        Controller.state({
+                            now: 'idle',
+                            event: 'delete.done'
+                        });
+                        callback(null);
+                    });
+                }
+            });
+        } else {
+            Controller.phase('deleteExtraFieldsDone');
+            var err = {error: 'Cannot delete now.'};
+            Controller.state({
+                now: 'errored',
+                event: 'controller.deletingExtraFieldsError',
+                details: err
+            });
+            callback(err);
+        }
+    };
 
 })(module.exports);

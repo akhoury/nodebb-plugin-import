@@ -149,6 +149,9 @@
 
         </div>
 
+        <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Delete everything, then import to NodeBB</button>
+        <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
+
         <button class="btn btn-lg btn-primary pull-right" data-on="click" data-action="saveSettings" id="save" type="button">Save Config</button>
     </div>
 
@@ -167,25 +170,6 @@
             with the necessary original fields and values, and these post-import-tools can use these original values to do/get
             some useful stuff. <br />
         </p>
-
-        <div class="form-group">
-            <h4>Delete the old original data from NodeBB Database</h4>
-            <p class="help-block">
-                If you're done using the post-import-tools, you can clean up the original data from your db, however,
-                you cannot revert this step, so you won't be able to use the post-import-tools unless you re-import your data.
-                However, this <b>will not</b> touch your original Database.
-            </p>
-            <button
-                    title="Deletes all the added fields to the NodeBB records"
-                    class="btn btn-lg btn-danger import-delete-originals disabled"
-                    disabled="disabled"
-                    data-on="click"
-                    data-action="deleteAugmentedOriginalData"
-                    id="delete-originals"
-                    type="button">Delete all original data from NodeBB's DB, I'm done with it (might take some time)
-            </button>
-        </div>
-
 
         <div class="form-group">
             <h4 for="importer-convert">Content conversion</h4>
@@ -388,6 +372,25 @@
             </button>
         </div>
 
+
+        <div class="form-group">
+            <h4>Delete the old original data from NodeBB Database</h4>
+            <p class="help-block">
+                If you're done using the post-import-tools, you can clean up the original data from your db, however,
+                you cannot revert this step, so you won't be able to use the post-import-tools unless you re-import your data.
+                However, this <b>will not</b> touch your original Database.
+            </p>
+            <button
+                    title="Deletes all the extra added fields to the NodeBB records"
+                    class="btn btn-lg btn-danger import-delete-originals disabled"
+                    disabled="disabled"
+                    data-on="click"
+                    data-action="deleteExtraFields"
+                    id="delete-originals"
+                    type="button">Deletes all the extra added fields to the NodeBB records, I'm done with them, (might take some time) I understand that I cannot revert this action.
+            </button>
+        </div>
+
     </div>
     <div class="text-center">
         <span title="Toggle settings" data-target-visible-direction="down" data-on="click" data-action="slideVerticalToggle" data-target=".import-tools" class="import-hand">Toggle post-import tools</span>
@@ -396,9 +399,6 @@
 </fieldset>
 
 <div class="import-toolbar import-overflow-hidden">
-    <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Delete everything, then import to NodeBB</button>
-    <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
-
     <div class="form">
         <div class="checkbox">
             <label for="log-control-server">
@@ -434,9 +434,9 @@
         <span class="controller-state-now">Idle</span><i class="fa controller-state-icon"></i>,
         by event:
         <span class="controller-state-event">none</span> |
-        Progress: <span class="controller-progress">
-                <span class="controller-progress-phase"></span>
-                <span class="controller-progress-percentage">0</span>%
+            <span class="controller-progress">
+                Phase: <b class="controller-progress-phase"></b>
+                Progress: <b class="controller-progress-percentage">0</b>%
             </span>
     </h4>
 </div>

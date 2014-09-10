@@ -84,23 +84,9 @@ var
 
     Plugin.api = {
         'get': {
-            fn: function(req, res, next) {
-                var fn = req.params.fn || req.query.fn,
-                    args = req.params.args || req.query.args || [];
 
-                args.push(function(err) {
-                    if (err) {
-                        res.json(500, err);
-                    } else {
-                        res.json.apply(res, arguments);
-                    }
-                });
-
-                if (typeof Plugin.controller[fn] === 'function') {
-                    Plugin.controller[fn].apply(Plugin.controller, args);
-                } else {
-                    res.json(500, {error: 'Could not Controller.' + fn});
-                }
+            config: function(req, res, next) {
+                res.json(Plugin.controller.config());
             },
 
             postImportTools: function(req, res, next) {
@@ -111,7 +97,7 @@ var
                 }
             },
 
-            config: function(req, res, next) {
+            settings: function(req, res, next) {
                 Plugin.settings(function(err, config) {
                     if (err) {
                         res.json(500, {error: err});
@@ -167,9 +153,9 @@ var
                     res.json({error: 'Cannot convert now'});
                 }
             },
-            deleteAugmentedOriginalData: function(req, res, next) {
+            deleteExtraFields: function(req, res, next) {
                 if (Plugin.controller.postImportToolsAvailble()) {
-                    Plugin.controller.deleteAugmentedOriginalData();
+                    Plugin.controller.deleteExtraFields();
                     res.json({started: false});
                 } else {
                     res.json({error: 'Cannot delete now'});
@@ -178,7 +164,7 @@ var
         },
 
         post: {
-            config: function(req, res, next) {
+            settings: function(req, res, next) {
                 var config = {};
 
                 for (var key in req.body) {
@@ -196,25 +182,19 @@ var
                 })
             },
 
-            // todo: get rid of fn route, too much crap and complexity for nothing
-            fn: function(req, res, next) {
-                var fn = req.body.fn,
-                    args = req.body.args || [];
+            config: function(req, res, next) {
+                var config = req.body.config;
+                Plugin.controller.config(config);
+                res.json(Plugin.controller.config());
+            },
 
-                if (typeof Plugin.controller[fn] === 'function') {
-                    if (fn === 'saveConfig') {
-                        Plugin.controller[fn].apply(Plugin.controller, args);
-                        res.json(Plugin.controller.config());
-                    } else {
-                        Plugin.controller[fn].apply(Plugin.controller, args);
-                        var response = {};
-                        response[fn] = true;
-                        response[fn + 'ed'] = true;
-                        res.json(response);
-                    }
-                } else {
-                    res.json(500, {error: 'Could not Controller.' + fn});
+            start: function(req, res, next) {
+                var config = req.body.config;
+                if (config) {
+                    Plugin.controller.config(config);
                 }
+                Plugin.controller.start();
+                res.json({started: true});
             },
 
             convert: function(req, res, next) {

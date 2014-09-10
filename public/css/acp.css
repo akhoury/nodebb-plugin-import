@@ -5,11 +5,22 @@
     cursor: hand;
     cursor: pointer;
 }
+.import-hand[data-target=".import-config"],
+.import-hand[data-target=".import-tools"] {
+    font-size: 20px;
+}
+.import-hand[data-target=".import-config"]:hover,
+.import-hand[data-target=".import-tools"]:hover {
+    color: rgb(107, 107, 107);
+}
 .import-config,
+.import-config-wrapper {
+    background: #E2E4F6;
+}
+
 .import-tools,
-.import-config-wrapper,
 .import-tools-wrapper {
-    background: #EEEEEE;
+    background: #DCF7C8;
 }
 .import-config-wrapper,
 .import-tools-wrapper {
@@ -18,7 +29,7 @@
 }
 .import-config,
 .import-tools {
-    max-height: 400px;
+    max-height: 600px;
     overflow: auto;
 }
 .import-logs {
