@@ -19,6 +19,9 @@ var fs = require('fs-extra'),
 
     utils = require('../public/js/utils.js'),
 
+    DELIVERABLES_TMP_DIR = path.join(__dirname, '/../public/tmp'),
+    DELIVERABLES_TMP_URL = path.join('/plugins/nodebb-plugin-import/tmp'),
+
     LOG_FILE = path.join(__dirname, '/tmp/import.log'),
     LAST_IMPORT_TIMESTAMP_FILE = path.join(__dirname + '/tmp/lastimport'),
     CONVERT_BATCH_SIZE = 5,
@@ -52,7 +55,7 @@ var fs = require('fs-extra'),
 
     Controller.postImportToolsAvailble = function () {
         var state = Controller.state();
-        return state.now === 'idle' && fs.existsSync(LAST_IMPORT_TIMESTAMP_FILE);
+        return (!state || state.now === 'idle') && fs.existsSync(LAST_IMPORT_TIMESTAMP_FILE);
     };
 
     Controller.clean = function() {
@@ -346,6 +349,11 @@ var fs = require('fs-extra'),
         if (Controller.postImportToolsAvailble()) {
             Controller.phase('convertStart');
 
+            Controller.state({
+                now: 'busy',
+                event: 'controller.convertAll'
+            });
+
             async.series([
                 function(done) {
                     if (rconf.usersSignatures) {
@@ -554,7 +562,7 @@ var fs = require('fs-extra'),
     Controller.progress = function(count, total, interval) {
         interval = interval || 2;
         var percentage = count / total * 100;
-        if (percentage - Controller.phasePercentage > interval || percentage >= 100) {
+        if (percentage === 0 || percentage >= 100 || (percentage - Controller.phasePercentage > interval)) {
             Controller.phasePercentage = percentage;
             Controller.emit('controller.progress', {count: count, total: total, percentage: percentage});
         }
@@ -571,6 +579,11 @@ var fs = require('fs-extra'),
         Controller.phase('usersCsvStart');
 
         if (Controller.postImportToolsAvailble()) {
+            Controller.state({
+                now: 'busy',
+                event: 'controller.getUsersCsv'
+            });
+
             var content = 'index,email,username,pwd,_uid,uid,joindate\n';
             async.waterfall([
                 function (next) {
@@ -608,12 +621,20 @@ var fs = require('fs-extra'),
                     });
                     callback(err);
                 } else {
-                    Controller.emit('controller.download', {filename: 'users.csv', content: content});
-                    Controller.state({
-                        now: 'idle',
-                        event: 'controller.download'
+
+                    var filename = 'users.csv';
+                    var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
+                    var fileurl = DELIVERABLES_TMP_URL + '/' + filename;
+                    var ret = {filename: filename, fileurl: fileurl, filepath: filepath};
+
+                    fs.writeFile(filepath, content, 'utf-8', function() {
+                        Controller.emit('controller.download', ret);
+                        Controller.state({
+                            now: 'idle',
+                            event: 'controller.download'
+                        });
+                        callback(null, ret);
                     });
-                    callback(null, content);
                 }
             });
         } else {
@@ -633,6 +654,12 @@ var fs = require('fs-extra'),
         Controller.phase('usersJsonStart');
 
         if (Controller.postImportToolsAvailble()) {
+
+            Controller.state({
+                now: 'busy',
+                event: 'controller.getUsersJson'
+            });
+
             var content = '[\n';
             async.waterfall([
                 function (next) {
@@ -680,12 +707,20 @@ var fs = require('fs-extra'),
                     });
                     callback(err);
                 } else {
-                    Controller.emit('controller.download', {filename: 'users.json', content: content});
-                    Controller.state({
-                        now: 'idle',
-                        event: 'controller.download'
+
+                    var filename = 'users.json';
+                    var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
+                    var fileurl = DELIVERABLES_TMP_URL + '/' + filename;
+                    var ret = {filename: filename, fileurl: fileurl, filepath: filepath};
+
+                    fs.writeFile(filepath, content, 'utf-8', function() {
+                        Controller.emit('controller.download', ret);
+                        Controller.state({
+                            now: 'idle',
+                            event: 'controller.download'
+                        });
+                        callback(null, ret);
                     });
-                    callback(null, content);
                 }
             });
         } else {
@@ -719,6 +754,11 @@ var fs = require('fs-extra'),
 
         var content = '';
         if (Controller.postImportToolsAvailble()) {
+
+            Controller.state({
+                now: 'busy',
+                event: 'controller.getRedirectionJson'
+            });
 
             content += '{\n';
             async.series([
@@ -884,12 +924,20 @@ var fs = require('fs-extra'),
                         content = content.substring(0, lastCommaIdx);
                     }
                     content += '\n}';
-                    Controller.emit('controller.download', {filename: 'redirect.map.json', content: content});
-                    Controller.state({
-                        now: 'idle',
-                        event: 'controller.download'
+
+                    var filename = 'redirect.map.json';
+                    var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
+                    var fileurl = DELIVERABLES_TMP_URL + '/' + filename;
+                    var ret = {filename: filename, fileurl: fileurl, filepath: filepath};
+
+                    fs.writeFile(filepath, content, 'utf-8', function() {
+                        Controller.emit('controller.download', ret);
+                        Controller.state({
+                            now: 'idle',
+                            event: 'controller.download'
+                        });
+                        callback(null, ret);
                     });
-                    callback(null, content);
                 }
             });
         } else {
@@ -910,10 +958,13 @@ var fs = require('fs-extra'),
         callback = _.isFunction(callback) ? callback : noop;
 
         var _mainPids = {};
+        Controller.phase('deleteExtraFieldsStart');
 
         if (Controller.postImportToolsAvailble()) {
-            Controller.phase('deleteExtraFieldsStart');
-
+            Controller.state({
+                now: 'busy',
+                event: 'controller.deleteExtraFields'
+            });
             async.series([
                 function(done) {
                     Controller.phase('deleteExtraFieldsUsersStart');

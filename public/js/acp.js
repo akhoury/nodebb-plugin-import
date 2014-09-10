@@ -366,6 +366,10 @@
 
                     if (state.details) {
                         console.warn(state.details);
+                        app.alert({
+                            message: JSON.stringify(state.details),
+                            timeout: 2000
+                        })
                     }
                 }
             };
@@ -425,8 +429,14 @@
         var onDownload = function(data) {
             if (data) {
                 var pom = document.createElement('a');
-                pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(data.content || ''));
                 pom.setAttribute('download', data.filename || 'file');
+
+                if (data.content) {
+                    pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(data.content || ''));
+                } else if (data.fileurl) {
+                    pom.setAttribute('href', data.fileurl);
+                }
+
                 pom.click();
             }
         };
@@ -524,9 +534,7 @@
 
         Settings.load(plugin.name, $form, function(err, data) {
 
-            socket.emit('admin.settings.get', {
-                hash: 'import'
-            }, function (err, values) {
+            var onValues = function (err, values) {
                 if (!err) {
                     values = values || {};
                     Object.keys(values).forEach(function(id) {
@@ -546,7 +554,15 @@
                 } else {
                     console.log('[settings] Unable to load settings for hash: ', hash);
                 }
-            });
+            };
+
+            if (data) {
+                onValues(err, data);
+            } else {
+                socket.emit('admin.settings.get', {
+                    hash: 'import'
+                }, onValues);
+            }
 
             socket.on('controller.state', onControllerState);
 

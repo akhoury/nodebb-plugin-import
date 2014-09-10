@@ -12,7 +12,8 @@
     "faIcon": "fa-magic",
     "staticDirs": {
         "js": "public/js",
-        "css": "public/css"
+        "css": "public/css",
+        "tmp": "public/tmp"
     },
     "templates": "./public/templates"
 }

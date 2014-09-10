@@ -18,3 +18,5 @@ node_modules
 config.json
 server/tmp/*
 server/logs/*.log
+public/tmp/*.csv
+public/tmp/*.json

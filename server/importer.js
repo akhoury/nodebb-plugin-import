@@ -227,7 +227,7 @@ var async = require('async'),
     Importer.progress = function(count, total, interval) {
         interval = interval || 2;
         var percentage = count / total * 100;
-        if (percentage - Importer.phasePercentage > interval || percentage >= 100) {
+        if (percentage === 0 || percentage >= 100 || (percentage - Importer.phasePercentage > interval)) {
             Importer.phasePercentage = percentage;
             Importer.emit('importer.progress', {count: count, total: total, percentage: percentage});
         }
