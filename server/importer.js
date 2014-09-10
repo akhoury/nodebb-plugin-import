@@ -521,7 +521,7 @@ var async = require('async'),
                     thumb: topic._thumb
                 }, function(err, returnTopic){
                     if (err) {
-                        Importer.warn('skipping topic:_tid: ' + _tid + ' ' + err);
+                        Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ' ' + err);
                         nextTick(done);
                     } else {
 
@@ -633,7 +633,7 @@ var async = require('async'),
 
                 }, function(err, postReturn){
                     if (err) {
-                        Importer.warn('skipping post: ' + post._pid + ' ' + err);
+                        Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ' ' + err);
                         nextTick(done);
                     } else {
 
