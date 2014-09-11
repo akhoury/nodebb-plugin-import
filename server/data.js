@@ -71,12 +71,33 @@ var db = module.parent.require('../../../src/database.js'),
     };
 
     Data.processSet = function(setKey, prefixEachId, process, options, callback) {
+        return Data.processIdsSet(
+            setKey,
+            function(err, ids, next) {
+                var keys = ids.map(function(id) {
+                    return prefixEachId + id;
+                });
+                db.getObjects(keys, function(err, objects) {
+                    process(err, objects, function(err) {
+                        if (err) {
+                            return next(err);
+                        }
+                        next();
+                    });
+                });
+            },
+            options,
+            callback);
+    };
+
+    Data.processIdsSet = function(setKey, process, options, callback) {
         if (typeof options === 'function') {
             callback = options;
             options = {};
         }
 
         callback = typeof callback === 'function' ? callback : function(){};
+        options = options || {};
 
         if (typeof process !== 'function') {
             throw new Error(process + ' is not a function');
@@ -103,19 +124,13 @@ var db = module.parent.require('../../../src/database.js'),
                         done = true;
                         return next();
                     }
-                    var keys = ids.map(function(id) {
-                        return prefixEachId + id;
-                    });
-
-                    db.getObjects(keys, function(err, objects) {
-                        process(err, objects, function(err) {
-                            if (err) {
-                                return next(err);
-                            }
-                            start += batch + 1;
-                            end = start + batch;
-                            next();
-                        });
+                    process(err, ids, function(err) {
+                        if (err) {
+                            return next(err);
+                        }
+                        start += batch + 1;
+                        end = start + batch;
+                        next();
                     });
                 })
             },
@@ -137,6 +152,22 @@ var db = module.parent.require('../../../src/database.js'),
 
     Data.processPostsSet = function(process, options, callback) {
         return Data.processSet('post:pid', 'post:', process, options, callback);
+    };
+
+    Data.processUsersUidsSet = function(process, options, callback) {
+        return Data.processIdsSet('user:uid', process, options, callback);
+    };
+
+    Data.processCategoriesCidsSet = function(process, options, callback) {
+        return Data.processIdsSet('category:cid', process, options, callback);
+    };
+
+    Data.processTopicsTidsSet = function(process, options, callback) {
+        return Data.processIdsSet('topic:tid', process, options, callback);
+    };
+
+    Data.processPostsPidsSet = function(process, options, callback) {
+        return Data.processIdsSet('post:pid', process, options, callback);
     };
 
 })(module.exports);

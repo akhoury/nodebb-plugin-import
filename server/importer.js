@@ -6,6 +6,7 @@ var async = require('async'),
     parse = require('./parse'),
 
     utils = require('../public/js/utils.js'),
+    Data = require('./data.js'),
 
     Group = require('../../../src/groups.js'),
     Meta = require('../../../src/meta.js'),
@@ -143,73 +144,79 @@ var async = require('async'),
     };
 
     Importer.flushData = function(next) {
-        Importer.log('importer.purge.start');
         async.series([
-            function(next){
-                Importer.success('importer.purge.categories-topics-posts.start', '...that might take a while');
+            function(done){
+                Importer.phase('purgeCategories+topics+postsStart');
+                Importer.progress(0, 0);
 
-                //todo Data.each*
-                db.getSortedSetRange('categories:cid', 0, -1, function(err, cids){
-                    async.eachLimit(cids || [], 5, function(cid, done) {
-                            Categories.purge(cid, done);
+                Data.countCategories(function(err, total) {
+                    var index = 0;
+                    Data.processCategoriesCidsSet(
+                        function (err, ids, nextBatch) {
+                            async.mapLimit(ids, 50, function(id, cb) {
+                                Importer.progress(index++, total);
+                                Categories.purge(id, cb);
+                            }, nextBatch);
                         },
-                        function(){
-                            Importer.success('importer.purge.categories-topics-posts.done');
-                            next();
+                        function(err) {
+                            Importer.phase('purgeCategories+topics+postsStart');
+                            Importer.progress(total, total);
+                            done(err)
+                        });
+                });
+
+            },
+            function(done) {
+                Importer.phase('purgeUsersStart');
+                Importer.progress(0, 0);
+
+                Data.countUsers(function(err, total) {
+                    var index = 0;
+                    Data.processUsersUidsSet(
+                        function(err, ids, nextBatch) {
+                            async.mapLimit(ids, 50, function(uid, cb) {
+                                Importer.progress(index++, total);
+                                User.delete(uid, cb);
+                            }, nextBatch);
+                        },
+                        function(err) {
+                            Importer.phase('purgeUsersDone');
+                            Importer.progress(total, total);
+                            done(err)
                         }
                     );
                 });
             },
-            function(next) {
-                Importer.success('importer.purge.users.start', '...that might take a while');
-
-                //todo Data.each*
-                db.getSortedSetRange('users:joindate', 0, -1, function(err, uids) {
-                    async.eachLimit(uids || [], 5, function(uid, done) {
-                            if (parseInt(uid, 10) !== 1) {
-                                User.delete(uid, done);
-                            } else {
-                                done();
-                            }
-                        },
-                        function(){
-                            Importer.success('importer.purge.users.done');
-                            next();
-                        }
-                    );
-                });
-
-            },
-            function(next) {
+            function(done) {
                 Importer.success('importer.purge.reset.globals.start');
                 async.parallel([
-                    function(done) {
-                        db.setObjectField('global', 'nextUid', 1, done);
+                    function(cb) {
+                        db.setObjectField('global', 'nextUid', 1, cb);
                     },
-                    function(done) {
-                        db.setObjectField('global', 'userCount', 1, done);
+                    function(cb) {
+                        db.setObjectField('global', 'userCount', 1, cb);
                     },
-                    function(done) {
-                        db.setObjectField('global', 'nextCid', 1, done);
+                    function(cb) {
+                        db.setObjectField('global', 'nextCid', 1, cb);
                     },
-                    function(done) {
-                        db.setObjectField('global', 'categoryCount', 1, done);
+                    function(cb) {
+                        db.setObjectField('global', 'categoryCount', 1, cb);
                     },
-                    function(done) {
-                        db.setObjectField('global', 'nextTid', 1, done);
+                    function(cb) {
+                        db.setObjectField('global', 'nextTid', 1, cb);
                     },
-                    function(done) {
-                        db.setObjectField('global', 'topicCount', 1, done);
+                    function(cb) {
+                        db.setObjectField('global', 'topicCount', 1, cb);
                     },
-                    function(done) {
-                        db.setObjectField('global', 'nextPid', 1, done);
+                    function(cb) {
+                        db.setObjectField('global', 'nextPid', 1, cb);
                     },
-                    function(done) {
-                        db.setObjectField('global', 'postCount', 1, done);
+                    function(cb) {
+                        db.setObjectField('global', 'postCount', 1, cb);
                     }
                 ], function() {
                     Importer.log('importer.purge.reset.globals.end');
-                    next();
+                    done();
                 });
             }
         ], function(err) {
@@ -433,9 +440,9 @@ var async = require('async'),
                 order: category._order || count + 1,
 
                 disabled: category._disabled || 0,
-                
+
                 parentCid: category._parent || category._parentCid || undefined,
-                
+
                 link: category._link || 0,
 
                 // roulette, that too,
