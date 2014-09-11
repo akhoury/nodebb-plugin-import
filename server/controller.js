@@ -7,24 +7,18 @@ var fs = require('fs-extra'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
     nodeExtend = require('node.extend'),
     noop = function(s){return s;},
-    nextTick = function(cb) {
-        setTimeout(cb, 0);
-    },
-    DB = module.parent.require('../../../src/database.js'),
+    db = module.parent.require('../../../src/database.js'),
+    Data = require('./data.js'),
     Meta = require('../../../src/meta.js'),
-    User = require('../../../src/user.js'),
-    Topics = require('../../../src/topics.js'),
-    Posts = require('../../../src/posts.js'),
-    Categories = require('../../../src/categories.js'),
 
     utils = require('../public/js/utils.js'),
 
     DELIVERABLES_TMP_DIR = path.join(__dirname, '/../public/tmp'),
     DELIVERABLES_TMP_URL = path.join('/plugins/nodebb-plugin-import/tmp'),
-
     LOG_FILE = path.join(__dirname, '/tmp/import.log'),
     LAST_IMPORT_TIMESTAMP_FILE = path.join(__dirname + '/tmp/lastimport'),
-    CONVERT_BATCH_SIZE = 5,
+    DELETE_EACH_LIMIT = 50,
+    CONVERT_EACH_LIMIT = 50,
 
     defaults = {
         redirectionTemplates: {
@@ -338,225 +332,6 @@ var fs = require('fs-extra'),
 
     Controller['bbcode-to-md'] = require('bbcode-to-markdown');
 
-    Controller.convertAll = function(callback) {
-        callback = _.isFunction(callback) ? callback : noop;
-
-        var rconf = Controller.config().contentConvert.convertReconds;
-        var _mainPids = {};
-
-        Controller.setupConvert();
-
-        if (Controller.postImportToolsAvailble()) {
-            Controller.phase('convertStart');
-
-            Controller.state({
-                now: 'busy',
-                event: 'controller.convertAll'
-            });
-
-            async.series([
-                function(done) {
-                    if (rconf.usersSignatures) {
-                        Controller.phase('convertUsersStart');
-                        async.waterfall([
-                            function (next) {
-                                DB.getObjectValues('username:uid', next);
-                            },
-                            function (uids, next) {
-                                User.getMultipleUserFields(
-                                    uids,
-                                    [
-                                        'uid', 'email', 'username', 'userslug',
-                                        '_imported_uid', '_imported_username', '_imported_slug', '_imported_signature'
-                                    ],
-                                    next
-                                );
-                            },
-                            function (users, next) {
-                                var index = 0, len = users.length;
-                                async.eachLimit(users, CONVERT_BATCH_SIZE, function(user, done) {
-                                        Controller.progress(index++, len);
-                                        if (user && user._imported_uid && user._imported_signature) {
-                                            User.setUserField(
-                                                user.uid,
-                                                'signature',
-                                                Controller.convert(utils.truncateStr(user._imported_signature, (Meta.config.maximumSignatureLength || 255) - 3)),
-                                                next
-                                            );
-                                        } else {
-                                            done();
-                                        }
-                                    },
-                                    function() {
-                                        Controller.phase('convertUsersDone');
-                                        next();
-                                    }
-                                );
-                            }
-                        ], done);
-                    } else {
-                        done();
-                    }
-                },
-                function(done) {
-                    if (rconf.categoriesNames || rconf.categoriesDescriptions) {
-                        Controller.phase('convertCategoriesStart');
-
-                        async.waterfall([
-                            function (next) {
-                                DB.getSortedSetRange('categories:cid', 0, -1, next);
-                            },
-                            function (cids, next) {
-                                Categories.getCategoriesData(cids, function(err, categories) {
-                                    var index = 0, len = categories.length;
-                                    async.eachLimit(categories, CONVERT_BATCH_SIZE, function(category, done) {
-                                        Controller.progress(index++, len);
-                                        if (category._imported_cid) {
-                                            async.parallel([
-                                                function(cb) {
-                                                    if (rconf.categoriesNames && category._imported_name) {
-                                                        DB.setObjectField('category:' + category.cid, 'name', Controller.convert(category._imported_name), cb);
-                                                    } else {
-                                                        cb();
-                                                    }
-                                                },
-                                                function(cb) {
-                                                    if (rconf.categoriesDescriptions && category._imported_description) {
-                                                        DB.setObjectField('category:' + category.cid, 'description', Controller.convert(category._imported_description), cb);
-                                                    } else {
-                                                        cb();
-                                                    }
-                                                }
-                                            ], done);
-                                        } else {
-                                            done();
-                                        }
-                                    }, function() {
-                                        Controller.phase('convertCategoriesDone');
-                                        next();
-                                    });
-                                });
-                            }
-                        ], done);
-                    } else {
-                        done();
-                    }
-                },
-                function(done) {
-                    if (rconf.topicsTitle || rconf.topicsContent || rconf.postsContent) {
-                        Controller.phase('convertTopicsStart');
-
-                        async.waterfall([
-                            function (next) {
-                                DB.getSortedSetRange('topics:tid', 0, -1, next);
-                            },
-                            function (tids, next) {
-                                Topics.getTopicsData(tids, function(err, topics) {
-                                    var index = 0, len = topics.length;
-                                    async.eachLimit(topics, CONVERT_BATCH_SIZE, function(topic, done) {
-                                        Controller.progress(index++, len);
-
-                                        // cache mainPids anyways
-                                        _mainPids[topic.mainPid] = 1;
-
-                                        if (topic && (rconf.topicsTitle || rconf.topicsContent) && topic._imported_tid) {
-                                            async.parallel([
-                                                function(cb) {
-                                                    if (rconf.topicsTitle && topic._imported_title) {
-                                                        var title = Controller.convert(topic._imported_title);
-                                                        DB.setObjectField('topic:' + topic.tid, 'title', title, function() {
-                                                            if (err) return cb(err);
-                                                            // DB.setObjectField('topic:' + topic.tid, 'slug', utils.slugify(title), cb);
-                                                            cb();
-                                                        });
-                                                    } else {
-                                                        cb();
-                                                    }
-                                                },
-                                                function(cb) {
-                                                    if (rconf.topicsContent && topic._imported_content) {
-                                                        DB.setObjectField('post:' + topic.mainPid, 'content', Controller.convert(topic._imported_content), cb);
-                                                    } else {
-                                                        cb();
-                                                    }
-                                                }
-                                            ], done);
-                                        } else {
-                                            done();
-                                        }
-                                    }, function() {
-                                        Controller.phase('convertTopicsDone');
-                                        next();
-                                    });
-                                });
-                            }
-                        ], done);
-                    } else {
-                        done();
-                    }
-                },
-                function(done) {
-                    if (rconf.postsContent) {
-                        Controller.phase('convertPostsStart');
-
-                        async.waterfall([
-                            function (next) {
-                                DB.getSortedSetRange('posts:pid', 0, -1, next);
-                            },
-                            function (pids, next) {
-                                var keys = [];
-                                for(var x=0, numPids=pids.length; x<numPids; ++x) {
-                                    keys.push('post:' + pids[x]);
-                                }
-                                DB.getObjects(keys, function(err, posts) {
-                                    var index = 0, len = posts.length;
-                                    async.eachLimit(posts, CONVERT_BATCH_SIZE, function(post, done) {
-                                        Controller.progress(index++, len);
-                                        if (post && post._imported_pid && ! _mainPids[post.pid] && post._imported_content) {
-                                            DB.setObjectField('post:' + post.pid, 'content', Controller.convert(post._imported_content), done);
-                                        } else {
-                                            done();
-                                        }
-                                    }, function() {
-                                        Controller.phase('convertPostsDone');
-                                        next();
-                                    });
-                                });
-                            }
-                        ], done);
-                    } else {
-                        done();
-                    }
-                }
-            ], function(err, results) {
-                Controller.phase('convertDone');
-                if (err) {
-                    Controller.state({
-                        now: 'errored',
-                        event: 'controller.convertError',
-                        details: err
-                    });
-                    callback(err);
-                } else {
-                    Controller.state({
-                        now: 'idle',
-                        event: 'convert.done'
-                    });
-                    callback(null);
-                }
-            });
-        } else {
-            Controller.phase('convertDone');
-            var err = {error: 'Cannot convert now.'};
-            Controller.state({
-                now: 'errored',
-                event: 'controller.convertError',
-                details: err
-            });
-            callback(err);
-        }
-    };
-
     Controller.phasePercentage = 0;
 
     Controller.progress = function(count, total, interval) {
@@ -577,6 +352,18 @@ var fs = require('fs-extra'),
         callback = _.isFunction(callback) ? callback : noop;
 
         Controller.phase('usersCsvStart');
+        Controller.progress(0, 0);
+
+        var error = function(err) {
+            console.log('err', err);
+            Controller.phase('usersCsvDone');
+            Controller.state({
+                now: 'errored',
+                event: 'controller.downloadError',
+                details: err
+            });
+            return callback(err);
+        };
 
         if (Controller.postImportToolsAvailble()) {
             Controller.state({
@@ -584,43 +371,23 @@ var fs = require('fs-extra'),
                 event: 'controller.getUsersCsv'
             });
 
-            var content = 'index,email,username,pwd,_uid,uid,joindate\n';
-            async.waterfall([
-                function (next) {
-                    DB.getObjectValues('username:uid', next);
-                },
-                function (uids, next) {
-                    User.getMultipleUserFields(
-                        uids,
-                        [
-                            'uid', 'email', 'username', 'joindate',
-                            '_imported_uid', '_imported_username', '_imported_email', '_imported_slug'
-                        ],
-                        next
-                    );
-                },
-                function (usersData, next) {
-                    var len = usersData.length;
-                    usersData.forEach(function (user, index) {
-                        if (user && user._imported_uid) {
-                            content += index + ',' + user.email + ',' + user.username + ',' + user._imported_pwd + ',' + user._imported_uid + ',' + user.uid + ',' + user.joindate + '\n';
-                        }
-
-                        Controller.progress(index + 1, len);
-                    });
-
-                    next(null, content);
-                }
-            ], function(err, content) {
-                Controller.phase('usersCsvDone');
+            Data.countUsers(function(err, total) {
                 if (err) {
-                    Controller.state({
-                        now: 'errored',
-                        event: 'controller.downloadError',
-                        details: err
-                    });
-                    callback(err);
-                } else {
+                    return error(err);
+                }
+                var content = 'index,email,username,pwd,_uid,uid,joindate\n';
+                var index = 0;
+                Data.eachUser(function (user) {
+                    if (user && user._imported_uid) {
+                        content += index + ',' + user.email + ',' + user.username + ',' + user._imported_pwd + ',' + user._imported_uid + ',' + user.uid + ',' + user.joindate + '\n';
+                    }
+                    Controller.progress(index++, total);
+                }, function(err) {
+                    if (err) {
+                        return error(err);
+                    }
+                    Controller.progress(total, total);
+                    Controller.phase('usersCsvDone');
 
                     var filename = 'users.csv';
                     var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
@@ -635,78 +402,66 @@ var fs = require('fs-extra'),
                         });
                         callback(null, ret);
                     });
-                }
+                });
             });
         } else {
-            var err = {error: 'Cannot download file at the moment.'};
-            Controller.state({
-                now: 'errored',
-                event: 'controller.downloadError',
-                details: err
-            });
-            Controller.phase('usersCsvDone');
-            callback(err);
+            error({error: 'Cannot download file at the moment.'});
         }
     };
 
     Controller.getUsersJson = function(callback) {
         callback = _.isFunction(callback) ? callback : noop;
+
         Controller.phase('usersJsonStart');
+        Controller.progress(0, 0);
+
+        var error = function(err) {
+            Controller.phase('usersJsonDone');
+            Controller.state({
+                now: 'errored',
+                event: 'controller.downloadError',
+                details: err
+            });
+            return callback(err);
+        };
 
         if (Controller.postImportToolsAvailble()) {
-
             Controller.state({
                 now: 'busy',
                 event: 'controller.getUsersJson'
             });
 
-            var content = '[\n';
-            async.waterfall([
-                function (next) {
-                    DB.getObjectValues('username:uid', next);
-                },
-                function (uids, next) {
-                    User.getMultipleUserFields(
-                        uids,
-                        [
-                            'uid', 'email', 'username', 'joindate',
-                            '_imported_uid', '_imported_username', '_imported_email', '_imported_slug'
-                        ],
-                        next
-                    );
-                },
-                function (usersData, next) {
-                    var len = usersData.length;
-                    usersData.forEach(function (user, index) {
-                        if (user && user._imported_uid) {
-                            content += '{'
-                                + '"index":' + index + ','
-                                + '"email":"' + user.email + '",'
-                                + '"username":"' + user.username + '",'
-                                + '"pwd":' + (user._imported_pwd ? '"' + user._imported_pwd + '"' : null) + ','
-                                + '"_uid":' + user._imported_uid + ','
-                                + '"uid":' + user.uid + ','
-                                + '"joindate":' + user.joindate
-                                + '}';
-                            if (index !== len - 1) {
-                                content += ',\n'
-                            }
-                        }
-                        Controller.progress(index + 1, len);
-                    });
-                    content += '\n]';
-                    next(null, content);
-                }
-            ], function(err, content) {
-                Controller.phase('usersJsonDone');
+            Data.countUsers(function(err, total) {
                 if (err) {
-                    Controller.state({
-                        now: 'errored',
-                        event: 'controller.downloadError',
-                        details: err
-                    });
-                    callback(err);
-                } else {
+                    error(err);
+                }
+                var content = '[\n';
+                var index = 0;
+                Data.eachUser(function (user) {
+                    if (user && user._imported_uid) {
+                        content += '{'
+                            + '"index":' + index + ','
+                            + '"email":"' + user.email + '",'
+                            + '"username":"' + user.username + '",'
+                            + '"pwd":' + (user._imported_pwd ? '"' + user._imported_pwd + '"' : null) + ','
+                            + '"_uid":' + user._imported_uid + ','
+                            + '"uid":' + user.uid + ','
+                            + '"joindate":' + user.joindate
+                            + '},\n';
+                    }
+                    Controller.progress(index++, total);
+                }, function(err) {
+                    if (err) {
+                        return error(err);
+                    }
+                    Controller.progress(total, total);
+                    Controller.phase('usersJsonDone');
+
+                    var lastCommaIdx = content.lastIndexOf(',');
+                    if (lastCommaIdx > -1) {
+                        content = content.substring(0, lastCommaIdx);
+                    }
+                    content += '\n}';
 
                     var filename = 'users.json';
                     var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
@@ -721,17 +476,10 @@ var fs = require('fs-extra'),
                         });
                         callback(null, ret);
                     });
-                }
+                });
             });
         } else {
-            Controller.phase('usersJsonDone');
-            var err = {error: 'Cannot download files at the moment.'};
-            Controller.state({
-                now: 'errored',
-                event: 'controller.downloadError',
-                details: err
-            });
-            callback(err);
+            error({error: 'Cannot download files at the moment.'});
         }
     };
 
@@ -741,6 +489,16 @@ var fs = require('fs-extra'),
         Controller.phase('redirectionMapStart');
 
         var _mainPids = {};
+
+        var error = function(err) {
+            Controller.phase('redirectionMapDone');
+            Controller.state({
+                now: 'errored',
+                event: 'controller.downloadError',
+                details: err
+            });
+            return callback(err);
+        };
 
         //precompile redirection templates
         Controller.redirectTemplates = {categories: {}, users: {}, topics: {}, posts: {}};
@@ -765,40 +523,28 @@ var fs = require('fs-extra'),
                 function(done) {
                     if (Controller.redirectTemplates.users.oldPath && Controller.redirectTemplates.users.newPath) {
                         Controller.phase('redirectionMapUsersStart');
-                        async.waterfall([
-                            function (next) {
-                                DB.getObjectValues('username:uid', next);
-                            },
-                            function (uids, next) {
-                                User.getMultipleUserFields(
-                                    uids,
-                                    [
-                                        'uid', 'email', 'username', 'userslug',
-                                        '_imported_uid', '_imported_username', '_imported_slug', '_imported_signature'
-                                    ],
-                                    next
-                                );
-                            },
-                            function (usersData, next) {
-                                var len = usersData.length;
-                                usersData.forEach(function (user, index) {
-                                    if (user && user._imported_uid) {
-                                        // map some aliases
-                                        user._uid = user._imported_uid;
-                                        user._username = user._imported_username;
-                                        user._slug = user._imported_slug;
-                                        user._userslug = user._imported_slug;
+                        Controller.progress(0, 0);
+                        Data.countUsers(function(err, total) {
+                            var index = 0;
+                            Data.eachUser(function(user) {
+                                if (user && user._imported_uid) {
+                                    // map some aliases
+                                    user._uid = user._imported_uid;
+                                    user._username = user._imported_username;
+                                    user._slug = user._imported_slug;
+                                    user._userslug = user._imported_slug;
 
-                                        var oldPath = Controller.redirectTemplates.users.oldPath(user);
-                                        var newPath = Controller.redirectTemplates.users.newPath(user);
-                                        content += '"' + oldPath + '":"' + newPath + '",\n';
-                                    }
-                                    Controller.progress(index + 1, len);
-                                });
+                                    var oldPath = Controller.redirectTemplates.users.oldPath(user);
+                                    var newPath = Controller.redirectTemplates.users.newPath(user);
+                                    content += '"' + oldPath + '":"' + newPath + '",\n';
+                                }
+                                Controller.progress(index++, total);
+                            }, function(err) {
+                                Controller.progress(total, total);
                                 Controller.phase('redirectionMapUsersDone');
-                                next();
-                            }
-                        ], done);
+                                done(err);
+                            });
+                        });
                     } else {
                         done();
                     }
@@ -806,32 +552,30 @@ var fs = require('fs-extra'),
                 function(done) {
                     if (Controller.redirectTemplates.categories.oldPath && Controller.redirectTemplates.categories.newPath) {
                         Controller.phase('redirectionMapCategoriesStart');
-                        async.waterfall([
-                            function (next) {
-                                DB.getSortedSetRange('categories:cid', 0, -1, next);
-                            },
-                            function (cids, next) {
-                                Categories.getCategoriesData(cids, function(err, categories) {
-                                    var len = categories.length;
-                                    categories.forEach(function(category, index) {
-                                        if (category && category._imported_cid) {
-                                            // map some aliases
-                                            category._cid = category._imported_cid;
-                                            category._slug = category._imported_slug;
-                                            category._name = category._imported_name;
-                                            category._link = category._imported_link;
+                        Controller.progress(0, 0);
+                        Data.countCategories(function(err, total) {
+                            var index = 0;
+                            Data.eachCategory(
+                                function (category) {
+                                    if (category && category._imported_cid) {
+                                        // map some aliases
+                                        category._cid = category._imported_cid;
+                                        category._slug = category._imported_slug;
+                                        category._name = category._imported_name;
+                                        category._link = category._imported_link;
 
-                                            var oldPath = Controller.redirectTemplates.categories.oldPath(category);
-                                            var newPath = Controller.redirectTemplates.categories.newPath(category);
-                                            content += '"' + oldPath + '":"' + newPath + '",\n';
-                                        }
-                                        Controller.progress(index + 1, len);
-                                    });
+                                        var oldPath = Controller.redirectTemplates.categories.oldPath(category);
+                                        var newPath = Controller.redirectTemplates.categories.newPath(category);
+                                        content += '"' + oldPath + '":"' + newPath + '",\n';
+                                    }
+                                    Controller.progress(index++, total);
+                                },
+                                function (err) {
+                                    Controller.progress(total, total);
                                     Controller.phase('redirectionMapCategoriesDone');
-                                    next();
+                                    done(err);
                                 });
-                            }
-                        ], done);
+                        });
                     } else {
                         done();
                     }
@@ -839,36 +583,33 @@ var fs = require('fs-extra'),
                 function(done) {
                     if (Controller.redirectTemplates.topics.oldPath && Controller.redirectTemplates.topics.newPath) {
                         Controller.phase('redirectionMapTopicsStart');
-                        async.waterfall([
-                            function (next) {
-                                DB.getSortedSetRange('topics:tid', 0, -1, next);
-                            },
-                            function (tids, next) {
-                                Topics.getTopicsData(tids, function(err, topics) {
-                                    var len = topics.length;
-                                    topics.forEach(function(topic, index) {
+                        Controller.progress(0, 0);
+                        Data.countTopics(function(err, total) {
+                            var index = 0;
+                            Data.eachTopic(
+                                function(topic) {
+                                    // cache mainPids
+                                    _mainPids[topic.mainPid] = 1;
 
-                                        // cache mainPids
-                                        _mainPids[topic.mainPid] = 1;
+                                    if (topic && topic._imported_tid) {
+                                        // map some aliases
+                                        topic._uid = topic._imported_uid;
+                                        topic._tid = topic._imported_tid;
+                                        topic._cid = topic._imported_cid;
+                                        topic._slug = topic._imported_slug;
 
-                                        if (topic && topic._imported_tid) {
-                                            // map some aliases
-                                            topic._uid = topic._imported_uid;
-                                            topic._tid = topic._imported_tid;
-                                            topic._cid = topic._imported_cid;
-                                            topic._slug = topic._imported_slug;
-
-                                            var oldPath = Controller.redirectTemplates.topics.oldPath(topic);
-                                            var newPath = Controller.redirectTemplates.topics.newPath(topic);
-                                            content += '"' + oldPath + '":"' + newPath + '",\n';
-                                        }
-                                        Controller.progress(index + 1, len);
-                                    });
+                                        var oldPath = Controller.redirectTemplates.topics.oldPath(topic);
+                                        var newPath = Controller.redirectTemplates.topics.newPath(topic);
+                                        content += '"' + oldPath + '":"' + newPath + '",\n';
+                                    }
+                                    Controller.progress(index++, total);
+                                },
+                                function(err) {
+                                    Controller.progress(total, total);
                                     Controller.phase('redirectionMapTopicsDone');
-                                    next();
+                                    done(err);
                                 });
-                            }
-                        ], done);
+                        });
                     } else {
                         done();
                     }
@@ -876,89 +617,83 @@ var fs = require('fs-extra'),
                 function(done) {
                     if (Controller.redirectTemplates.posts.oldPath && Controller.redirectTemplates.posts.newPath) {
                         Controller.phase('redirectionMapPostsStart');
-                        async.waterfall([
-                            function (next) {
-                                DB.getSortedSetRange('posts:pid', 0, -1, next);
-                            },
-                            function (pids, next) {
-                                var keys = [];
-                                for(var x=0, numPids=pids.length; x<numPids; ++x) {
-                                    keys.push('post:' + pids[x]);
-                                }
-                                DB.getObjects(keys, function(err, posts) {
-                                    var len = posts.length;
-                                    posts.forEach(function(post, index) {
-                                        if (post && post._imported_pid && !_mainPids[post.pid] ) {
-                                            // map some aliases
-                                            post._pid = post._imported_pid;
-                                            post._uid = post._imported_uid;
-                                            post._tid = post._imported_tid;
+                        Controller.progress(0, 0);
+                        Data.countPosts(function(err, total) {
+                            var index = 0;
+                            Data.eachPost(
+                                function(post) {
+                                    if (post && post._imported_pid && !_mainPids[post.pid] ) {
+                                        // map some aliases
+                                        post._pid = post._imported_pid;
+                                        post._uid = post._imported_uid;
+                                        post._tid = post._imported_tid;
 
-                                            var oldPath = Controller.redirectTemplates.posts.oldPath(post);
-                                            var newPath = Controller.redirectTemplates.posts.newPath(post);
-                                            content += '"' + oldPath + '":"' + newPath + '",\n';
-                                        }
-                                        Controller.progress(index + 1, len);
-                                    });
+                                        var oldPath = Controller.redirectTemplates.posts.oldPath(post);
+                                        var newPath = Controller.redirectTemplates.posts.newPath(post);
+                                        content += '"' + oldPath + '":"' + newPath + '",\n';
+                                    }
+                                    Controller.progress(index++, total);
+                                },
+                                function(err) {
+                                    Controller.progress(total, total);
                                     Controller.phase('redirectionMapPostsDone');
-                                    next();
-                                });
-                            }
-                        ], done);
+                                    done(err);
+                                }
+                            );
+                        });
                     } else {
                         done();
                     }
                 }
             ], function(err, results) {
-                Controller.phase('redirectionMapDone');
                 if (err) {
-                    Controller.state({
-                        now: 'errored',
-                        event: 'controller.downloadError',
-                        details: err
-                    });
-                    callback(err);
-                } else {
-                    var lastCommaIdx = content.lastIndexOf(',');
-                    if (lastCommaIdx > -1) {
-                        content = content.substring(0, lastCommaIdx);
-                    }
-                    content += '\n}';
-
-                    var filename = 'redirect.map.json';
-                    var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
-                    var fileurl = DELIVERABLES_TMP_URL + '/' + filename;
-                    var ret = {filename: filename, fileurl: fileurl, filepath: filepath};
-
-                    fs.writeFile(filepath, content, 'utf-8', function() {
-                        Controller.emit('controller.download', ret);
-                        Controller.state({
-                            now: 'idle',
-                            event: 'controller.download'
-                        });
-                        callback(null, ret);
-                    });
+                    return error(err);
                 }
+
+                Controller.phase('redirectionMapDone');
+
+                var lastCommaIdx = content.lastIndexOf(',');
+                if (lastCommaIdx > -1) {
+                    content = content.substring(0, lastCommaIdx);
+                }
+                content += '\n}';
+
+                var filename = 'redirect.map.json';
+                var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
+                var fileurl = DELIVERABLES_TMP_URL + '/' + filename;
+                var ret = {filename: filename, fileurl: fileurl, filepath: filepath};
+
+                fs.writeFile(filepath, content, 'utf-8', function() {
+                    Controller.emit('controller.download', ret);
+                    Controller.state({
+                        now: 'idle',
+                        event: 'controller.download'
+                    });
+                    callback(null, ret);
+                });
+
             });
         } else {
-            Controller.phase('redirectionMapDone');
-            var err = {error: 'Cannot download files.'};
-            Controller.state({
-                now: 'errored',
-                event: 'controller.downloadError',
-                details: err
-            });
-            callback(err);
+            error({error: 'Cannot download files.'});
         }
     };
 
 
     Controller.deleteExtraFields = function(callback) {
-
         callback = _.isFunction(callback) ? callback : noop;
+        Controller.phase('deleteExtraFieldsStart');
 
         var _mainPids = {};
-        Controller.phase('deleteExtraFieldsStart');
+
+        var error = function(err) {
+            Controller.phase('deleteExtraFieldsDone');
+            Controller.state({
+                now: 'errored',
+                event: 'controller.deletingExtraFieldsError',
+                details: err
+            });
+            return callback(err);
+        };
 
         if (Controller.postImportToolsAvailble()) {
             Controller.state({
@@ -968,208 +703,391 @@ var fs = require('fs-extra'),
             async.series([
                 function(done) {
                     Controller.phase('deleteExtraFieldsUsersStart');
-                    async.waterfall([
-                        function (next) {
-                            DB.getObjectValues('username:uid', next);
-                        },
-                        function (uids, next) {
-                            User.getMultipleUserFields(
-                                uids,
-                                [
-                                    'uid',
-                                    '_imported_uid', '_imported_username', '_imported_slug', '_imported_signature'
-                                ],
-                                next
-                            );
-                        },
-                        function (users, next) {
-                            var index = 0, len = users.length;
-                            async.eachLimit(users, CONVERT_BATCH_SIZE, function(user, done) {
-                                    Controller.progress(index++, len);
-                                    if (user && user._imported_uid) {
-                                        async.parallel([
-                                            function(cb) {
-                                                DB.deleteObjectField('user:' + user.uid, '_imported_uid', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('user:' + user.uid, '_imported_username', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('user:' + user.uid, '_imported_slug', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('user:' + user.uid, '_imported_signature', cb);
-                                            }
-                                        ], done);
-                                    } else {
-                                        done();
-                                    }
-                                },
-                                function() {
-                                    Controller.phase('deleteExtraFieldsUsersDone');
-                                    next();
-                                }
-                            );
-                        }
-                    ], done);
+                    Controller.progress(0, 0);
+                    Data.countUsers(function(err, total) {
+                        var index = 0;
 
+                        Data.eachUser(
+                            function(user, next) {
+                                var nxt = function(err) {
+                                    Controller.progress(index++, total);
+                                    next(err);
+                                };
+
+                                if (user && user._imported_uid) {
+                                    async.parallel([
+                                        function(cb) {
+                                            db.deleteObjectField('user:' + user.uid, '_imported_uid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('user:' + user.uid, '_imported_username', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('user:' + user.uid, '_imported_slug', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('user:' + user.uid, '_imported_signature', cb);
+                                        }
+                                    ], nxt);
+                                } else {
+                                    nxt();
+                                }
+                            },
+                            {async: true, eachLimit: DELETE_EACH_LIMIT},
+                            function(err) {
+                                Controller.progress(total, total);
+                                Controller.phase('deleteExtraFieldsUsersDone');
+                                done(err);
+                            });
+                    });
                 },
                 function(done) {
                     Controller.phase('deleteExtraFieldsCategoriesStart');
-
-                    async.waterfall([
-                        function (next) {
-                            DB.getSortedSetRange('categories:cid', 0, -1, next);
-                        },
-                        function (cids, next) {
-                            Categories.getCategoriesData(cids, function(err, categories) {
-                                var index = 0, len = categories.length;
-                                async.eachLimit(categories, CONVERT_BATCH_SIZE, function(category, done) {
-                                    Controller.progress(index++, len);
-                                    if (category._imported_cid) {
-                                        async.parallel([
-                                            function(cb) {
-                                                DB.deleteObjectField('category:' + category.cid, '_imported_cid', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('category:' + category.cid, '_imported_name', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('category:' + category.cid, '_imported_description', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('category:' + category.cid, '_imported_slug', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('category:' + category.cid, '_imported_link', cb);
-                                            }
-                                        ], done);
-                                    } else {
-                                        done();
-                                    }
-                                }, function() {
-                                    Controller.phase('deleteExtraFieldsCategoriesDone');
-                                    next();
-                                });
+                    Controller.progress(0, 0);
+                    Data.countCategories(function(err, total) {
+                        var index = 0;
+                        Data.eachCategory(
+                            function(category, next) {
+                                var nxt = function(err) {
+                                    Controller.progress(index++, total);
+                                    next(err);
+                                };
+                                if (category._imported_cid) {
+                                    async.parallel([
+                                        function(cb) {
+                                            db.deleteObjectField('category:' + category.cid, '_imported_cid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('category:' + category.cid, '_imported_name', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('category:' + category.cid, '_imported_description', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('category:' + category.cid, '_imported_slug', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('category:' + category.cid, '_imported_link', cb);
+                                        }
+                                    ], nxt);
+                                } else {
+                                    nxt();
+                                }
+                            },
+                            {async: true, eachLimit: DELETE_EACH_LIMIT},
+                            function(err) {
+                                Controller.progress(total, total);
+                                Controller.phase('deleteExtraFieldsCategoriesDone');
+                                done(err);
                             });
-                        }
-                    ], done);
-
+                    });
                 },
                 function(done) {
                     Controller.phase('deleteExtraFieldsTopicsStart');
-
-                    async.waterfall([
-                        function (next) {
-                            DB.getSortedSetRange('topics:tid', 0, -1, next);
-                        },
-                        function (tids, next) {
-                            Topics.getTopicsData(tids, function(err, topics) {
-                                var index = 0, len = topics.length;
-                                async.eachLimit(topics, CONVERT_BATCH_SIZE, function(topic, done) {
-                                    Controller.progress(index++, len);
-                                    if (topic && topic._imported_tid) {
-                                        _mainPids[topic.mainPid] = 1;
-
-                                        async.parallel([
-                                            function(cb) {
-                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_tid', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_cid', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_uid', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_slug', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_title', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('topic:' + topic.tid, '_imported_content', cb);
-                                            }
-                                        ], done);
-                                    } else {
-                                        done();
-                                    }
-                                }, function() {
-                                    Controller.phase('deleteExtraFieldsTopicsDone');
-                                    next();
-                                });
+                    Controller.progress(0, 0);
+                    Data.countTopics(function(err, total) {
+                        var index = 0;
+                        Data.eachTopic(
+                            function(topic, next) {
+                                var nxt = function(err) {
+                                    Controller.progress(index++, total);
+                                    next(err);
+                                };
+                                if (topic && topic._imported_tid) {
+                                    _mainPids[topic.mainPid] = 1;
+                                    async.parallel([
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_tid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_cid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_uid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_slug', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_title', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_content', cb);
+                                        }
+                                    ], nxt);
+                                } else {
+                                    nxt();
+                                }
+                            },
+                            {async: true, eachLimit: DELETE_EACH_LIMIT},
+                            function(err) {
+                                Controller.progress(total, total);
+                                Controller.phase('deleteExtraFieldsTopicsDone');
+                                done(err);
                             });
-                        }
-                    ], done);
+                    });
                 },
                 function(done) {
                     Controller.phase('deleteExtraFieldsPostsStart');
-
-                    async.waterfall([
-                        function (next) {
-                            DB.getSortedSetRange('posts:pid', 0, -1, next);
-                        },
-                        function (pids, next) {
-                            var keys = [];
-                            for(var x=0, numPids=pids.length; x<numPids; ++x) {
-                                keys.push('post:' + pids[x]);
-                            }
-                            DB.getObjects(keys, function(err, posts) {
-                                var index = 0, len = posts.length;
-                                async.eachLimit(posts, CONVERT_BATCH_SIZE, function(post, done) {
-                                    Controller.progress(index++, len);
-                                    if (post && post._imported_pid) {
-                                        async.parallel([
-                                            function(cb) {
-                                                DB.deleteObjectField('post:' + post.pid, '_imported_pid', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('post:' + post.pid, '_imported_tid', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('post:' + post.pid, '_imported_uid', cb);
-                                            },
-                                            function(cb) {
-                                                DB.deleteObjectField('post:' + post.pid, '_imported_content', cb);
-                                            }
-                                        ], done);
-                                    } else {
-                                        done();
-                                    }
-                                }, function() {
-                                    Controller.phase('deleteExtraFieldsPostsDone');
-                                    next();
-                                });
+                    Controller.progress(0, 0);
+                    Data.countPosts(function(err, total) {
+                        var index = 0;
+                        Data.eachPost(
+                            function(post, next) {
+                                var nxt = function(err) {
+                                    Controller.progress(index++, total);
+                                    next(err);
+                                };
+                                if (post && post._imported_pid) {
+                                    async.parallel([
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_pid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_tid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_uid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_content', cb);
+                                        }
+                                    ], nxt);
+                                } else {
+                                    nxt();
+                                }
+                            },
+                            {async: true, eachLimit: DELETE_EACH_LIMIT},
+                            function(err) {
+                                Controller.progress(total, total);
+                                Controller.phase('deleteExtraFieldsPostsStart');
+                                done(err);
                             });
-                        }
-                    ], done);
-
+                    });
                 }
             ], function(err, results) {
-                Controller.phase('deleteExtraFieldsDone');
                 if (err) {
-                    Controller.state({
-                        now: 'errored',
-                        event: 'controller.deletingExtraFieldsError',
-                        details: err
-                    });
-                    callback(err);
-                } else {
-                    fs.remove(LAST_IMPORT_TIMESTAMP_FILE, function(err) {
-                        Controller.state({
-                            now: 'idle',
-                            event: 'delete.done'
-                        });
-                        callback(null);
-                    });
+                    return error(err);
                 }
+
+                Controller.phase('deleteExtraFieldsDone');
+
+                fs.remove(LAST_IMPORT_TIMESTAMP_FILE, function(err) {
+                    Controller.state({
+                        now: 'idle',
+                        event: 'delete.done'
+                    });
+                    callback(null);
+                });
+
             });
         } else {
-            Controller.phase('deleteExtraFieldsDone');
-            var err = {error: 'Cannot delete now.'};
+            error({error: 'Cannot delete now.'});
+        }
+    };
+
+    Controller.convertAll = function(callback) {
+        callback = _.isFunction(callback) ? callback : noop;
+
+        var rconf = Controller.config().contentConvert.convertReconds;
+
+        var _mainPids = {};
+
+        var error = function(err) {
+            Controller.phase('convertDone');
             Controller.state({
                 now: 'errored',
-                event: 'controller.deletingExtraFieldsError',
+                event: 'controller.convertError',
+                details: err
+            });
+            callback(err);
+        };
+
+        Controller.setupConvert();
+
+        if (Controller.postImportToolsAvailble()) {
+            Controller.phase('convertStart');
+
+            Controller.state({
+                now: 'busy',
+                event: 'controller.convertAll'
+            });
+
+            async.series([
+                function(done) {
+                    if (rconf.usersSignatures) {
+                        Controller.phase('convertUsersStart');
+                        Controller.progress(0, 0);
+                        Data.countUsers(function(err, total) {
+                            var index = 0;
+                            Data.eachUser(
+                                function(user, next) {
+                                    var nxt = function(err) {
+                                        Controller.progress(index++, total);
+                                        next(err);
+                                    };
+                                    if (user && user._imported_uid && user._imported_signature) {
+                                        db.setObjectField('user:' + user.uid,
+                                            'signature',
+                                            Controller.convert(utils.truncateStr(user._imported_signature, (Meta.config.maximumSignatureLength || 255) - 3)),
+                                            nxt
+                                        );
+                                    } else {
+                                        nxt();
+                                    }
+                                },
+                                {async: true, eachLimit: CONVERT_EACH_LIMIT},
+                                function(err) {
+                                    Controller.progress(total, total);
+                                    Controller.phase('convertUsersDone');
+                                    done(err);
+                                });
+                        });
+                    } else {
+                        done();
+                    }
+                },
+                function(done) {
+                    if (rconf.categoriesNames || rconf.categoriesDescriptions) {
+                        Controller.phase('convertCategoriesStart');
+                        Controller.progress(0, 0);
+                        Data.countCategories(function(err, total) {
+                            var index = 0;
+                            Data.eachCategory(
+                                function(category, next) {
+                                    var nxt = function(err) {
+                                        Controller.progress(index++, total);
+                                        next(err);
+                                    };
+                                    if (category._imported_cid) {
+                                        async.parallel([
+                                            function(cb) {
+                                                if (rconf.categoriesNames && category._imported_name) {
+                                                    db.setObjectField('category:' + category.cid, 'name', Controller.convert(category._imported_name), cb);
+                                                } else {
+                                                    cb();
+                                                }
+                                            },
+                                            function(cb) {
+                                                if (rconf.categoriesDescriptions && category._imported_description) {
+                                                    db.setObjectField('category:' + category.cid, 'description', Controller.convert(category._imported_description), cb);
+                                                } else {
+                                                    cb();
+                                                }
+                                            }
+                                        ], nxt);
+                                    } else {
+                                        nxt();
+                                    }
+                                },
+                                {async: true, eachLimit: CONVERT_EACH_LIMIT},
+                                function(err) {
+                                    Controller.progress(total, total);
+                                    Controller.phase('convertCategoriesDone');
+                                    done(err);
+                                }
+                            );
+                        });
+                    } else {
+                        done();
+                    }
+                },
+                function(done) {
+                    if (rconf.topicsTitle || rconf.topicsContent || rconf.postsContent) {
+                        Controller.phase('convertTopicsStart');
+                        Controller.progress(0, 0);
+                        Data.countTopics(function(err, total) {
+                            var index = 0;
+                            Data.eachTopic(
+                                function(topic, next) {
+                                    var nxt = function(err) {
+                                        Controller.progress(index++, total);
+                                        next(err);
+                                    };
+                                    // cache mainPids anyways
+                                    _mainPids[topic.mainPid] = 1;
+
+                                    if (topic && (rconf.topicsTitle || rconf.topicsContent) && topic._imported_tid) {
+                                        async.parallel([
+                                            function(cb) {
+                                                if (rconf.topicsTitle && topic._imported_title) {
+                                                    db.setObjectField('topic:' + topic.tid, 'title', Controller.convert(topic._imported_title), cb);
+                                                } else {
+                                                    cb();
+                                                }
+                                            },
+                                            function(cb) {
+                                                if (rconf.topicsContent && topic._imported_content) {
+                                                    db.setObjectField('post:' + topic.mainPid, 'content', Controller.convert(topic._imported_content), cb);
+                                                } else {
+                                                    cb();
+                                                }
+                                            }
+                                        ], nxt);
+                                    } else {
+                                        nxt();
+                                    }
+                                },
+                                {async: true, eachLimit: CONVERT_EACH_LIMIT},
+                                function(err) {
+                                    Controller.progress(total, total);
+                                    Controller.phase('convertTopicsDone');
+                                    done(err);
+                                });
+                        });
+                    } else {
+                        done();
+                    }
+                },
+                function(done) {
+                    if (rconf.postsContent) {
+                        Controller.phase('convertPostsStart');
+                        Controller.progress(0, 0);
+                        Data.countPosts(function(err, total) {
+                            var index = 0;
+                            Data.eachPost(
+                                function(post, next) {
+                                    var nxt = function(err) {
+                                        Controller.progress(index++, total);
+                                        next(err);
+                                    };
+                                    if (post && post._imported_pid && ! _mainPids[post.pid] && post._imported_content) {
+                                        db.setObjectField('post:' + post.pid, 'content', Controller.convert(post._imported_content), nxt);
+                                    } else {
+                                        nxt();
+                                    }
+                                },
+                                {async: true, eachLimit: CONVERT_EACH_LIMIT},
+                                function(err) {
+                                    Controller.progress(total, total);
+                                    Controller.phase('convertPostsDone');
+                                    done(err);
+                                });
+                        });
+                    } else {
+                        done();
+                    }
+                }
+            ], function(err, results) {
+
+                if (err) {
+                    return error(err);
+                }
+
+                Controller.phase('convertDone');
+
+                Controller.state({
+                    now: 'idle',
+                    event: 'convert.done'
+                });
+                callback(null);
+            });
+        } else {
+            Controller.phase('convertDone');
+            var err = {error: 'Cannot convert now.'};
+            Controller.state({
+                now: 'errored',
+                event: 'controller.convertError',
                 details: err
             });
             callback(err);

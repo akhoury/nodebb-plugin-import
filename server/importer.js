@@ -13,11 +13,7 @@ var async = require('async'),
     Topics = require('../../../src/topics.js'),
     Posts = require('../../../src/posts.js'),
     Categories = require('../../../src/categories.js'),
-    DB = module.parent.require('../../../src/database.js'),
-
-    nextTick = function(cb) {
-        setTimeout(cb, 0);
-    },
+    db = module.parent.require('../../../src/database.js'),
 
     BATCH_SIZE = 3,
 
@@ -94,15 +90,15 @@ var async = require('async'),
                 + Importer.data.posts._pids.length + ' posts.'
         );
 
-        Importer.DBKeys = (function() {
-            return DB.helpers.redis ? // if redis
+        Importer.dbKeys = (function() {
+            return db.helpers.redis ? // if redis
                 function(key, callback) {
-                    return DB.client.keys(key, callback);
+                    return db.client.keys(key, callback);
                 }
                 // if mongo
-                : DB.helpers.mongo ?
+                : db.helpers.mongo ?
                 function(key, callback) {
-                    DB.client.collection('objects').find( { _key: { $regex: key.replace(/\*/, '.*') } }, function(err, result) {
+                    db.client.collection('objects').find( { _key: { $regex: key.replace(/\*/, '.*') } }, function(err, result) {
                         if (err) {
                             callback(err);
                         } else {
@@ -151,7 +147,9 @@ var async = require('async'),
         async.series([
             function(next){
                 Importer.success('importer.purge.categories-topics-posts.start', '...that might take a while');
-                DB.getSortedSetRange('categories:cid', 0, -1, function(err, cids){
+
+                //todo Data.each*
+                db.getSortedSetRange('categories:cid', 0, -1, function(err, cids){
                     async.eachLimit(cids || [], 5, function(cid, done) {
                             Categories.purge(cid, done);
                         },
@@ -164,7 +162,9 @@ var async = require('async'),
             },
             function(next) {
                 Importer.success('importer.purge.users.start', '...that might take a while');
-                DB.getSortedSetRange('users:joindate', 0, -1, function(err, uids) {
+
+                //todo Data.each*
+                db.getSortedSetRange('users:joindate', 0, -1, function(err, uids) {
                     async.eachLimit(uids || [], 5, function(uid, done) {
                             if (parseInt(uid, 10) !== 1) {
                                 User.delete(uid, done);
@@ -184,28 +184,28 @@ var async = require('async'),
                 Importer.success('importer.purge.reset.globals.start');
                 async.parallel([
                     function(done) {
-                        DB.setObjectField('global', 'nextUid', 1, done);
+                        db.setObjectField('global', 'nextUid', 1, done);
                     },
                     function(done) {
-                        DB.setObjectField('global', 'userCount', 1, done);
+                        db.setObjectField('global', 'userCount', 1, done);
                     },
                     function(done) {
-                        DB.setObjectField('global', 'nextCid', 1, done);
+                        db.setObjectField('global', 'nextCid', 1, done);
                     },
                     function(done) {
-                        DB.setObjectField('global', 'categoryCount', 1, done);
+                        db.setObjectField('global', 'categoryCount', 1, done);
                     },
                     function(done) {
-                        DB.setObjectField('global', 'nextTid', 1, done);
+                        db.setObjectField('global', 'nextTid', 1, done);
                     },
                     function(done) {
-                        DB.setObjectField('global', 'topicCount', 1, done);
+                        db.setObjectField('global', 'topicCount', 1, done);
                     },
                     function(done) {
-                        DB.setObjectField('global', 'nextPid', 1, done);
+                        db.setObjectField('global', 'nextPid', 1, done);
                     },
                     function(done) {
-                        DB.setObjectField('global', 'postCount', 1, done);
+                        db.setObjectField('global', 'postCount', 1, done);
                     }
                 ], function() {
                     Importer.log('importer.purge.reset.globals.end');
@@ -272,14 +272,14 @@ var async = require('async'),
 
             if (!userData.username) {
                 Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" username is invalid.');
-                nextTick(done);
+                done();
             } else {
                 Importer.log('[count: ' + count + '] saving user:_uid: ' + _uid);
 
                 var onCreate = function(err, uid) {
                     if (err) {
                         Importer.warn('skipping username: "' + user.username + '" ' + err);
-                        nextTick(done);
+                        done();
                     } else {
                         user.imported = true;
                         imported++;
@@ -336,11 +336,11 @@ var async = require('async'),
                             Importer.progress(count, users._uids.length);
 
                             if (config.autoConfirmEmails) {
-                                DB.setObjectField('email:confirmed', user.email, '1', function() {
-                                    nextTick(done);
+                                db.setObjectField('email:confirmed', user.email, '1', function() {
+                                    done();
                                 });
                             } else {
-                                nextTick(done);
+                                done();
                             }
                         });
                     }
@@ -377,20 +377,20 @@ var async = require('async'),
 
             Importer.success('Importing ' + imported + '/' + users._uids.length + ' users took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
 
-            if (config.autoConfirmEmails && Importer.DBkeys) {
+            if (config.autoConfirmEmails && Importer.dbkeys) {
                 async.parallel([
                     function(done){
-                        Importer.DBkeys('confirm:*', function(err, keys){
+                        Importer.dbkeys('confirm:*', function(err, keys){
                             keys.forEach(function(key){
-                                DB.delete(key);
+                                db.delete(key);
                             });
                             done();
                         });
                     },
                     function(done){
-                        Importer.DBkeys('email:*:confirm', function(err, keys){
+                        Importer.dbkeys('email:*:confirm', function(err, keys){
                             keys.forEach(function(key){
-                                DB.delete(key);
+                                db.delete(key);
                             });
                             done();
                         });
@@ -447,7 +447,7 @@ var async = require('async'),
             Categories.create(categoryData, function(err, categoryReturn) {
                 if (err) {
                     Importer.warn('skipping category:_cid: ' + _cid + ' : ' + err);
-                    nextTick(done);
+                    done();
                 } else {
 
                     var fields = {
@@ -458,7 +458,7 @@ var async = require('async'),
                         _imported_link: category._link || ''
                     };
 
-                    DB.setObject('category:' + categoryReturn.cid, fields, function(err) {
+                    db.setObject('category:' + categoryReturn.cid, fields, function(err) {
                         if (err) {
                             Importer.warn(err);
                         }
@@ -469,7 +469,7 @@ var async = require('async'),
                         imported++;
                         category = nodeExtend(true, {}, category, categoryReturn);
                         categories[_cid] = category;
-                        nextTick(done);
+                        done();
                     });
                 }
             });
@@ -509,7 +509,7 @@ var async = require('async'),
                 Importer.warn('[count:' + count + '] skipping topic:_tid:"'
                     + _tid + '" --> _cid: ' + topic._cid + ':imported:' + !!(category && category.imported));
 
-                nextTick(done);
+                done();
             } else {
                 Importer.log('[count:' + count + '] saving topic:_tid: ' + _tid);
 
@@ -522,7 +522,7 @@ var async = require('async'),
                 }, function(err, returnTopic){
                     if (err) {
                         Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ' ' + err);
-                        nextTick(done);
+                        done();
                     } else {
 
                         topic.imported = true;
@@ -565,12 +565,12 @@ var async = require('async'),
 
                         // pinned = 1 not enough to float the topic to the top in it's category
                         if (topicFields.pinned) {
-                            DB.sortedSetAdd('categories:' + category.cid + ':tid', Math.pow(2, 53), returnTopic.topicData.tid);
+                            db.sortedSetAdd('categories:' + category.cid + ':tid', Math.pow(2, 53), returnTopic.topicData.tid);
                         }  else {
-                            DB.sortedSetAdd('categories:' + category.cid + ':tid', timestamp, returnTopic.topicData.tid);
+                            db.sortedSetAdd('categories:' + category.cid + ':tid', timestamp, returnTopic.topicData.tid);
                         }
 
-                        DB.setObject('topic:' + returnTopic.topicData.tid, topicFields, function(err, result) {
+                        db.setObject('topic:' + returnTopic.topicData.tid, topicFields, function(err, result) {
 
                             if (err) { done(err); throw err; }
 
@@ -579,7 +579,7 @@ var async = require('async'),
                             Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
                                 topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
                                 topics[_tid] = topic;
-                                nextTick(done);
+                                done();
                             });
                         });
                     }
@@ -617,7 +617,7 @@ var async = require('async'),
 
             if (!topic || !topic.imported) {
                 Importer.warn('skipping post:_pid: ' + _pid + ' _tid:valid: ' + !!(topic && topic.imported));
-                nextTick(done);
+                done();
             } else {
 
                 Importer.log('[count: ' + count + '] saving post: ' + _pid);
@@ -634,7 +634,7 @@ var async = require('async'),
                 }, function(err, postReturn){
                     if (err) {
                         Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ' ' + err);
-                        nextTick(done);
+                        done();
                     } else {
 
                         post.imported = true;
@@ -662,7 +662,7 @@ var async = require('async'),
                             post = nodeExtend(true, {}, post, fields, postReturn);
                             post.imported = true;
                             posts[_pid] = post;
-                            nextTick(done);
+                            done();
                         });
                     }
                 });
@@ -693,19 +693,19 @@ var async = require('async'),
             var topic = Importer.data.topics[_tid];
             if (!topic) {
                 Importer.warn('[count:' + count + '] imported topic:_tid: ' + _tid + ' doesn\'t exist in storage, probably skipped some time earlier');
-                nextTick(done);
+                done();
             } else {
                 if (topic._locked) {
-                    DB.setObjectField('topic:' + topic.tid, 'locked', '1', function(err) {
+                    db.setObjectField('topic:' + topic.tid, 'locked', '1', function(err) {
                         if (err) {
                             Importer.warn(err);
                         } else {
                             Importer.log('[count: ' + count + '] locked topic:' + topic.tid + ' back');
                         }
-                        nextTick(done);
+                        done();
                     });
                 } else {
-                    nextTick(done);
+                    done();
                 }
             }
         }, function(err) {
@@ -721,7 +721,7 @@ var async = require('async'),
         Importer.success('Fixing  ' + Importer.data.topics._tids.length + ' topic timestamps');
 
         async.eachLimit(Importer.data.topics._tids, 10, function(_tid, done) {
-            DB.getSortedSetRevRange('tid:' + _tid + ':posts', 0, -1, function(err, pids) {
+            db.getSortedSetRevRange('tid:' + _tid + ':posts', 0, -1, function(err, pids) {
                 if (err) {
                     return done(err);
                 }
@@ -731,17 +731,17 @@ var async = require('async'),
                 }
                 async.parallel({
                     cid: function(next) {
-                        DB.getObjectField('topic:' + _tid, 'cid', next);
+                        db.getObjectField('topic:' + _tid, 'cid', next);
                     },
                     lastPostTimestamp: function(next) {
-                        DB.getObjectField('post:' + pids[0], 'timestamp', next);
+                        db.getObjectField('post:' + pids[0], 'timestamp', next);
                     }
                 }, function(err, results) {
                     if (err) {
                         return done(err);
                     }
 
-                    DB.sortedSetAdd('categories:' + results.cid + ':tid', results.lastPostTimestamp, _tid, done);
+                    db.sortedSetAdd('categories:' + results.cid + ':tid', results.lastPostTimestamp, _tid, done);
                 });
             });
         }, function(err) {
@@ -754,12 +754,12 @@ var async = require('async'),
 
     Importer.backupConfig = function(next) {
         // if the backedConfig file exists, that means we did not complete the restore config last time,
-        // so don't overwrite it, assuming the nodebb config in the DB are the tmp ones
+        // so don't overwrite it, assuming the nodebb config in the db are the tmp ones
         if (fs.existsSync(backupConfigFilepath)) {
             Importer.config('backedConfig', fs.readJsonSync(backupConfigFilepath) || {});
             next();
         } else {
-            DB.getObject('config', function(err, data) {
+            db.getObject('config', function(err, data) {
                 if (err) {
                     throw err;
                 }
@@ -783,7 +783,7 @@ var async = require('async'),
             config['email:smtp:host'] = '';
         }
 
-        DB.setObject('config', config, function(err){
+        db.setObject('config', config, function(err){
             if (err) {
                 throw err;
             }
@@ -797,7 +797,7 @@ var async = require('async'),
         if (fs.existsSync(backupConfigFilepath)) {
             Importer.config('backedConfig', fs.readJsonFileSync(backupConfigFilepath));
 
-            DB.setObject('config', Importer.config().backedConfig, function(err){
+            db.setObject('config', Importer.config().backedConfig, function(err){
                 if (err) {
                     Importer.warn('Something went wrong while restoring your nbb configs');
                     Importer.warn('here are your backed-up configs, you do it manually');
