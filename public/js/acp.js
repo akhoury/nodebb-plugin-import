@@ -564,6 +564,25 @@
                 }, onValues);
             }
 
+            socket.on('connect', function() {
+                onControllerState({
+                    now: 'idle',
+                    event: 'server.connected'
+                });
+                setTimeout(function() {
+                    getState().done(onControllerState);
+                }, 1000);
+            });
+
+            socket.on('event:disconnect', function() {
+                onError('Server disconnected :(');
+                onControllerState({
+                    now: 'errored',
+                    event: 'server.disco, disconnected'
+                });
+
+            });
+
             socket.on('controller.state', onControllerState);
 
             socket.on('exporter.log', onLog);

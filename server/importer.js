@@ -3,7 +3,6 @@ var async = require('async'),
     _ = require('underscore'),
     nodeExtend = require('node.extend'),
     fs = require('fs-extra'),
-    parse = require('./parse'),
 
     utils = require('../public/js/utils.js'),
     Data = require('./data.js'),
@@ -16,7 +15,7 @@ var async = require('async'),
     Categories = require('../../../src/categories.js'),
     db = module.parent.require('../../../src/database.js'),
 
-    BATCH_SIZE = 3,
+    IMPORT_BATCH_SIZE = 10,
 
     logPrefix = '[nodebb-plugin-import]',
 
@@ -132,8 +131,8 @@ var async = require('async'),
             Importer.flushData,
             Importer.backupConfig,
             Importer.setTmpConfig,
-            Importer.importUsers,
             Importer.importCategories,
+            Importer.importUsers,
             Importer.importTopics,
             Importer.importPosts,
             Importer.relockUnlockedTopics,
@@ -147,7 +146,7 @@ var async = require('async'),
         async.series([
             function(done){
                 Importer.phase('purgeCategories+topics+postsStart');
-                Importer.progress(0, 0);
+                Importer.progress(0, 1);
 
                 Data.countCategories(function(err, total) {
                     var index = 0;
@@ -159,8 +158,8 @@ var async = require('async'),
                             }, nextBatch);
                         },
                         function(err) {
+                            Importer.progress(1, 1);
                             Importer.phase('purgeCategories+topics+postsStart');
-                            Importer.progress(total, total);
                             done(err)
                         });
                 });
@@ -168,7 +167,7 @@ var async = require('async'),
             },
             function(done) {
                 Importer.phase('purgeUsersStart');
-                Importer.progress(0, 0);
+                Importer.progress(0, 1);
 
                 Data.countUsers(function(err, total) {
                     var index = 0;
@@ -176,19 +175,24 @@ var async = require('async'),
                         function(err, ids, nextBatch) {
                             async.mapLimit(ids, 50, function(uid, cb) {
                                 Importer.progress(index++, total);
+                                if (parseInt(uid, 10) === 1) {
+                                    return cb();
+                                }
                                 User.delete(uid, cb);
                             }, nextBatch);
                         },
                         function(err) {
+                            Importer.progress(1, 1);
                             Importer.phase('purgeUsersDone');
-                            Importer.progress(total, total);
                             done(err)
                         }
                     );
                 });
             },
             function(done) {
-                Importer.success('importer.purge.reset.globals.start');
+                Importer.phase('resetGlobalsStart');
+                Importer.progress(0, 1);
+
                 async.parallel([
                     function(cb) {
                         db.setObjectField('global', 'nextUid', 1, cb);
@@ -214,17 +218,15 @@ var async = require('async'),
                     function(cb) {
                         db.setObjectField('global', 'postCount', 1, cb);
                     }
-                ], function() {
-                    Importer.log('importer.purge.reset.globals.end');
-                    done();
-                });
+                ], done);
             }
         ], function(err) {
             if (err) {
                 Importer.error(err);
-                throw err;
+                next(err);
             }
-            Importer.success('importer.purge.done');
+            Importer.progress(1, 1);
+            Importer.phase('resetGlobalsDone');
             next();
         });
     };
@@ -248,6 +250,7 @@ var async = require('async'),
     Importer.importUsers = function(next) {
         Importer._lastPercentage = 0;
         Importer.phase('usersImportStart');
+        Importer.progress(0, 1);
         var count = 0,
             imported = 0,
             config = Importer.config(),
@@ -264,13 +267,11 @@ var async = require('async'),
 
         Importer.success('Importing ' + users._uids.length + ' users.');
 
-        async.eachLimit(users._uids, BATCH_SIZE, function(_uid, done) {
+        async.eachLimit(users._uids, IMPORT_BATCH_SIZE, function(_uid, done) {
             count++;
 
             var user = users[_uid];
-
             var u = Importer.makeValidNbbUsername(user._username || '', user._alternativeUsername || '');
-
             var userData = {
                 username: u.username,
                 email: user._email,
@@ -279,26 +280,20 @@ var async = require('async'),
 
             if (!userData.username) {
                 Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" username is invalid.');
-                done();
-            } else {
-                Importer.log('[count: ' + count + '] saving user:_uid: ' + _uid);
+                return done();
+            }
 
-                var onCreate = function(err, uid) {
-                    if (err) {
-                        Importer.warn('skipping username: "' + user.username + '" ' + err);
-                        done();
-                    } else {
-                        user.imported = true;
-                        imported++;
+            Importer.log('[count: ' + count + '] saving user:_uid: ' + _uid);
 
-                        if (('' + user._level).toLowerCase() == 'moderator') {
-                            Importer.makeModeratorOnAllCategories(uid);
-                            Importer.warn(userData.username + ' just became a moderator on all categories');
-                        } else if (('' + user._level).toLowerCase() == 'administrator') {
-                            Group.join('administrators', uid, function(){
-                                Importer.warn(userData.username + ' became an Administrator');
-                            });
-                        }
+            var onCreate = function(err, uid) {
+                if (err) {
+                    Importer.warn('[count: ' + count + '] skipping username: "' + user._username + '" ' + err);
+                    done();
+                } else {
+                    user.imported = true;
+                    imported++;
+
+                    var onLevel = function() {
 
                         var fields = {
                             // preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
@@ -329,8 +324,10 @@ var async = require('async'),
                             keptPicture = true;
                         }
 
-                        User.setUserFields(uid, fields, function(err, result) {
-                            if (err) { done(err); throw err; }
+                        var onUserFields = function(err, result) {
+                            if (err) {
+                                return done(err);
+                            }
 
                             fields.uid = uid;
 
@@ -343,40 +340,53 @@ var async = require('async'),
                             Importer.progress(count, users._uids.length);
 
                             if (config.autoConfirmEmails) {
-                                db.setObjectField('email:confirmed', user.email, '1', function() {
-                                    done();
-                                });
+                                db.setObjectField('email:confirmed', user.email, '1', done);
                             } else {
                                 done();
                             }
+                        };
+
+                        User.setUserFields(uid, fields, onUserFields);
+                    };
+
+                    if (('' + user._level).toLowerCase() == 'moderator') {
+                        Importer.makeModeratorOnAllCategories(uid, onLevel);
+                        Importer.warn(userData.username + ' just became a moderator on all categories');
+                    } else if (('' + user._level).toLowerCase() == 'administrator') {
+                        Group.join('administrators', uid, function(){
+                            Importer.warn(userData.username + ' became an Administrator');
+                            onLevel();
                         });
+                    } else {
+                        onLevel();
                     }
-                };
-
-                if (oldOwnerNotFound && (user._username || '').toLowerCase() === config.adminTakeOwnership.username.toLowerCase()) {
-                    Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" because it was revoked ownership');
-
-                    // cache the _uid for the next phases
-                    Importer.config('adminTakeOwnership', {
-                        enable: true,
-                        username: user._username,
-                        // just an alias in this case
-                        _username: user._username,
-                        _uid: user._uid
-                    });
-
-                    // no need to make it a mod or an admin, it already is
-                    user._level = null;
-
-                    // set to false so we don't have to match all users
-                    oldOwnerNotFound = false;
-
-                    // dont create, but set the fields
-                    return onCreate(null, 1);
-                } else {
-                    User.create(userData, onCreate);
                 }
+            };
+
+            if (oldOwnerNotFound && (user._username || '').toLowerCase() === config.adminTakeOwnership.username.toLowerCase()) {
+                Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" because it was revoked ownership');
+
+                // cache the _uid for the next phases
+                Importer.config('adminTakeOwnership', {
+                    enable: true,
+                    username: user._username,
+                    // just an alias in this case
+                    _username: user._username,
+                    _uid: user._uid
+                });
+
+                // no need to make it a mod or an admin, it already is
+                user._level = null;
+
+                // set to false so we don't have to match all users
+                oldOwnerNotFound = false;
+
+                // dont create, but set the fields
+                return onCreate(null, 1);
+            } else {
+                User.create(userData, onCreate);
             }
+
         }, function(err) {
             if (err) {
                 throw err;
@@ -403,10 +413,12 @@ var async = require('async'),
                         });
                     }
                 ], function() {
+                    Importer.progress(1, 1);
                     Importer.phase('usersImportDone');
                     next();
                 });
             } else {
+                Importer.progress(1, 1);
                 Importer.phase('usersImportDone');
                 next();
             }
@@ -415,6 +427,7 @@ var async = require('async'),
 
     Importer.importCategories = function(next) {
         Importer.phase('categoriesImportStart');
+        Importer.progress(0, 1);
 
         Importer._lastPercentage = 0;
         var count = 0,
@@ -425,7 +438,7 @@ var async = require('async'),
 
         Importer.success('Importing ' + categories._cids.length + ' categories.');
 
-        async.eachLimit(categories._cids, BATCH_SIZE, function(_cid, done) {
+        var onEach = function(_cid, done) {
             count++;
 
             var category = categories[_cid];
@@ -451,41 +464,46 @@ var async = require('async'),
                 color: config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)]
             };
 
-            Categories.create(categoryData, function(err, categoryReturn) {
+            var onCreate = function(err, categoryReturn) {
                 if (err) {
                     Importer.warn('skipping category:_cid: ' + _cid + ' : ' + err);
-                    done();
-                } else {
-
-                    var fields = {
-                        _imported_cid: _cid,
-                        _imported_name: category._name || '',
-                        _imported_slug: category._slug || '',
-                        _imported_description: category._description || '',
-                        _imported_link: category._link || ''
-                    };
-
-                    db.setObject('category:' + categoryReturn.cid, fields, function(err) {
-                        if (err) {
-                            Importer.warn(err);
-                        }
-
-                        Importer.progress(count, categories._cids.length);
-
-                        category.imported = true;
-                        imported++;
-                        category = nodeExtend(true, {}, category, categoryReturn);
-                        categories[_cid] = category;
-                        done();
-                    });
+                    return done();
                 }
-            });
 
-        }, function(err) {
+                var fields = {
+                    _imported_cid: _cid,
+                    _imported_name: category._name || '',
+                    _imported_slug: category._slug || '',
+                    _imported_description: category._description || '',
+                    _imported_link: category._link || ''
+                };
+
+                var onFields = function(err) {
+                    if (err) {
+                        Importer.warn(err);
+                    }
+
+                    Importer.progress(count, categories._cids.length);
+
+                    category.imported = true;
+                    imported++;
+                    category = nodeExtend(true, {}, category, categoryReturn);
+                    categories[_cid] = category;
+                    done();
+                };
+
+                db.setObject('category:' + categoryReturn.cid, fields, onFields);
+            };
+
+            Categories.create(categoryData, onCreate);
+        };
+
+        async.eachLimit(categories._cids, IMPORT_BATCH_SIZE, onEach, function(err) {
             if (err) {
                 throw err;
             }
             Importer.success('Importing ' + imported + '/' + categories._cids.length + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+            Importer.progress(1, 1);
             Importer.phase('categoriesImportDone');
             next();
         });
@@ -493,6 +511,7 @@ var async = require('async'),
 
     Importer.importTopics = function(next) {
         Importer.phase('topicsImportStart');
+        Importer.progress(0, 1);
 
         Importer._lastPercentage = 0;
         var count = 0,
@@ -505,7 +524,7 @@ var async = require('async'),
 
         Importer.success('Importing ' + topics._tids.length + ' topics.');
 
-        async.eachLimit(topics._tids, BATCH_SIZE, function(_tid, done) {
+        var onEach = function(_tid, done) {
             count++;
 
             var topic = topics[_tid];
@@ -520,13 +539,7 @@ var async = require('async'),
             } else {
                 Importer.log('[count:' + count + '] saving topic:_tid: ' + _tid);
 
-                Topics.post({
-                    uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === topic._uid ? 1 : user.uid,
-                    title: topic._title || '',
-                    content: topic._content || '',
-                    cid: category.cid,
-                    thumb: topic._thumb
-                }, function(err, returnTopic){
+                var onPost = function (err, returnTopic) {
                     if (err) {
                         Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ' ' + err);
                         done();
@@ -570,33 +583,51 @@ var async = require('async'),
                             relativeTime: relativeTime
                         };
 
+                        var onPinned = function() {
+
+                            var onFields = function(err, result) {
+
+                                if (err) { done(err); throw err; }
+
+                                Importer.progress(count, topics._tids.length);
+
+                                var onPostFields = function(){
+                                    topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
+                                    topics[_tid] = topic;
+                                    done();
+                                };
+
+                                Posts.setPostFields(returnTopic.postData.pid, postFields, onPostFields);
+                            };
+
+                            db.setObject('topic:' + returnTopic.topicData.tid, topicFields, onFields);
+                        };
+
                         // pinned = 1 not enough to float the topic to the top in it's category
                         if (topicFields.pinned) {
-                            db.sortedSetAdd('categories:' + category.cid + ':tid', Math.pow(2, 53), returnTopic.topicData.tid);
+                            db.sortedSetAdd('categories:' + category.cid + ':tid', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
                         }  else {
-                            db.sortedSetAdd('categories:' + category.cid + ':tid', timestamp, returnTopic.topicData.tid);
+                            db.sortedSetAdd('categories:' + category.cid + ':tid', timestamp, returnTopic.topicData.tid, onPinned);
                         }
-
-                        db.setObject('topic:' + returnTopic.topicData.tid, topicFields, function(err, result) {
-
-                            if (err) { done(err); throw err; }
-
-                            Importer.progress(count, topics._tids.length);
-
-                            Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
-                                topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
-                                topics[_tid] = topic;
-                                done();
-                            });
-                        });
                     }
-                });
+                };
+
+                Topics.post({
+                    uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === topic._uid ? 1 : user.uid,
+                    title: topic._title || '',
+                    content: topic._content || '',
+                    cid: category.cid,
+                    thumb: topic._thumb
+                }, onPost);
             }
-        }, function(err) {
+        };
+
+        async.eachLimit(topics._tids, IMPORT_BATCH_SIZE, onEach, function(err) {
             if (err) {
                 throw err;
             }
             Importer.success('Importing ' + imported + '/' + topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+            Importer.progress(1, 1);
             Importer.phase('topicsImportDone');
             next();
         });
@@ -604,6 +635,8 @@ var async = require('async'),
 
     Importer.importPosts = function(next) {
         Importer.phase('postsImportStart');
+        Importer.progress(0, 1);
+
         Importer._lastPercentage = 0;
         var count = 0,
             imported = 0,
@@ -615,7 +648,7 @@ var async = require('async'),
 
         Importer.success('Importing ' + posts._pids.length + ' posts.');
 
-        async.eachLimit(posts._pids, BATCH_SIZE, function(_pid, done) {
+        var onEach = function(_pid, done) {
             count++;
 
             var post = posts[_pid];
@@ -629,16 +662,7 @@ var async = require('async'),
 
                 Importer.log('[count: ' + count + '] saving post: ' + _pid);
 
-                Posts.create({
-                    uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
-                    tid: topic.tid,
-                    content: post._content || '',
-                    timestamp: post._timestamp || startTime,
-
-                    // i seriously doubt you have this, but it's ok if you don't
-                    toPid: post['_nbb-toPid']
-
-                }, function(err, postReturn){
+                var onCreate = function(err, postReturn){
                     if (err) {
                         Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ' ' + err);
                         done();
@@ -662,7 +686,7 @@ var async = require('async'),
                             _imported_content: post._content || ''
                         };
 
-                        Posts.setPostFields(postReturn.pid, fields, function(){
+                        var onPostFields = function() {
 
                             Importer.progress(count, posts._pids.length);
 
@@ -670,12 +694,28 @@ var async = require('async'),
                             post.imported = true;
                             posts[_pid] = post;
                             done();
-                        });
+                        };
+
+                        Posts.setPostFields(postReturn.pid, fields, onPostFields);
                     }
-                });
+                };
+
+                Posts.create({
+                    uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
+                    tid: topic.tid,
+                    content: post._content || '',
+                    timestamp: post._timestamp || startTime,
+
+                    // i seriously doubt you have this, but it's ok if you don't
+                    toPid: post['_nbb-toPid']
+
+                }, onCreate);
             }
-        }, function(){
-            Importer.success('Importing ' + imported + '/' + posts._pids.length + ' posts took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
+        };
+
+        async.eachLimit(posts._pids, IMPORT_BATCH_SIZE, onEach, function() {
+            Importer.progress(1, 1);
+            Importer.phase('postsImportDone');
             next();
         });
     };
@@ -690,14 +730,15 @@ var async = require('async'),
     };
 
     Importer.relockUnlockedTopics = function(next) {
-        var count = 0,
-            startTime = +new Date();
-        Importer.success('Relocking ' + Importer.data.topics._tids.length + ' topics');
+        var count = 0, len = Importer.data.topics._tids.length;
+
+        Importer.phase('relockingTopicsStart');
+        Importer.progress(0, 1);
 
         async.eachLimit(Importer.data.topics._tids, 5, function(_tid, done) {
-            count++;
-
             var topic = Importer.data.topics[_tid];
+            Importer.progress(count++, len);
+
             if (!topic) {
                 Importer.warn('[count:' + count + '] imported topic:_tid: ' + _tid + ' doesn\'t exist in storage, probably skipped some time earlier');
                 done();
@@ -717,44 +758,51 @@ var async = require('async'),
             }
         }, function(err) {
             if (err) throw err;
-
-            Importer.success('Relocking ' + Importer.data.topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+            Importer.progress(1, 1);
+            Importer.phase('relockingTopicsDone');
             next();
         });
     };
 
     Importer.fixTopicTimestamps = function(next) {
-        var startTime = +new Date();
-        Importer.success('Fixing  ' + Importer.data.topics._tids.length + ' topic timestamps');
+        var count = 0, len = Importer.data.topics._tids.length;
+
+        Importer.phase('fixTopicTimestampsStart');
+        Importer.progress(0, 1);
 
         async.eachLimit(Importer.data.topics._tids, 10, function(_tid, done) {
-            db.getSortedSetRevRange('tid:' + _tid + ':posts', 0, -1, function(err, pids) {
-                if (err) {
-                    return done(err);
-                }
+            var topic = Importer.data.topics[_tid];
+            Importer.progress(count++, len);
 
-                if (!Array.isArray(pids) || !pids.length) {
-                    return done();
-                }
-                async.parallel({
-                    cid: function(next) {
-                        db.getObjectField('topic:' + _tid, 'cid', next);
-                    },
-                    lastPostTimestamp: function(next) {
-                        db.getObjectField('post:' + pids[0], 'timestamp', next);
-                    }
-                }, function(err, results) {
+            if (topic && topic.tid) {
+                db.getSortedSetRevRange('tid:' + topic.tid + ':posts', 0, -1, function(err, pids) {
                     if (err) {
                         return done(err);
                     }
 
-                    db.sortedSetAdd('categories:' + results.cid + ':tid', results.lastPostTimestamp, _tid, done);
+                    if (!Array.isArray(pids) || !pids.length) {
+                        return done();
+                    }
+                    async.parallel({
+                        cid: function(next) {
+                            db.getObjectField('topic:' + topic.tid, 'cid', next);
+                        },
+                        lastPostTimestamp: function(next) {
+                            db.getObjectField('post:' + pids[0], 'timestamp', next);
+                        }
+                    }, function(err, results) {
+                        if (err) {
+                            return done(err);
+                        }
+
+                        db.sortedSetAdd('categories:' + results.cid + ':tid', results.lastPostTimestamp, _tid, done);
+                    });
                 });
-            });
+            }
         }, function(err) {
             if (err) throw err;
-
-            Importer.success('Fixing  ' + Importer.data.topics._tids.length + ' topic timestamps took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+            Importer.progress(1, 1);
+            Importer.phase('fixTopicTimestampsDone');
             next();
         });
     };
@@ -830,17 +878,18 @@ var async = require('async'),
     };
 
     // aka forums
-    Importer.makeModeratorOnAllCategories = function(uid) {
-        Importer.data.categories._cids.forEach(function(cid) {
+    Importer.makeModeratorOnAllCategories = function(uid, done) {
+        async.map(Importer.data.categories._cids, function(cid, next) {
             var category = Importer.data.categories[cid];
             if (category) {
                 Group.join('group:cid:' + cid + ':privileges:mods:members', uid, function(err){
                     if (err) {
                         Importer.warn(err);
                     }
+                    next();
                 });
             }
-        });
+        }, done);
     };
 
     // which of the values is falsy

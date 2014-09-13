@@ -139,35 +139,35 @@ var db = module.parent.require('../../../src/database.js'),
     };
 
     Data.processUsersSet = function(process, options, callback) {
-        return Data.processSet('user:uid', 'user:', process, options, callback);
+        return Data.processSet('users:joindate', 'user:', process, options, callback);
     };
 
     Data.processCategoriesSet = function(process, options, callback) {
-        return Data.processSet('category:cid', 'category:', process, options, callback);
+        return Data.processSet('categories:cid', 'category:', process, options, callback);
     };
 
     Data.processTopicsSet = function(process, options, callback) {
-        return Data.processSet('topic:tid', 'topic:', process, options, callback);
+        return Data.processSet('topics:tid', 'topic:', process, options, callback);
     };
 
     Data.processPostsSet = function(process, options, callback) {
-        return Data.processSet('post:pid', 'post:', process, options, callback);
+        return Data.processSet('posts:pid', 'post:', process, options, callback);
     };
 
     Data.processUsersUidsSet = function(process, options, callback) {
-        return Data.processIdsSet('user:uid', process, options, callback);
+        return Data.processIdsSet('users:joindate', process, options, callback);
     };
 
     Data.processCategoriesCidsSet = function(process, options, callback) {
-        return Data.processIdsSet('category:cid', process, options, callback);
+        return Data.processIdsSet('categories:cid', process, options, callback);
     };
 
     Data.processTopicsTidsSet = function(process, options, callback) {
-        return Data.processIdsSet('topic:tid', process, options, callback);
+        return Data.processIdsSet('topics:tid', process, options, callback);
     };
 
     Data.processPostsPidsSet = function(process, options, callback) {
-        return Data.processIdsSet('post:pid', process, options, callback);
+        return Data.processIdsSet('posts:pid', process, options, callback);
     };
 
 })(module.exports);
