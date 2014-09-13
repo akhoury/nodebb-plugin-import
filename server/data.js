@@ -6,7 +6,10 @@ var db = module.parent.require('../../../src/database.js'),
     User = require('../../../src/user.js'),
     Topics = require('../../../src/topics.js'),
     Posts = require('../../../src/posts.js'),
-    Categories = require('../../../src/categories.js');
+    Categories = require('../../../src/categories.js'),
+    
+    DEFAULT_BATCH_SIZE = 100;
+
 
 (function(Data) {
 
@@ -103,7 +106,7 @@ var db = module.parent.require('../../../src/database.js'),
             throw new Error(process + ' is not a function');
         }
 
-        var batch = options.batch || 5000;
+        var batch = options.batch || DEFAULT_BATCH_SIZE;
         var start = 0;
         var end = batch;
         var done = false;

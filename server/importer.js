@@ -145,7 +145,7 @@ var async = require('async'),
     Importer.flushData = function(next) {
         async.series([
             function(done){
-                Importer.phase('purgeCategories+topics+postsStart');
+                Importer.phase('purgeCategories+Topics+PostsStart');
                 Importer.progress(0, 1);
 
                 Data.countCategories(function(err, total) {
@@ -159,7 +159,7 @@ var async = require('async'),
                         },
                         function(err) {
                             Importer.progress(1, 1);
-                            Importer.phase('purgeCategories+topics+postsStart');
+                            Importer.phase('purgeCategories+Topics+PostsStart');
                             done(err)
                         });
                 });
@@ -716,6 +716,7 @@ var async = require('async'),
         async.eachLimit(posts._pids, IMPORT_BATCH_SIZE, onEach, function() {
             Importer.progress(1, 1);
             Importer.phase('postsImportDone');
+            Importer.success('Importing ' + imported + '/' + posts._pids.length + ' posts took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
             next();
         });
     };
@@ -735,7 +736,7 @@ var async = require('async'),
         Importer.phase('relockingTopicsStart');
         Importer.progress(0, 1);
 
-        async.eachLimit(Importer.data.topics._tids, 5, function(_tid, done) {
+        async.eachLimit(Importer.data.topics._tids, IMPORT_BATCH_SIZE, function(_tid, done) {
             var topic = Importer.data.topics[_tid];
             Importer.progress(count++, len);
 
@@ -770,7 +771,7 @@ var async = require('async'),
         Importer.phase('fixTopicTimestampsStart');
         Importer.progress(0, 1);
 
-        async.eachLimit(Importer.data.topics._tids, 10, function(_tid, done) {
+        async.eachLimit(Importer.data.topics._tids, IMPORT_BATCH_SIZE, function(_tid, done) {
             var topic = Importer.data.topics[_tid];
             Importer.progress(count++, len);
 
@@ -798,6 +799,8 @@ var async = require('async'),
                         db.sortedSetAdd('categories:' + results.cid + ':tid', results.lastPostTimestamp, _tid, done);
                     });
                 });
+            } else {
+                done();
             }
         }, function(err) {
             if (err) throw err;

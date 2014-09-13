@@ -355,7 +355,6 @@ var fs = require('fs-extra'),
         Controller.progress(0, 0);
 
         var error = function(err) {
-            console.log('err', err);
             Controller.phase('usersCsvDone');
             Controller.state({
                 now: 'errored',
@@ -416,6 +415,7 @@ var fs = require('fs-extra'),
         Controller.progress(0, 0);
 
         var error = function(err) {
+            Controller.progress(1, 1);
             Controller.phase('usersJsonDone');
             Controller.state({
                 now: 'errored',
@@ -454,7 +454,7 @@ var fs = require('fs-extra'),
                     if (err) {
                         return error(err);
                     }
-                    Controller.progress(total, total);
+                    Controller.progress(1, 1);
                     Controller.phase('usersJsonDone');
 
                     var lastCommaIdx = content.lastIndexOf(',');
@@ -492,6 +492,7 @@ var fs = require('fs-extra'),
 
         var error = function(err) {
             Controller.phase('redirectionMapDone');
+            Controller.progress(1, 1);
             Controller.state({
                 now: 'errored',
                 event: 'controller.downloadError',
@@ -540,7 +541,7 @@ var fs = require('fs-extra'),
                                 }
                                 Controller.progress(index++, total);
                             }, function(err) {
-                                Controller.progress(total, total);
+                                Controller.progress(1, 1);
                                 Controller.phase('redirectionMapUsersDone');
                                 done(err);
                             });
@@ -571,7 +572,7 @@ var fs = require('fs-extra'),
                                     Controller.progress(index++, total);
                                 },
                                 function (err) {
-                                    Controller.progress(total, total);
+                                    Controller.progress(1, 1);
                                     Controller.phase('redirectionMapCategoriesDone');
                                     done(err);
                                 });
@@ -605,7 +606,7 @@ var fs = require('fs-extra'),
                                     Controller.progress(index++, total);
                                 },
                                 function(err) {
-                                    Controller.progress(total, total);
+                                    Controller.progress(1, 1);
                                     Controller.phase('redirectionMapTopicsDone');
                                     done(err);
                                 });
@@ -635,7 +636,7 @@ var fs = require('fs-extra'),
                                     Controller.progress(index++, total);
                                 },
                                 function(err) {
-                                    Controller.progress(total, total);
+                                    Controller.progress(1, 1);
                                     Controller.phase('redirectionMapPostsDone');
                                     done(err);
                                 }
@@ -650,6 +651,7 @@ var fs = require('fs-extra'),
                     return error(err);
                 }
 
+                Controller.progress(1, 1);
                 Controller.phase('redirectionMapDone');
 
                 var lastCommaIdx = content.lastIndexOf(',');
@@ -735,7 +737,7 @@ var fs = require('fs-extra'),
                             },
                             {async: true, eachLimit: DELETE_EACH_LIMIT},
                             function(err) {
-                                Controller.progress(total, total);
+                                Controller.progress(1, 1);
                                 Controller.phase('deleteExtraFieldsUsersDone');
                                 done(err);
                             });
@@ -776,7 +778,7 @@ var fs = require('fs-extra'),
                             },
                             {async: true, eachLimit: DELETE_EACH_LIMIT},
                             function(err) {
-                                Controller.progress(total, total);
+                                Controller.progress(1, 1);
                                 Controller.phase('deleteExtraFieldsCategoriesDone');
                                 done(err);
                             });
@@ -821,7 +823,7 @@ var fs = require('fs-extra'),
                             },
                             {async: true, eachLimit: DELETE_EACH_LIMIT},
                             function(err) {
-                                Controller.progress(total, total);
+                                Controller.progress(1, 1);
                                 Controller.phase('deleteExtraFieldsTopicsDone');
                                 done(err);
                             });
@@ -859,7 +861,7 @@ var fs = require('fs-extra'),
                             },
                             {async: true, eachLimit: DELETE_EACH_LIMIT},
                             function(err) {
-                                Controller.progress(total, total);
+                                Controller.progress(1, 1);
                                 Controller.phase('deleteExtraFieldsPostsStart');
                                 done(err);
                             });
@@ -870,6 +872,7 @@ var fs = require('fs-extra'),
                     return error(err);
                 }
 
+                Controller.progress(1, 1);
                 Controller.phase('deleteExtraFieldsDone');
 
                 fs.remove(LAST_IMPORT_TIMESTAMP_FILE, function(err) {
@@ -938,7 +941,7 @@ var fs = require('fs-extra'),
                                 },
                                 {async: true, eachLimit: CONVERT_EACH_LIMIT},
                                 function(err) {
-                                    Controller.progress(total, total);
+                                    Controller.progress(1, 1);
                                     Controller.phase('convertUsersDone');
                                     done(err);
                                 });
@@ -982,7 +985,7 @@ var fs = require('fs-extra'),
                                 },
                                 {async: true, eachLimit: CONVERT_EACH_LIMIT},
                                 function(err) {
-                                    Controller.progress(total, total);
+                                    Controller.progress(1, 1);
                                     Controller.phase('convertCategoriesDone');
                                     done(err);
                                 }
@@ -1030,7 +1033,7 @@ var fs = require('fs-extra'),
                                 },
                                 {async: true, eachLimit: CONVERT_EACH_LIMIT},
                                 function(err) {
-                                    Controller.progress(total, total);
+                                    Controller.progress(1, 1);
                                     Controller.phase('convertTopicsDone');
                                     done(err);
                                 });
@@ -1059,7 +1062,7 @@ var fs = require('fs-extra'),
                                 },
                                 {async: true, eachLimit: CONVERT_EACH_LIMIT},
                                 function(err) {
-                                    Controller.progress(total, total);
+                                    Controller.progress(1, 1);
                                     Controller.phase('convertPostsDone');
                                     done(err);
                                 });
