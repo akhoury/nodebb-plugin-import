@@ -12,10 +12,9 @@ Import your old forum data to nodebb | a one time use plugin
 
 ## Screenshots
 
-![Imgur](http://i.imgur.com/aPbBTza.png)
-![Imgur](http://i.imgur.com/SzHVU2Z.png)
-![Imgur](http://i.imgur.com/uHzPvgd.png)
-![Imgur](http://i.imgur.com/soRHXM3.png)
+![Imgur](http://i.imgur.com/LbeijOH.png)
+![Imgur](http://i.imgur.com/zWW1mHP.png)
+![Imgur](http://i.imgur.com/n1ukngx.png)
 
 ## Usage
 

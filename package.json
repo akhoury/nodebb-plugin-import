@@ -1,7 +1,7 @@
 
 {
     "name": "nodebb-plugin-import",
-    "version": "0.2.4",
+    "version": "0.2.4-1",
     "description": "Import your forum data to nodebb",
     "main": "./server/importer.js",
     "scripts": {
@@ -16,7 +16,14 @@
         "plugin",
         "migrate",
         "convert",
-        "import"
+        "import",
+        "ubb",
+        "phpbb",
+        "vb",
+        "vbulletin",
+        "ipb",
+        "ipboard",
+        "smf"
     ],
     "author": {
         "name": "akhoury",

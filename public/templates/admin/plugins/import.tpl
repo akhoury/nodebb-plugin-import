@@ -46,7 +46,7 @@
             <p class="help-block">
                 You can enter any valid npm package name, tarball file/url etc. see <a target="_blank" href="https://www.npmjs.org/doc/cli/npm-install.html">npm docs</a>
                 <br /> i.e.
-                <code class="import-code-example">nodebb-plugin-vbexporter</code> or <br />
+                <code class="import-code-example">nodebb-plugin-vbulletin</code> or <br />
                 <code class="import-code-example">git://github.com/psychobunny/nodebb-plugin-import-phpbb#master</code> or <br/>
                 <code class="import-code-example">nodebb-plugin-import-ubb@0.1.0</code> etc.<br />
                 if a value exists here, it will take precedence over the select box value right above it.
