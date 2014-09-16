@@ -325,8 +325,12 @@ var fs = require('fs-extra'),
     // which will avoid jsdom.jsdom().createWindow() every time, much, much faster, and avoids memory leaks
     Controller['html-to-md'] = (function(window){
         var brRe = /<br\s*(\/)?>/gmi;
+        var entities = new (require('html-entities')).AllHtmlEntities();
         return function(str){
-            return htmlMd(str, {window: window}).replace(brRe, "\n");
+            str = str || '';
+            str = entities.decode(str);
+            str = htmlMd(str, {window: window}).replace(brRe, "\n");
+            return str;
         }
     })(window);
 

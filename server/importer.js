@@ -152,11 +152,12 @@ var async = require('async'),
                     var index = 0;
                     Data.processCategoriesCidsSet(
                         function (err, ids, nextBatch) {
-                            async.mapLimit(ids, 50, function(id, cb) {
+                            async.mapLimit(ids, IMPORT_BATCH_SIZE, function(id, cb) {
                                 Importer.progress(index++, total);
                                 Categories.purge(id, cb);
                             }, nextBatch);
                         },
+                        {alwaysStartAt: 0},
                         function(err) {
                             Importer.progress(1, 1);
                             Importer.phase('purgeCategories+Topics+PostsStart');
@@ -170,16 +171,29 @@ var async = require('async'),
                 Importer.progress(0, 1);
 
                 Data.countUsers(function(err, total) {
-                    var index = 0;
+                    var index = 0; var count = 0;
                     Data.processUsersUidsSet(
                         function(err, ids, nextBatch) {
-                            async.mapLimit(ids, 50, function(uid, cb) {
+                            async.mapLimit(ids, IMPORT_BATCH_SIZE, function(uid, cb) {
                                 Importer.progress(index++, total);
                                 if (parseInt(uid, 10) === 1) {
                                     return cb();
                                 }
-                                User.delete(uid, cb);
-                            }, nextBatch);
+                                User.delete(uid, function() {
+                                    count++;
+                                    cb();
+                                });
+                            }, function(){
+                                nextBatch();
+                            });
+                        },
+                        {
+                            // since we're deleting records the range is always shifting backwards, so need to advance the batch start boundary
+                            alwaysStartAt: 0,
+                            // done if the uid=1 in the only one in the db
+                            doneIf: function(start, end, ids) {
+                                return ids.length === 1;
+                            }
                         },
                         function(err) {
                             Importer.progress(1, 1);
@@ -796,7 +810,7 @@ var async = require('async'),
                             return done(err);
                         }
 
-                        db.sortedSetAdd('categories:' + results.cid + ':tid', results.lastPostTimestamp, _tid, done);
+                        db.sortedSetAdd('categories:' + results.cid + ':tid', results.lastPostTimestamp, topic.tid, done);
                     });
                 });
             } else {

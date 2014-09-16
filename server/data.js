@@ -2,6 +2,7 @@
 var db = module.parent.require('../../../src/database.js'),
     async = require('async'),
 
+    utils = require('../public/js/utils.js'),
     Meta = require('../../../src/meta.js'),
     User = require('../../../src/user.js'),
     Topics = require('../../../src/topics.js'),
@@ -106,6 +107,12 @@ var db = module.parent.require('../../../src/database.js'),
             throw new Error(process + ' is not a function');
         }
 
+        // custom done condition
+        options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function(){};
+
+        // always start at, useful when deleting all records
+        // options.alwaysStartAt
+
         var batch = options.batch || DEFAULT_BATCH_SIZE;
         var start = 0;
         var end = batch;
@@ -123,7 +130,7 @@ var db = module.parent.require('../../../src/database.js'),
                     if (err) {
                         return next(err);
                     }
-                    if (!ids.length) {
+                    if (!ids.length || options.doneIf(start, end, ids)) {
                         done = true;
                         return next();
                     }
@@ -131,7 +138,7 @@ var db = module.parent.require('../../../src/database.js'),
                         if (err) {
                             return next(err);
                         }
-                        start += batch + 1;
+                        start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
                         end = start + batch;
                         next();
                     });
