@@ -97,9 +97,9 @@ NodeBB prefers using Markdown as the *content language format*, and since most W
 
 ### Some common issues</h4>
 
-* "EMFILE too many open files" error, try disabling the server logs, there is an option for that
-* "Segmentation fault" error, along with disabling server logs, try changing the "convert" option to "Don't convert", that's most likely it, then file an issue, I'll help you through it.
-* "Error: MISCONF Redis is configured to save RDB snapshots, but is currently not able to persist on disk." see [the redis note](https://github.com/akhoury/nodebb-plugin-import#redis-note), it might help
+* `EMFILE too many open files` error, try disabling the server logs, there is an option for that
+* `Segmentation fault` error, along with disabling server logs, try the Redis note, then file an issue, I'll help you through it.
+* `Error: MISCONF Redis is configured to save RDB snapshots, but is currently not able to persist on disk.` see [the redis note](https://github.com/akhoury/nodebb-plugin-import#redis-note), it might help
 
 ### Test
 
