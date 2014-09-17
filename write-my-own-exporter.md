@@ -8,9 +8,9 @@ This section is up here because it's very important for you to read it, so let's
 * when you see the term __OLD__ it refers to your source forum or bulletin-board
 * when you see the term __NEW__ it refers to NodeBB
 * __ALL__ of the __OLD__ __variables__, must start with an __underscore__ character: `_`
-* `_cid` --> old category id, some forum softwares use different terms for categories, such as __forums__
+* `_cid` --> old category id, some forum software use different terms for categories, such as __forums__
 * `_uid` --> old user id
-* `_tid` --> old topic id
+* `_tid` --> old topic id, some forum software use different terms for topics, such as __threads__
 * `_pid` --> old post id
 * `cid` --> new category id
 * `uid` --> new user id
