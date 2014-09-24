@@ -2,7 +2,7 @@ nodebb-plugin-import
 =========
 Import your old forum data to nodebb | a one time use plugin
 
-### Works with NodeBB v0.5.0-4 (exact. nothing else)
+### Works with NodeBB v0.5.0 (exact. nothing else)
 ```
 # If you want a higher revision, import to this one then just checkout master (or another stable higher 0.x.x+ release)
 # and use the lovely ./nodebb upgrade
