@@ -1,6 +1,5 @@
 
 var fs = require('fs-extra'),
-    lineReader = require('line-reader'),
     path = require('path'),
     _ = require('underscore'),
     async = require('async'),
@@ -16,7 +15,11 @@ var fs = require('fs-extra'),
     DELIVERABLES_TMP_DIR = path.join(__dirname, '/../public/tmp'),
     DELIVERABLES_TMP_URL = path.join('/plugins/nodebb-plugin-import/tmp'),
     LOG_FILE = path.join(__dirname, '/tmp/import.log'),
+
     LAST_IMPORT_TIMESTAMP_FILE = path.join(__dirname + '/tmp/lastimport'),
+
+    DIRTY_FILE = path.join(__dirname + '/tmp/controller.dirty'),
+
     DELETE_EACH_LIMIT = 50,
     CONVERT_EACH_LIMIT = 50,
 
@@ -52,6 +55,13 @@ var fs = require('fs-extra'),
         return (!state || state.now === 'idle') && fs.existsSync(LAST_IMPORT_TIMESTAMP_FILE);
     };
 
+    Controller.isDirty = function () {
+        if (!Controller._importer) {
+            Controller._importer = require('./importer');
+        }
+        return Controller._importer.isDirty();
+    };
+
     Controller.clean = function() {
         // call clean functions for both importers and exporters
     };
@@ -76,6 +86,24 @@ var fs = require('fs-extra'),
                 }
             });
         });
+    };
+
+    Controller.resume = function(config, callback) {
+        Controller.config(config);
+
+        var resume = function() {
+            Controller.startExport(Controller.config(), function(err, data) {
+                Controller.resumeImport(data, Controller.config(), callback);
+            });
+        };
+
+        if (Controller.config('log').server) {
+            fs.ensureFile(LOG_FILE, function () {
+                start();
+            });
+        } else {
+            resume();
+        }
     };
 
     Controller.startExport = function(config, callback) {
@@ -155,12 +183,7 @@ var fs = require('fs-extra'),
         return Controller._state;
     };
 
-    Controller.startImport = function(data, config, callback) {
-        if (_.isFunction(config)) {
-            callback = config;
-            config  = null;
-        }
-
+    Controller._requireImporter = function(callback) {
         callback = _.isFunction(callback) ? callback : function(){};
 
         var state = Controller.state();
@@ -184,7 +207,9 @@ var fs = require('fs-extra'),
                 now: 'idle',
                 event: 'importer.complete'
             });
-            callback();
+            fs.remove(DIRTY_FILE, function(err) {
+                callback();
+            });
         });
 
         Controller._importer.once('importer.error', function() {
@@ -200,8 +225,41 @@ var fs = require('fs-extra'),
                 event: 'importer.start'
             });
         });
+    };
+
+    Controller.startImport = function(data, config, callback) {
+        fs.writeFileSync(DIRTY_FILE, +new Date(), {encoding: 'utf8'});
+        Controller._requireImporter(callback);
+
+        if (_.isFunction(config)) {
+            callback = config;
+            config  = null;
+        }
+
         Controller._importer.once('importer.ready', function() {
             Controller._importer.start();
+        });
+
+        Controller._importer.init(data, config || Controller.config(), callback);
+    };
+
+    Controller.resumeImport = function(data, config, callback) {
+        Controller._requireImporter(callback);
+
+        if (_.isFunction(config)) {
+            callback = config;
+            config  = null;
+        }
+
+        Controller._importer.once('importer.resume', function() {
+            Controller.state({
+                now: 'busy',
+                event: 'importer.resume'
+            });
+        });
+
+        Controller._importer.once('importer.ready', function() {
+            Controller._importer.resume();
         });
 
         Controller._importer.init(data, config || Controller.config(), callback);
@@ -866,10 +924,16 @@ var fs = require('fs-extra'),
                             {async: true, eachLimit: DELETE_EACH_LIMIT},
                             function(err) {
                                 Controller.progress(1, 1);
-                                Controller.phase('deleteExtraFieldsPostsStart');
+                                Controller.phase('deleteExtraFieldsPostsDone');
                                 done(err);
                             });
                     });
+                },
+                function(done) {
+                    if (!Controller._importer) {
+                        Controller._importer = require('./importer');
+                    }
+                    Controller._importer.deleteTmpImportedSetsAndObjects(done);
                 }
             ], function(err, results) {
                 if (err) {

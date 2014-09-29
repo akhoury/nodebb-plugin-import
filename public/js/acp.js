@@ -60,9 +60,20 @@
                 actions.saveSettings();
                 if (start()) {
                     $wrapper.find('#import-start').prop('disabled', true).addClass('disabled');
+                    $wrapper.find('#import-resume').prop('disabled', true).addClass('disabled');
                     $wrapper.find('.import-logs').empty();
                 }
             },
+
+            resume: function(e) {
+                actions.saveSettings();
+                if (resume()) {
+                    $wrapper.find('#import-start').prop('disabled', true).addClass('disabled');
+                    $wrapper.find('#import-resume').prop('disabled', true).addClass('disabled');
+                    $wrapper.find('.import-logs').empty();
+                }
+            },
+
 
             downloadUsersCsv: function(e) {
                 togglePostImportTools(false);
@@ -222,6 +233,24 @@
             }
         };
 
+        var resume = plugin.resume = function() {
+            var config = gatherConfig();
+            if (config) {
+                $.ajax({
+                    type: 'post',
+                    data: {
+                        _csrf: $('#csrf_token').val(),
+                        config: config
+                    },
+                    url: plugin.apiHost + '/resume',
+                    cache: false
+                });
+                return true;
+            } else {
+                return false;
+            }
+        };
+
         var saveConfig = plugin.saveConfig = function() {
             utils.toggleVertical($form.find('.import-config'), false, 'down');
             utils.toggleVertical($form.find('.import-tools'), false, 'down');
@@ -319,6 +348,19 @@
             }
         };
 
+        var checkDirty = function() {
+            $.get(plugin.apiHost + '/isDirty')
+                .done(function(data) {
+                    if (data && data.isDirty) {
+                        utils.toggleVisible($wrapper.find('#import-resume'), true);
+                    } else {
+                        utils.toggleVisible($wrapper.find('#import-resume'), false);
+                    }
+                })
+                .fail(function() {
+                    utils.toggleVisible($wrapper.find('#import-resume'), false);
+                });
+        };
 
         var bindActions = function() {
             $wrapper.find('[data-action]').each(function(i, el) {
@@ -337,6 +379,7 @@
             var icon = $wrapper.find('.controller-state-icon');
             var event = $wrapper.find('.controller-state-event');
             var startBtn = $wrapper.find('#import-start');
+            var resumeBtn = $wrapper.find('#import-resume');
 
             return function(state) {
                 if (state) {
@@ -346,17 +389,20 @@
 
                     if (state.now === 'busy') {
                         icon.addClass('fa-spinner fa-spin');
-                        startBtn.prop('disabled', true).addClass('disabled');
+                        utils.toggleAvailable(startBtn, false);
+                        utils.toggleAvailable(resumeBtn, false);
                         container.css({color: 'blue'});
                         toggleLogBtns(false);
                         togglePostImportTools(false);
                     } else if (state.now === 'errored') {
-                        startBtn.prop('disabled', false).removeClass('disabled');
+                        utils.toggleAvailable(startBtn, true);
+                        utils.toggleAvailable(resumeBtn, true);
                         icon.addClass('fa-warning');
                         container.css({color: 'red'});
                         toggleLogBtns(true);
                     } else if (state.now === 'idle') {
-                        startBtn.prop('disabled', false).removeClass('disabled');
+                        utils.toggleAvailable(startBtn, true);
+                        utils.toggleAvailable(resumeBtn, true);
                         container.css({color: 'grey'});
                         postImportToolsAvailable();
                         toggleLogBtns(true);
@@ -441,7 +487,7 @@
             }
         };
 
-        var gatherConfig = function(ignoreErrors) {
+        gatherConfig = function(ignoreErrors) {
             var exporter = {
                 dbhost: $('#exporter-dbhost').val(),
                 dbname: $('#exporter-dbname').val(),
@@ -629,6 +675,7 @@
 
             findExporters();
             postImportToolsAvailable();
+            checkDirty();
 
             getState().done(function() {
                 setTimeout(function() {

@@ -14,20 +14,24 @@ var db = module.parent.require('../../../src/database.js'),
 
 (function(Data) {
 
+    Data.count = function(setKey, callback) {
+        db.sortedSetCard(setKey, callback);
+    };
+
     Data.countUsers = function(callback) {
-        db.sortedSetCard('users:joindate', callback);
+        Data.count('users:joindate', callback);
     };
 
     Data.countCategories = function(callback) {
-        db.sortedSetCard('categories:cid', callback);
+        Data.count('categories:cid', callback);
     };
 
     Data.countTopics = function(callback) {
-        db.sortedSetCard('topics:tid', callback);
+        Data.count('topics:tid', callback);
     };
 
     Data.countPosts = function(callback) {
-        db.sortedSetCard('posts:pid', callback);
+        Data.count('posts:pid', callback);
     };
 
     Data.eachUser = function(iterator, options, callback) {
@@ -178,6 +182,80 @@ var db = module.parent.require('../../../src/database.js'),
 
     Data.processPostsPidsSet = function(process, options, callback) {
         return Data.processIdsSet('posts:pid', process, options, callback);
+    };
+
+    Data.isImported = function(setKey, _id, callback) {
+        return db.isSetMember(setKey, _id, callback);
+    };
+
+    Data.getImported = function(setKey, objPrefix, _id, callback) {
+        Data.isImported(setKey, _id, function(err, isImported) {
+            if (!isImported) {
+                return callback(null, null);
+            }
+            db.getObject(objPrefix + _id, function(err, obj) {
+                callback(null, obj);
+            });
+        });
+    };
+
+    Data.getImportedUser = function(_uid, callback) {
+        return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
+    };
+
+    Data.getImportedCategory = function(_cid, callback) {
+        return Data.getImported('_imported:_categories', '_imported_category:', _cid, callback);
+    };
+
+    Data.getImportedTopic = function(_tid, callback) {
+        return Data.getImported('_imported:_topics', '_imported_topic:', _tid, callback);
+    };
+
+    Data.getImportedPost = function(_pid, callback) {
+        return Data.getImported('_imported:_posts', '_imported_post:', _pid, callback);
+    };
+
+    Data.setImported = function(setKey, objPrefix, _id, id, data, callback) {
+        delete data._typeCast;
+        delete data.parse;
+        return db.setObject(objPrefix + _id, data, function(err) {
+            if (err) {
+                return callback(err);
+            }
+            db.sortedSetAdd(setKey, _id, id, callback);
+        });
+    };
+
+    Data.setUserImported = function(_uid, uid, user, callback) {
+        return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
+    };
+
+    Data.setCategoryImported = function(_cid, cid, category, callback) {
+        return Data.setImported('_imported:_categories', '_imported_category:', _cid, cid, category, callback);
+    };
+
+    Data.setTopicImported = function(_tid, tid, topic, callback) {
+        return Data.setImported('_imported:_topics', '_imported_topic:', _tid, tid, topic, callback);
+    };
+
+    Data.setPostImported = function(_pid, pid, post, callback) {
+        return Data.setImported('_imported:_posts', '_imported_post:', _pid, pid, post, callback);
+    };
+
+    Data.isUserImported = function(_uid, callback) {
+        return Data.isImported('_imported:_users', _uid, callback);
+    };
+
+    Data.isCategoryImported = function(_cid, callback) {
+        return Data.isImported('_imported:_categories', _cid, callback);
+    };
+
+    Data.isTopicImported = function(_tid, callback) {
+        return Data.isImported('_imported:_topics', _tid, callback);
+    };
+
+    Data.isPostImported = function(_pid, callback) {
+        return Data.isImported('_imported:_posts', _pid, callback);
     };
 
 })(module.exports);

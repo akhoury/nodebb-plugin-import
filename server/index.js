@@ -38,7 +38,7 @@ var
     };
 
     Plugin.render = function(req, res, next) {
-        res.render('admin/plugins/import', {json: Plugin.json || {}, config: Plugin.config || {}});
+        res.render('admin/plugins/import', {json: Plugin.json || {}, config: Plugin.config || {}, csrf: req.csrfToken()});
     };
 
     Plugin.hooks = {
@@ -84,6 +84,10 @@ var
 
     Plugin.api = {
         'get': {
+
+            isDirty: function(req, res, next) {
+                res.json({isDirty: Plugin.controller.isDirty()});
+            },
 
             config: function(req, res, next) {
                 res.json(Plugin.controller.config());
@@ -195,6 +199,15 @@ var
                 }
                 Plugin.controller.start();
                 res.json({started: true});
+            },
+
+            resume: function(req, res, next) {
+                var config = req.body.config;
+                if (config) {
+                    Plugin.controller.config(config);
+                }
+                Plugin.controller.resume();
+                res.json({started: true, resuming: true});
             },
 
             convert: function(req, res, next) {

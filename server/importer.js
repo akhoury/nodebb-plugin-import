@@ -3,6 +3,7 @@ var async = require('async'),
     _ = require('underscore'),
     nodeExtend = require('node.extend'),
     fs = require('fs-extra'),
+    path = require('path'),
 
     utils = require('../public/js/utils.js'),
     Data = require('./data.js'),
@@ -15,11 +16,16 @@ var async = require('async'),
     Categories = require('../../../src/categories.js'),
     db = module.parent.require('../../../src/database.js'),
 
-    IMPORT_BATCH_SIZE = 10,
+    BATCH_SIZE = 5,
 
     logPrefix = '[nodebb-plugin-import]',
 
-    backupConfigFilepath = __dirname + '/tmp/importer.nbb.backedConfig.json',
+    BACKUP_CONFIG_FILE = path.join(__dirname, '/tmp/importer.nbb.backedConfig.json'),
+
+    DIRTY_USERS_FILE = path.join(__dirname, '/tmp/importer.dirty.users'),
+    DIRTY_CATEGORIES_FILE = path.join(__dirname, '/tmp/importer.dirty.categories'),
+    DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
+    DIRTY_POSTS_FILE = path.join(__dirname, '/tmp/importer.dirty.posts'),
 
     defaults = {
         log: true,
@@ -131,8 +137,8 @@ var async = require('async'),
             Importer.flushData,
             Importer.backupConfig,
             Importer.setTmpConfig,
-            Importer.importCategories,
             Importer.importUsers,
+            Importer.importCategories,
             Importer.importTopics,
             Importer.importPosts,
             Importer.relockUnlockedTopics,
@@ -140,6 +146,58 @@ var async = require('async'),
             Importer.restoreConfig,
             Importer.teardown
         ], callback);
+    };
+
+    Importer.resume = function(callback) {
+        Importer.emit('importer.start');
+        Importer.emit('importer.resume');
+
+        async.series([
+            Importer.importUsers,
+            Importer.importCategories,
+            Importer.importTopics,
+            Importer.importPosts,
+            Importer.relockUnlockedTopics,
+            Importer.fixTopicTimestamps,
+            Importer.restoreConfig,
+            Importer.teardown
+        ], callback);
+    };
+
+    // todo: really? wtf is this logic
+    Importer.isDirty = function(done) {
+
+        Importer.areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
+        Importer.areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
+        Importer.areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
+        Importer.arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
+
+        Importer.isAnythingDirty = Importer.areUsersDirty || Importer.areCategoriesDirty || Importer.areTopicsDirty || Importer.arePostsDirty;
+
+        // order matters
+        if (Importer.areUsersDirty) {
+            Importer.alreadyImportedAllUsers = false;
+            Importer.alreadyImportedAllCategories = false;
+            Importer.alreadyImportedAllTopics = false;
+            Importer.alreadyImportedAllPosts = false;
+        } else if (Importer.areCategoriesDirty) {
+            Importer.alreadyImportedAllUsers = true;
+            Importer.alreadyImportedAllCategories = false;
+            Importer.alreadyImportedAllTopics = false;
+            Importer.alreadyImportedAllPosts = false;
+        } else if (Importer.areTopicsDirty) {
+            Importer.alreadyImportedAllUsers = true;
+            Importer.alreadyImportedAllCategories = true;
+            Importer.alreadyImportedAllTopics = false;
+            Importer.alreadyImportedAllPosts = false;
+        } else if (Importer.arePostsDirty) {
+            Importer.alreadyImportedAllUsers = true;
+            Importer.alreadyImportedAllCategories = true;
+            Importer.alreadyImportedAllTopics = true;
+            Importer.alreadyImportedAllPosts = false;
+        }
+
+        return typeof done === 'function' ? done() : Importer.isAnythingDirty;
     };
 
     Importer.flushData = function(next) {
@@ -152,7 +210,7 @@ var async = require('async'),
                     var index = 0;
                     Data.processCategoriesCidsSet(
                         function (err, ids, nextBatch) {
-                            async.mapLimit(ids, IMPORT_BATCH_SIZE, function(id, cb) {
+                            async.mapLimit(ids, BATCH_SIZE, function(id, cb) {
                                 Importer.progress(index++, total);
                                 Categories.purge(id, cb);
                             }, nextBatch);
@@ -174,7 +232,7 @@ var async = require('async'),
                     var index = 0; var count = 0;
                     Data.processUsersUidsSet(
                         function(err, ids, nextBatch) {
-                            async.mapLimit(ids, IMPORT_BATCH_SIZE, function(uid, cb) {
+                            async.mapLimit(ids, BATCH_SIZE, function(uid, cb) {
                                 Importer.progress(index++, total);
                                 if (parseInt(uid, 10) === 1) {
                                     return cb();
@@ -183,11 +241,8 @@ var async = require('async'),
                                     count++;
                                     cb();
                                 });
-                            }, function(){
-                                nextBatch();
-                            });
-                        },
-                        {
+                            }, nextBatch);
+                        }, {
                             // since we're deleting records the range is always shifting backwards, so need to advance the batch start boundary
                             alwaysStartAt: 0,
                             // done if the uid=1 in the only one in the db
@@ -204,6 +259,8 @@ var async = require('async'),
                 });
             },
             function(done) {
+                Importer.flushed = true;
+
                 Importer.phase('resetGlobalsStart');
                 Importer.progress(0, 1);
 
@@ -232,8 +289,12 @@ var async = require('async'),
                     function(cb) {
                         db.setObjectField('global', 'postCount', 1, cb);
                     }
-                ], done);
-            }
+                ], function() {
+                    Importer.progress(1, 1);
+                    done();
+                });
+            },
+            Importer.deleteTmpImportedSetsAndObjects
         ], function(err) {
             if (err) {
                 Importer.error(err);
@@ -261,6 +322,34 @@ var async = require('async'),
         Importer.emit('importer.phase', {phase: phase, data: data});
     };
 
+    var getImportedUser = function(_uid, callback) {
+        if (! Importer.flushed && (Importer.alreadyImportedAllUsers || Importer.areUsersDirty)) {
+            return Data.getImportedUser(_uid, callback);
+        }
+        return callback(null, null);
+    };
+
+    var getImportedCategory = function(_cid, callback) {
+        if (! Importer.flushed && (Importer.alreadyImportedAllCategories || Importer.areCategoriesDirty)) {
+            return Data.getImportedCategory(_cid, callback);
+        }
+        return callback(null, null);
+    };
+
+    var getImportedTopic = function(_tid, callback) {
+        if (! Importer.flushed && (Importer.alreadyImportedAllTopics || Importer.areTopicsDirty)) {
+            return Data.getImportedTopic(_tid, callback);
+        }
+        return callback(null, null);
+    };
+
+    var getImportedPost = function(_pid, callback) {
+        if (! Importer.flushed && (Importer.alreadyImportedAllPosts || Importer.arePostsDirty)) {
+            return Data.getImportedPost(_pid, callback);
+        }
+        return callback(null, null);
+    };
+
     Importer.importUsers = function(next) {
         Importer._lastPercentage = 0;
         Importer.phase('usersImportStart');
@@ -281,132 +370,153 @@ var async = require('async'),
 
         Importer.success('Importing ' + users._uids.length + ' users.');
 
-        async.eachLimit(users._uids, IMPORT_BATCH_SIZE, function(_uid, done) {
+        fs.writeFileSync(DIRTY_USERS_FILE, +new Date(), {encoding: 'utf8'});
+
+        async.eachLimit(users._uids, BATCH_SIZE, function(_uid, done) {
             count++;
 
-            var user = users[_uid];
-            var u = Importer.makeValidNbbUsername(user._username || '', user._alternativeUsername || '');
-            var userData = {
-                username: u.username,
-                email: user._email,
-                password: user._password || passwordGen()
-            };
-
-            if (!userData.username) {
-                Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" username is invalid.');
-                return done();
-            }
-
-            Importer.log('[count: ' + count + '] saving user:_uid: ' + _uid);
-
-            var onCreate = function(err, uid) {
-                if (err) {
-                    Importer.warn('[count: ' + count + '] skipping username: "' + user._username + '" ' + err);
-                    done();
-                } else {
-                    user.imported = true;
-                    imported++;
-
-                    var onLevel = function() {
-
-                        var fields = {
-                            // preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
-                            signature: utils.truncateStr(user._signature || '', 252),
-                            website: user._website || '',
-                            banned: user._banned ? 1 : 0,
-                            location: user._location || '',
-                            joindate: user._joindate || startTime,
-                            reputation: (user._reputation || 0) * config.userReputationMultiplier,
-                            profileviews: user._profileViews || 0,
-                            fullname: user._fullname || '',
-                            birthday: user._birthday || '',
-                            showemail: user._showemail ? 1 : 0,
-
-                            // this is a migration script, no one is online
-                            status: 'offline',
-
-                            _imported_uid: _uid,
-                            _imported_username: user._username || '',
-                            _imported_slug: user._slug || user._userslug || '',
-                            _imported_signature: user._signature
-                        };
-
-                        var keptPicture = false;
-                        if (user._picture) {
-                            fields.gravatarpicture = user._picture;
-                            fields.picture = user._picture;
-                            keptPicture = true;
-                        }
-
-                        var onUserFields = function(err, result) {
-                            if (err) {
-                                return done(err);
-                            }
-
-                            fields.uid = uid;
-
-                            user = nodeExtend(true, {}, user, fields);
-                            user.keptPicture = keptPicture;
-                            user.userslug = u.userslug;
-
-                            users[_uid] = user;
-
-                            Importer.progress(count, users._uids.length);
-
-                            if (config.autoConfirmEmails) {
-                                db.setObjectField('email:confirmed', user.email, '1', done);
-                            } else {
-                                done();
-                            }
-                        };
-
-                        User.setUserFields(uid, fields, onUserFields);
-                    };
-
-                    if (('' + user._level).toLowerCase() == 'moderator') {
-                        Importer.makeModeratorOnAllCategories(uid, onLevel);
-                        Importer.warn(userData.username + ' just became a moderator on all categories');
-                    } else if (('' + user._level).toLowerCase() == 'administrator') {
-                        Group.join('administrators', uid, function(){
-                            Importer.warn(userData.username + ' became an Administrator');
-                            onLevel();
-                        });
-                    } else {
-                        onLevel();
-                    }
+            getImportedUser(_uid, function(err, _user) {
+                if (_user) {
+                    users[_uid] = _user;
+                    Importer.warn('[count:' + count + '] skipping user: "' + _user._username + '", already imported');
+                    Importer.progress(count, users._uids.length);
+                    return done();
                 }
-            };
 
-            if (oldOwnerNotFound && (user._username || '').toLowerCase() === config.adminTakeOwnership.username.toLowerCase()) {
-                Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" because it was revoked ownership');
+                var user = users[_uid];
 
-                // cache the _uid for the next phases
-                Importer.config('adminTakeOwnership', {
-                    enable: true,
-                    username: user._username,
-                    // just an alias in this case
-                    _username: user._username,
-                    _uid: user._uid
-                });
+                var u = Importer.makeValidNbbUsername(user._username || '', user._alternativeUsername || '');
+                var userData = {
+                    username: u.username,
+                    email: user._email,
+                    password: user._password || passwordGen()
+                };
 
-                // no need to make it a mod or an admin, it already is
-                user._level = null;
+                if (!userData.username) {
+                    Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" username is invalid.');
+                    Importer.progress(count, users._uids.length);
+                    return done();
+                }
 
-                // set to false so we don't have to match all users
-                oldOwnerNotFound = false;
+                Importer.log('[count: ' + count + '] saving user:_uid: ' + _uid);
 
-                // dont create, but set the fields
-                return onCreate(null, 1);
-            } else {
-                User.create(userData, onCreate);
-            }
+                var onCreate = function(err, uid) {
+                    if (err) {
+                        Importer.warn('[count: ' + count + '] skipping username: "' + user._username + '" ' + err);
+                        Importer.progress(count, users._uids.length);
+                        done();
+                    } else {
+                        user.imported = true;
+                        imported++;
 
+                        var onLevel = function() {
+
+                            var fields = {
+                                // preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
+                                signature: utils.truncateStr(user._signature || '', 252),
+                                website: user._website || '',
+                                banned: user._banned ? 1 : 0,
+                                location: user._location || '',
+                                joindate: user._joindate || startTime,
+                                reputation: (user._reputation || 0) * config.userReputationMultiplier,
+                                profileviews: user._profileViews || 0,
+                                fullname: user._fullname || '',
+                                birthday: user._birthday || '',
+                                showemail: user._showemail ? 1 : 0,
+
+                                // this is a migration script, no one is online
+                                status: 'offline',
+
+                                _imported_uid: _uid,
+                                _imported_username: user._username || '',
+                                _imported_slug: user._slug || user._userslug || '',
+                                _imported_signature: user._signature
+                            };
+
+                            var keptPicture = false;
+                            if (user._picture) {
+                                fields.gravatarpicture = user._picture;
+                                fields.picture = user._picture;
+                                keptPicture = true;
+                            }
+
+                            var onUserFields = function(err, result) {
+                                if (err) {
+                                    return done(err);
+                                }
+
+                                fields.uid = uid;
+
+                                user = nodeExtend(true, {}, user, fields);
+                                user.keptPicture = keptPicture;
+                                user.userslug = u.userslug;
+
+                                users[_uid] = user;
+
+                                Importer.progress(count, users._uids.length);
+
+                                var onEmailConfirmed = function() {
+                                    Data.setUserImported(_uid, uid, user, done);
+                                };
+
+                                if (config.autoConfirmEmails) {
+                                    db.setObjectField('email:confirmed', user.email, '1', onEmailConfirmed);
+                                } else {
+                                    onEmailConfirmed();
+                                }
+                            };
+
+                            User.setUserFields(uid, fields, onUserFields);
+                        };
+
+                        if (('' + user._level).toLowerCase() == 'moderator') {
+                            Importer.makeModeratorOnAllCategories(uid, onLevel);
+                            Importer.warn(userData.username + ' just became a moderator on all categories');
+                        } else if (('' + user._level).toLowerCase() == 'administrator') {
+                            Group.join('administrators', uid, function(){
+                                Importer.warn(userData.username + ' became an Administrator');
+                                onLevel();
+                            });
+                        } else {
+                            onLevel();
+                        }
+                    }
+                };
+
+                if (oldOwnerNotFound && (user._username || '').toLowerCase() === config.adminTakeOwnership.username.toLowerCase()) {
+                    Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" because it was revoked ownership');
+
+                    // cache the _uid for the next phases
+                    Importer.config('adminTakeOwnership', {
+                        enable: true,
+                        username: user._username,
+                        // just an alias in this case
+                        _username: user._username,
+                        _uid: user._uid
+                    });
+
+                    // no need to make it a mod or an admin, it already is
+                    user._level = null;
+
+                    // set to false so we don't have to match all users
+                    oldOwnerNotFound = false;
+
+                    // dont create, but set the fields
+                    return onCreate(null, 1);
+                } else {
+                    User.create(userData, onCreate);
+                }
+            });
         }, function(err) {
             if (err) {
                 throw err;
             }
 
             Importer.success('Importing ' + imported + '/' + users._uids.length + ' users took: ' + ((+new Date() - startTime)/1000).toFixed(2) + ' seconds');
+
+            var nxt = function() {
+                fs.remove(DIRTY_USERS_FILE, next);
+            };
 
             if (config.autoConfirmEmails && Importer.dbkeys) {
                 async.parallel([
@@ -429,12 +539,12 @@ var async = require('async'),
                 ], function() {
                     Importer.progress(1, 1);
                     Importer.phase('usersImportDone');
-                    next();
+                    nxt();
                 });
             } else {
                 Importer.progress(1, 1);
                 Importer.phase('usersImportDone');
-                next();
+                nxt();
             }
         });
     };
@@ -444,6 +554,7 @@ var async = require('async'),
         Importer.progress(0, 1);
 
         Importer._lastPercentage = 0;
+
         var count = 0,
             imported = 0,
             startTime = +new Date(),
@@ -452,74 +563,87 @@ var async = require('async'),
 
         Importer.success('Importing ' + categories._cids.length + ' categories.');
 
+        fs.writeFileSync(DIRTY_CATEGORIES_FILE, +new Date(), {encoding: 'utf8'});
+
         var onEach = function(_cid, done) {
             count++;
 
-            var category = categories[_cid];
-
-            Importer.log('[count:' + count + '] saving category:_cid: ' + _cid);
-
-            var categoryData = {
-                name: category._name || ('Category ' + (count + 1)),
-                description: category._description || 'no description available',
-
-                // you can fix the order later, nbb/admin
-                order: category._order || count + 1,
-
-                disabled: category._disabled || 0,
-
-                parentCid: category._parent || category._parentCid || undefined,
-
-                link: category._link || 0,
-
-                // roulette, that too,
-                icon: config.categoriesIcons[Math.floor(Math.random() * config.categoriesIcons.length)],
-                bgColor: config.categoriesBgColors[Math.floor(Math.random() * config.categoriesBgColors.length)],
-                color: config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)]
-            };
-
-            var onCreate = function(err, categoryReturn) {
-                if (err) {
-                    Importer.warn('skipping category:_cid: ' + _cid + ' : ' + err);
+            getImportedCategory(_cid, function(err, _category) {
+                if (_category) {
+                    categories[_cid] = _category;
+                    Importer.warn('skipping category:_cid: ' + _cid + ', already imported');
+                    Importer.progress(count, categories._cids.length);
                     return done();
                 }
 
-                var fields = {
-                    _imported_cid: _cid,
-                    _imported_name: category._name || '',
-                    _imported_slug: category._slug || '',
-                    _imported_description: category._description || '',
-                    _imported_link: category._link || ''
+                var category = categories[_cid];
+
+                Importer.log('[count:' + count + '] saving category:_cid: ' + _cid);
+
+                var categoryData = {
+                    name: category._name || ('Category ' + (count + 1)),
+                    description: category._description || 'no description available',
+
+                    // you can fix the order later, nbb/admin
+                    order: category._order || count + 1,
+
+                    disabled: category._disabled || 0,
+
+                    parentCid: category._parent || category._parentCid || undefined,
+
+                    link: category._link || 0,
+
+                    // roulette, that too,
+                    icon: config.categoriesIcons[Math.floor(Math.random() * config.categoriesIcons.length)],
+                    bgColor: config.categoriesBgColors[Math.floor(Math.random() * config.categoriesBgColors.length)],
+                    color: config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)]
                 };
 
-                var onFields = function(err) {
+                var onCreate = function(err, categoryReturn) {
                     if (err) {
-                        Importer.warn(err);
+                        Importer.warn('skipping category:_cid: ' + _cid + ' : ' + err);
+                        Importer.progress(count, categories._cids.length);
+                        return done();
                     }
 
-                    Importer.progress(count, categories._cids.length);
+                    var fields = {
+                        _imported_cid: _cid,
+                        _imported_name: category._name || '',
+                        _imported_slug: category._slug || '',
+                        _imported_description: category._description || '',
+                        _imported_link: category._link || ''
+                    };
 
-                    category.imported = true;
-                    imported++;
-                    category = nodeExtend(true, {}, category, categoryReturn);
-                    categories[_cid] = category;
-                    done();
+                    var onFields = function(err) {
+                        if (err) {
+                            Importer.warn(err);
+                        }
+
+                        Importer.progress(count, categories._cids.length);
+
+                        category.imported = true;
+                        imported++;
+                        category = nodeExtend(true, {}, category, categoryReturn);
+                        categories[_cid] = category;
+
+                        Data.setCategoryImported(_cid, categoryReturn.cid, category, done);
+                    };
+
+                    db.setObject('category:' + categoryReturn.cid, fields, onFields);
                 };
 
-                db.setObject('category:' + categoryReturn.cid, fields, onFields);
-            };
-
-            Categories.create(categoryData, onCreate);
+                Categories.create(categoryData, onCreate);
+            });
         };
 
-        async.eachLimit(categories._cids, IMPORT_BATCH_SIZE, onEach, function(err) {
+        async.eachLimit(categories._cids, BATCH_SIZE, onEach, function(err) {
             if (err) {
                 throw err;
             }
             Importer.success('Importing ' + imported + '/' + categories._cids.length + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
             Importer.progress(1, 1);
             Importer.phase('categoriesImportDone');
-            next();
+            fs.remove(DIRTY_CATEGORIES_FILE, next);
         });
     };
 
@@ -538,112 +662,125 @@ var async = require('async'),
 
         Importer.success('Importing ' + topics._tids.length + ' topics.');
 
+        fs.writeFileSync(DIRTY_TOPICS_FILE, +new Date(), {encoding: 'utf8'});
+
         var onEach = function(_tid, done) {
             count++;
 
-            var topic = topics[_tid];
-            var category = categories[topic._cid];
-            var user = users[topic._uid] || {};
+            getImportedTopic(_tid, function(err, _topic) {
+                if (_topic) {
+                    topics[_tid] = _topic;
+                    Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ', already imported');
+                    Importer.progress(count, topics._tids.length);
+                    return done();
+                }
 
-            if (!category || !category.imported) {
-                Importer.warn('[count:' + count + '] skipping topic:_tid:"'
-                    + _tid + '" --> _cid: ' + topic._cid + ':imported:' + !!(category && category.imported));
+                var topic = topics[_tid];
+                var category = categories[topic._cid];
+                var user = users[topic._uid] || {};
 
-                done();
-            } else {
-                Importer.log('[count:' + count + '] saving topic:_tid: ' + _tid);
+                if (!category || !category.imported) {
+                    Importer.warn('[count:' + count + '] skipping topic:_tid:"'
+                        + _tid + '" --> _cid: ' + topic._cid + ':imported:' + !!(category && category.imported));
+                    Importer.progress(count, topics._tids.length);
+                    done();
+                } else {
+                    Importer.log('[count:' + count + '] saving topic:_tid: ' + _tid);
 
-                var onPost = function (err, returnTopic) {
-                    if (err) {
-                        Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ' ' + err);
-                        done();
-                    } else {
+                    var onPost = function (err, returnTopic) {
+                        if (err) {
+                            Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ' ' + err);
+                            Importer.progress(count, topics._tids.length);
+                            done();
+                        } else {
 
-                        topic.imported = true;
-                        imported++;
+                            topic.imported = true;
+                            imported++;
 
-                        var timestamp = topic._timestamp || startTime;
-                        var relativeTime = new Date(timestamp).toISOString();
+                            var timestamp = topic._timestamp || startTime;
+                            var relativeTime = new Date(timestamp).toISOString();
 
-                        var topicFields = {
-                            viewcount: topic._viewcount || 0,
+                            var topicFields = {
+                                viewcount: topic._viewcount || 0,
 
-                            // assume that this topic not locked for now, but will iterate back again at the end and lock it back after finishing the importPosts()
-                            // locked: normalizedTopic._locked ? 1 : 0,
-                            locked: 0,
+                                // assume that this topic not locked for now, but will iterate back again at the end and lock it back after finishing the importPosts()
+                                // locked: normalizedTopic._locked ? 1 : 0,
+                                locked: 0,
 
-                            deleted: topic._deleted ? 1 : 0,
+                                deleted: topic._deleted ? 1 : 0,
 
-                            // if pinned, we should set the db.sortedSetAdd('categories:' + cid + ':tid', Math.pow(2, 53), tid);
-                            pinned: topic._pinned ? 1 : 0,
-                            timestamp: timestamp,
-                            lastposttime: timestamp,
+                                // if pinned, we should set the db.sortedSetAdd('categories:' + cid + ':tid', Math.pow(2, 53), tid);
+                                pinned: topic._pinned ? 1 : 0,
+                                timestamp: timestamp,
+                                lastposttime: timestamp,
 
-                            // todo: not sure if I need these two
-                            teaser_timestamp: relativeTime,
-                            relativeTime: relativeTime,
+                                // todo: not sure if I need these two
+                                teaser_timestamp: relativeTime,
+                                relativeTime: relativeTime,
 
-                            _imported_tid: _tid,
-                            _imported_uid: topic._uid || '',
-                            _imported_cid: topic._cid,
-                            _imported_slug: topic._slug || '',
-                            _imported_title: topic._title || '',
-                            _imported_content: topic._content || ''
-                        };
-
-                        var postFields = {
-                            timestamp: timestamp,
-                            // todo: not sure if I need this
-                            relativeTime: relativeTime
-                        };
-
-                        var onPinned = function() {
-
-                            var onFields = function(err, result) {
-
-                                if (err) { done(err); throw err; }
-
-                                Importer.progress(count, topics._tids.length);
-
-                                var onPostFields = function(){
-                                    topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
-                                    topics[_tid] = topic;
-                                    done();
-                                };
-
-                                Posts.setPostFields(returnTopic.postData.pid, postFields, onPostFields);
+                                _imported_tid: _tid,
+                                _imported_uid: topic._uid || '',
+                                _imported_cid: topic._cid,
+                                _imported_slug: topic._slug || '',
+                                _imported_title: topic._title || '',
+                                _imported_content: topic._content || ''
                             };
 
-                            db.setObject('topic:' + returnTopic.topicData.tid, topicFields, onFields);
-                        };
+                            var postFields = {
+                                timestamp: timestamp,
+                                // todo: not sure if I need this
+                                relativeTime: relativeTime
+                            };
 
-                        // pinned = 1 not enough to float the topic to the top in it's category
-                        if (topicFields.pinned) {
-                            db.sortedSetAdd('categories:' + category.cid + ':tid', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
-                        }  else {
-                            db.sortedSetAdd('categories:' + category.cid + ':tid', timestamp, returnTopic.topicData.tid, onPinned);
+                            var onPinned = function() {
+
+                                var onFields = function(err, result) {
+                                    Importer.progress(count, topics._tids.length);
+                                    if (err) {
+                                        Importer.warn(err);
+                                    }
+
+                                    var onPostFields = function(){
+                                        topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
+                                        topics[_tid] = topic;
+
+                                        Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, done);
+                                    };
+
+                                    Posts.setPostFields(returnTopic.postData.pid, postFields, onPostFields);
+                                };
+
+                                db.setObject('topic:' + returnTopic.topicData.tid, topicFields, onFields);
+                            };
+
+                            // pinned = 1 not enough to float the topic to the top in it's category
+                            if (topicFields.pinned) {
+                                db.sortedSetAdd('categories:' + category.cid + ':tid', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
+                            }  else {
+                                db.sortedSetAdd('categories:' + category.cid + ':tid', timestamp, returnTopic.topicData.tid, onPinned);
+                            }
                         }
-                    }
-                };
+                    };
 
-                Topics.post({
-                    uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === topic._uid ? 1 : user.uid,
-                    title: topic._title || '',
-                    content: topic._content || '',
-                    cid: category.cid,
-                    thumb: topic._thumb
-                }, onPost);
-            }
+                    Topics.post({
+                        uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === topic._uid ? 1 : user.uid,
+                        title: topic._title || '',
+                        content: topic._content || '',
+                        cid: category.cid,
+                        thumb: topic._thumb
+                    }, onPost);
+                }
+            });
         };
 
-        async.eachLimit(topics._tids, IMPORT_BATCH_SIZE, onEach, function(err) {
+        async.eachLimit(topics._tids, BATCH_SIZE, onEach, function(err) {
             if (err) {
                 throw err;
             }
             Importer.success('Importing ' + imported + '/' + topics._tids.length + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
             Importer.progress(1, 1);
             Importer.phase('topicsImportDone');
-            next();
+            fs.remove(DIRTY_TOPICS_FILE, next);
         });
     };
 
@@ -662,76 +799,89 @@ var async = require('async'),
 
         Importer.success('Importing ' + posts._pids.length + ' posts.');
 
+        fs.writeFileSync(DIRTY_POSTS_FILE, +new Date(), {encoding: 'utf8'});
+
         var onEach = function(_pid, done) {
             count++;
 
-            var post = posts[_pid];
-            var topic = topics[post._tid];
-            var user = users[post._uid] || {};
+            getImportedPost(_pid, function(err, _post) {
+                if (_post) {
+                    posts[_pid] = _post;
+                    Importer.warn('skipping post:_pid: ' + _pid + ', already imported');
+                    Importer.progress(count, posts._pids.length);
+                    return done();
+                }
 
-            if (!topic || !topic.imported) {
-                Importer.warn('skipping post:_pid: ' + _pid + ' _tid:valid: ' + !!(topic && topic.imported));
-                done();
-            } else {
+                var post = posts[_pid];
+                var topic = topics[post._tid];
+                var user = users[post._uid] || {};
 
-                Importer.log('[count: ' + count + '] saving post: ' + _pid);
+                if (!topic || !topic.imported) {
+                    Importer.warn('skipping post:_pid: ' + _pid + ' _tid:valid: ' + !!(topic && topic.imported));
+                    done();
+                } else {
 
-                var onCreate = function(err, postReturn){
-                    if (err) {
-                        Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ' ' + err);
-                        done();
-                    } else {
+                    Importer.log('[count: ' + count + '] saving post: ' + _pid);
 
-                        post.imported = true;
-                        imported++;
-
-                        var fields = {
-                            reputation: post._reputation || 0,
-                            votes: post._votes || 0,
-                            edited: post._edited || 0,
-                            deleted: post._deleted || 0,
-
-                            // todo: not sure if I need this
-                            relativeTime: new Date(post._timestamp || startTime).toISOString(),
-
-                            _imported_pid: _pid,
-                            _imported_uid: post._uid || '',
-                            _imported_tid: post._tid || '',
-                            _imported_content: post._content || ''
-                        };
-
-                        var onPostFields = function() {
-
+                    var onCreate = function(err, postReturn){
+                        if (err) {
+                            Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ' ' + err);
                             Importer.progress(count, posts._pids.length);
-
-                            post = nodeExtend(true, {}, post, fields, postReturn);
-                            post.imported = true;
-                            posts[_pid] = post;
                             done();
-                        };
+                        } else {
 
-                        Posts.setPostFields(postReturn.pid, fields, onPostFields);
-                    }
-                };
+                            post.imported = true;
+                            imported++;
 
-                Posts.create({
-                    uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
-                    tid: topic.tid,
-                    content: post._content || '',
-                    timestamp: post._timestamp || startTime,
+                            var fields = {
+                                reputation: post._reputation || 0,
+                                votes: post._votes || 0,
+                                edited: post._edited || 0,
+                                deleted: post._deleted || 0,
 
-                    // i seriously doubt you have this, but it's ok if you don't
-                    toPid: post['_nbb-toPid']
+                                // todo: not sure if I need this
+                                relativeTime: new Date(post._timestamp || startTime).toISOString(),
 
-                }, onCreate);
-            }
+                                _imported_pid: _pid,
+                                _imported_uid: post._uid || '',
+                                _imported_tid: post._tid || '',
+                                _imported_content: post._content || ''
+                            };
+
+                            var onPostFields = function() {
+
+                                Importer.progress(count, posts._pids.length);
+
+                                post = nodeExtend(true, {}, post, fields, postReturn);
+                                post.imported = true;
+                                posts[_pid] = post;
+
+                                Data.setPostImported(_pid, post.pid, post, done);
+                            };
+
+                            Posts.setPostFields(postReturn.pid, fields, onPostFields);
+                        }
+                    };
+
+                    Posts.create({
+                        uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
+                        tid: topic.tid,
+                        content: post._content || '',
+                        timestamp: post._timestamp || startTime,
+
+                        // i seriously doubt you have this, but it's ok if you don't
+                        toPid: post['_nbb-toPid']
+
+                    }, onCreate);
+                }
+            });
         };
 
-        async.eachLimit(posts._pids, IMPORT_BATCH_SIZE, onEach, function() {
+        async.eachLimit(posts._pids, BATCH_SIZE, onEach, function() {
             Importer.progress(1, 1);
             Importer.phase('postsImportDone');
             Importer.success('Importing ' + imported + '/' + posts._pids.length + ' posts took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
-            next();
+            fs.remove(DIRTY_POSTS_FILE, next);
         });
     };
 
@@ -750,7 +900,7 @@ var async = require('async'),
         Importer.phase('relockingTopicsStart');
         Importer.progress(0, 1);
 
-        async.eachLimit(Importer.data.topics._tids, IMPORT_BATCH_SIZE, function(_tid, done) {
+        async.eachLimit(Importer.data.topics._tids, BATCH_SIZE, function(_tid, done) {
             var topic = Importer.data.topics[_tid];
             Importer.progress(count++, len);
 
@@ -785,7 +935,7 @@ var async = require('async'),
         Importer.phase('fixTopicTimestampsStart');
         Importer.progress(0, 1);
 
-        async.eachLimit(Importer.data.topics._tids, IMPORT_BATCH_SIZE, function(_tid, done) {
+        async.eachLimit(Importer.data.topics._tids, BATCH_SIZE, function(_tid, done) {
             var topic = Importer.data.topics[_tid];
             Importer.progress(count++, len);
 
@@ -827,8 +977,8 @@ var async = require('async'),
     Importer.backupConfig = function(next) {
         // if the backedConfig file exists, that means we did not complete the restore config last time,
         // so don't overwrite it, assuming the nodebb config in the db are the tmp ones
-        if (fs.existsSync(backupConfigFilepath)) {
-            Importer.config('backedConfig', fs.readJsonSync(backupConfigFilepath) || {});
+        if (fs.existsSync(BACKUP_CONFIG_FILE)) {
+            Importer.config('backedConfig', fs.readJsonSync(BACKUP_CONFIG_FILE) || {});
             next();
         } else {
             db.getObject('config', function(err, data) {
@@ -836,7 +986,7 @@ var async = require('async'),
                     throw err;
                 }
                 Importer.config('backedConfig', data || {});
-                fs.outputJsonSync(backupConfigFilepath, Importer.config('backedConfig'));
+                fs.outputJsonSync(BACKUP_CONFIG_FILE, Importer.config('backedConfig'));
                 next();
             });
         }
@@ -866,8 +1016,8 @@ var async = require('async'),
 
     // im nice
     Importer.restoreConfig = function(next) {
-        if (fs.existsSync(backupConfigFilepath)) {
-            Importer.config('backedConfig', fs.readJsonFileSync(backupConfigFilepath));
+        if (fs.existsSync(BACKUP_CONFIG_FILE)) {
+            Importer.config('backedConfig', fs.readJsonFileSync(BACKUP_CONFIG_FILE));
 
             db.setObject('config', Importer.config().backedConfig, function(err){
                 if (err) {
@@ -878,7 +1028,7 @@ var async = require('async'),
                 }
 
                 Importer.success('Config restored:' + JSON.stringify(Importer.config().backedConfig));
-                fs.removeSync(backupConfigFilepath);
+                fs.removeSync(BACKUP_CONFIG_FILE);
 
                 Meta.configs.init(function(err) {
                     if (err) {
@@ -889,7 +1039,7 @@ var async = require('async'),
                 });
             });
         } else {
-            Importer.warn('Could not restore NodeBB tmp configs, because ' + backupConfigFilepath + ' does not exist');
+            Importer.warn('Could not restore NodeBB tmp configs, because ' + BACKUP_CONFIG_FILE + ' does not exist');
             next();
         }
     };
@@ -1062,6 +1212,114 @@ var async = require('async'),
             }
         }
         return Importer._config;
+    };
+
+    Importer.deleteTmpImportedSetsAndObjects = function(done) {
+        Importer.phase('deleteTmpImportedSetsAndObjectsStart');
+        Importer.progress(0, 1);
+
+        var total = 0;
+        async.parallel([
+            function(next) {
+                Data.count('_imported:_users', function(err, count) {
+                    total += count;
+                    next();
+                });
+            },
+            function(next) {
+                Data.count('_imported:_categories', function(err, count) {
+                    total += count;
+                    next();
+                });
+            },
+            function(next) {
+                Data.count('_imported:_topics', function(err, count) {
+                    total += count;
+                    next();
+                });
+            },
+            function(next) {
+                Data.count('_imported:_posts', function(err, count) {
+                    total += count;
+                    next();
+                });
+            }
+        ], function(err) {
+            if (err) {
+                Importer.warn(err);
+            }
+            var index = 0;
+            async.series([
+                function(next) {
+                    Data.processIdsSet(
+                        '_imported:_users',
+                        function(err, ids, nextBatch) {
+                            async.mapLimit(ids, BATCH_SIZE, function(_uid, cb) {
+                                Importer.progress(index++, total);
+                                db.sortedSetRemove('_imported:_users', _uid, function() {
+                                    db.delete('_imported_user:' + _uid, cb);
+                                });
+                            }, nextBatch);
+                        },
+                        {
+                            alwaysStartAt: 0
+                        },
+                        next);
+                },
+                function(next) {
+                    Data.processIdsSet(
+                        '_imported:_categories',
+                        function(err, ids, nextBatch) {
+                            async.mapLimit(ids, BATCH_SIZE, function(_cid, cb) {
+                                Importer.progress(index++, total);
+                                    db.sortedSetRemove('_imported:_categories', _cid, function() {
+                                        db.delete('_imported_category:' + _cid, cb);
+                                    });
+                            }, nextBatch);
+                        },
+                        {
+                            alwaysStartAt: 0
+                        },
+                        next);
+                },
+                function(next) {
+                    Data.processIdsSet(
+                        '_imported:_topics',
+                        function(err, ids, nextBatch) {
+                            async.mapLimit(ids, BATCH_SIZE, function(_tid, cb) {
+                                Importer.progress(index++, total);
+                                    db.sortedSetRemove('_imported:_topics', _tid, function() {
+                                        db.delete('_imported_topic:' + _tid, cb);
+                                    });
+                            }, nextBatch);
+                        },
+                        {
+                            alwaysStartAt: 0
+                        },
+                        next);
+                },
+                function(next) {
+                    Data.processIdsSet(
+                        '_imported:_posts',
+                        function(err, ids, nextBatch) {
+                            async.mapLimit(ids, BATCH_SIZE, function(_pid, cb) {
+                                Importer.progress(index++, total);
+                                    db.sortedSetRemove('_imported:_posts', _pid, function() {
+                                        db.delete('_imported_post:' + _pid, cb);
+                                    });
+                            }, nextBatch);
+                        },
+                        {
+                            alwaysStartAt: 0
+                        },
+                        next);
+                }
+            ], function() {
+                Importer.phase('deleteTmpImportedSetsAndObjectsDone');
+                Importer.progress(1, 1);
+                done();
+            });
+        });
     };
 
 })(module.exports);

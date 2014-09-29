@@ -146,10 +146,12 @@
                 <p class="help-block">Comma separated values of <a href="http://fortawesome.github.io/Font-Awesome/icons/" target="_blank">font-awesome</a> icons to be randomly chosen from</p>
                 <input value="fa-comment" type="text" id="importer-categories-icons" name="importer-categories-icons" placeholder="fa-comment,fa-home" class="form-control">
             </div>
-
         </div>
 
-        <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Delete everything, then import to NodeBB</button>
+        <button class="btn btn-lg btn-info hidden" data-on="click" data-action="resume" id="import-resume" type="button">Last run was interrupted, try to resume</button>
+
+        <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Delete everything, then re-import to NodeBB</button>
+
         <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
 
         <button class="btn btn-lg btn-primary pull-right" data-on="click" data-action="saveSettings" id="save" type="button">Save Config</button>
@@ -161,240 +163,241 @@
 </div>
 
 <div class="col-sm-12 import-tools-wrapper">
-    <div class="col-sm-12 import-tools">
+<div class="col-sm-12 import-tools">
 
-        <h2>Post Import Tools </h2>
+<h2>Post Import Tools </h2>
+<p class="help-block">
+    The post import tools only works if you have previously imported your data using this plugin.
+    The way it works is that it would have augmented your NodeBB records (users, categories, topics and posts)
+    with the necessary original fields and values, and these post-import-tools can use these original values to do/get
+    some useful stuff. <br />
+</p>
+
+<div class="form-group">
+    <h4 for="importer-convert">Content conversion</h4>
+    <p class="help-block">
+        Convert your user signatures, categories names and descriptions, topics titles and content, and posts content,
+        to Markdown (the preferred NodeBB format language).
+
+        If you have another [from-to] format you want to add, let me know, or pull request it
+    </p>
+
+    <div class="form-group">
+        <div class="checkbox">
+            <label for="content-convert-use-parse-before">
+                <input data-on="change" data-action="visibleToggle" data-target=".content-convert-parse-before-container" type="checkbox" id="content-convert-use-parse-before" name="content-convert-use-parse-before"> Pre-parse all content with my custom JavaScript
+            </label>
+            <p class="help-block">
+                For advanced users only. This function will run <b>before</b> the main convert function, use it wisely. If it has invalid syntax or causes runtime error, it will be ignored.
+            </p>
+        </div>
+        <div class="content-convert-parse-before-container hidden">
+            <p class="help-block">
+                <code>function parseBefore(content) {</code>
+            </p>
+            <textarea class="form-control" id="content-convert-parse-before" name="content-convert-parse-before" placeholder="content = content.replace(/orange/g, 'apple'); "></textarea>
+            <p class="help-block">
+                <code>&nbsp;&nbsp;return content;</code><br />
+                <code>}</code>
+            </p>
+        </div>
+    </div>
+
+    <label for="content-convert-main">
+        Main convert
+    </label>
+    <p class="help-block">
+        Uses other scripts such as
+        <a target="_blank" href="https://github.com/akhoury/bbcode-to-markdown">bbcode-to-markdown</a>
+        and
+        <a target="_blank" href="https://github.com/akhoury/html-md-optional_window">html-md</a>
+        to help convert the content.
+    </p>
+    <select class="form-control" id="content-convert-main" name="content-convert-main">
+        <option value="">Don't touch my content</option>
+        <option value="bbcode-to-md">BBCode to Markdown</option>
+        <option value="html-to-md">HTML to Markdown</option>
+    </select>
+
+
+    <div class="form-group">
+        <div class="checkbox">
+            <label for="content-convert-use-parse-after">
+                <input data-on="change" data-action="visibleToggle" data-target=".content-convert-parse-after-container" type="checkbox" id="content-convert-use-parse-after" name="content-convert-use-parse-after"> Post-parse all content with my custom JavaScript
+            </label>
+            <p class="help-block">
+                For advanced users only. This function will run <b>after</b> the main convert function, use it wisely. If it has invalid syntax or causes runtime error, it will be ignored.
+            </p>
+        </div>
+        <div class="content-convert-parse-after-container hidden">
+            <p class="help-block">
+                <code>function parseAfter(content) {</code>
+            </p>
+            <textarea class="form-control" id="content-convert-parse-after" name="content-convert-parse-after" placeholder="content = content.replace(/apple/g, 'kitkat'); "></textarea>
+            <p class="help-block">
+                <code>&nbsp;&nbsp;return content;</code><br />
+                <code>}</code>
+            </p>
+        </div>
+    </div>
+
+    <label>
+        What to convert
+    </label>
+    <div class="form-horizontal">
+        <div class="checkbox">
+            <label for="content-convert-users-signatures">
+                <input checked type="checkbox" id="content-convert-users-signatures" name="content-convert-users-signatures"> User's signatures
+            </label>
+        </div>
+        <div class="checkbox">
+            <label for="content-convert-categories-names">
+                <input checked type="checkbox" id="content-convert-categories-names" name="content-convert-categories-names"> Categories names
+            </label>
+        </div>
+        <div class="checkbox">
+            <label for="content-convert-categories-descriptions">
+                <input checked type="checkbox" id="content-convert-categories-descriptions" name="content-convert-categories-descriptions"> Categories descriptions
+            </label>
+        </div>
+        <div class="checkbox">
+            <label for="content-convert-topics-titles">
+                <input checked type="checkbox" id="content-convert-topics-titles" name="content-convert-topics-titles"> Topics titles
+            </label>
+        </div>
+        <div class="checkbox">
+            <label for="content-convert-topics-content">
+                <input checked type="checkbox" id="content-convert-topics-content" name="content-convert-topics-content"> Topics content
+            </label>
+        </div>
+        <div class="checkbox">
+            <label for="content-convert-posts-content">
+                <input checked type="checkbox" id="content-convert-posts-content" name="content-convert-posts-content"> Posts content
+            </label>
+        </div>
+    </div>
+
+    <button
+            title="Attempts to convert all selected content"
+            class="btn btn-lg btn-default import-convert-btn disabled"
+            disabled="disabled"
+            data-on="click"
+            data-action="convertContent"
+            id="convert-content"
+            type="button">Start Convert (might take some time)
+    </button>
+
+</div>
+
+<hr />
+
+<div class="form-group">
+    <h4 for="importer-templates">Redirection templates</h4>
+    <p class="help-block">
+        These templates allow you to create redirection maps; Set the desirable templates and click on 'redirect.map.json' to download it the prepared map.
+        The map will include each old path mapped to a relevant new NodeBB one, based on the templates provided.
+        For example, some forums uses IDs in the URLs, some uses slugs. The old paths here are an example of the
+        UBB forum's way, and the disabled ones are the NodeBB way. Change the old paths at will.
+        <br />
+        You can use them with,
+        either an <a href="http://wiki.nginx.org/HttpMapModule" target="_blank">NGINX MapModule</a> or this lite <a href="https://github.com/akhoury/RedirectBB" target="_blank">"redirector"</a> that I wrote for this purpose.
+        <br />
+        Note the templating syntax, it uses the <a href="http://underscorejs.org/#template" target="_blank">Underscore.js's template</a>
+    </p>
+    <div class="redirection-templates-configs">
+        <label for="redirection-templates-users-oldpath">Users old path</label>
+        <input value="/forums/ubbthreads.php/users/<%= _uid %>" type="text" class="form-control" id="redirection-templates-users-oldpath" name="redirection-templates-users-oldpath" placeholder="/forums/ubbthreads.php/users/<%= _uid %>">
+        <label for="redirection-templates-users-newpath">Users new path</label>
+        <input disabled="disabled" value="/user/<%= userslug %>" type="text" class="form-control" id="redirection-templates-users-newpath" name="redirection-templates-users-newpath" placeholder="/user/<%= userslug %>">
+
+        <label for="redirection-templates-categories-oldpath">Categories old path</label>
+        <input value="/forums/ubbthreads.php/forums/<%= _cid %>" type="text" class="form-control" id="redirection-templates-categories-oldpath" name="redirection-templates-categories-oldpath" placeholder="/forums/ubbthreads.php/forums/<%= _cid %>">
+        <label for="redirection-templates-categories-newpath">Categories new path</label>
+        <input disabled="disabled" value="/category/<%= cid %>" type="text" class="form-control" id="redirection-templates-categories-newpath" name="redirection-templates-categories-newpath" placeholder="/category/<%= cid %>">
+
+        <label for="redirection-templates-topics-oldpath">Topics old path</label>
+        <input value="/forums/ubbthreads.php/topics/<%= _tid %>" type="text" class="form-control" id="redirection-templates-topics-oldpath" name="redirection-templates-topics-oldpath" placeholder="/forums/ubbthreads.php/topics/<%= _tid %>">
+        <label for="redirection-templates-topics-newpath">Topics new path</label>
+        <input disabled="disabled" value="/topic/<%= tid %>" type="text" class="form-control" id="redirection-templates-topics-newpath" name="redirection-templates-topics-newpath" placeholder="/topic/<%= tid %>">
+
+        <label for="redirection-templates-posts-oldpath">Posts old path</label>
         <p class="help-block">
-            The post import tools only works if you have previously imported your data using this plugin.
-            The way it works is that it would have augmented your NodeBB records (users, categories, topics and posts)
-            with the necessary original fields and values, and these post-import-tools can use these original values to do/get
-            some useful stuff. <br />
+            Most Forums uses the '#' (location.hash) to add the post id to the path, this cannot be easily redirected
+            without some client side JS 'Redirector' that grabs that # value and add to the query string or something
+            but if your old-forums doesn't do that, feel free to edit that config.
+
+            By default this it's blank to disable it and increase performance,
+            it is a little bit of a CPU hog since the posts have the highest number of records
+            and this require string processing, so if
+            you're okay with redirecting oldTopicPaths and oldPostsPaths to the newTopicPaths without scrolling to the right post in the topic, leave this empty.
         </p>
-
-        <div class="form-group">
-            <h4 for="importer-convert">Content conversion</h4>
-            <p class="help-block">
-                Convert your user signatures, categories names and descriptions, topics titles and content, and posts content,
-                to Markdown (the preferred NodeBB format language).
-
-                If you have another [from-to] format you want to add, let me know, or pull request it
-            </p>
-
-            <div class="form-group">
-                <div class="checkbox">
-                    <label for="content-convert-use-parse-before">
-                        <input data-on="change" data-action="visibleToggle" data-target=".content-convert-parse-before-container" type="checkbox" id="content-convert-use-parse-before" name="content-convert-use-parse-before"> Pre-parse all content with my custom JavaScript
-                    </label>
-                    <p class="help-block">
-                        For advanced users only. This function will run <b>before</b> the main convert function, use it wisely. If it has invalid syntax or causes runtime error, it will be ignored.
-                    </p>
-                </div>
-                <div class="content-convert-parse-before-container hidden">
-                    <p class="help-block">
-                        <code>function parseBefore(content) {</code>
-                    </p>
-                    <textarea class="form-control" id="content-convert-parse-before" name="content-convert-parse-before" placeholder="content = content.replace(/orange/g, 'apple'); "></textarea>
-                    <p class="help-block">
-                        <code>&nbsp;&nbsp;return content;</code><br />
-                        <code>}</code>
-                    </p>
-                </div>
-            </div>
-
-            <label for="content-convert-main">
-                Main convert
-            </label>
-            <p class="help-block">
-                Uses other scripts such as
-                    <a target="_blank" href="https://github.com/akhoury/bbcode-to-markdown">bbcode-to-markdown</a>
-                    and
-                    <a target="_blank" href="https://github.com/akhoury/html-md-optional_window">html-md</a>
-                to help convert the content.
-            </p>
-            <select class="form-control" id="content-convert-main" name="content-convert-main">
-                <option value="">Don't touch my content</option>
-                <option value="bbcode-to-md">BBCode to Markdown</option>
-                <option value="html-to-md">HTML to Markdown</option>
-            </select>
-
-
-            <div class="form-group">
-                <div class="checkbox">
-                    <label for="content-convert-use-parse-after">
-                        <input data-on="change" data-action="visibleToggle" data-target=".content-convert-parse-after-container" type="checkbox" id="content-convert-use-parse-after" name="content-convert-use-parse-after"> Post-parse all content with my custom JavaScript
-                    </label>
-                    <p class="help-block">
-                        For advanced users only. This function will run <b>after</b> the main convert function, use it wisely. If it has invalid syntax or causes runtime error, it will be ignored.
-                    </p>
-                </div>
-                <div class="content-convert-parse-after-container hidden">
-                    <p class="help-block">
-                        <code>function parseAfter(content) {</code>
-                    </p>
-                    <textarea class="form-control" id="content-convert-parse-after" name="content-convert-parse-after" placeholder="content = content.replace(/apple/g, 'kitkat'); "></textarea>
-                    <p class="help-block">
-                        <code>&nbsp;&nbsp;return content;</code><br />
-                        <code>}</code>
-                    </p>
-                </div>
-            </div>
-
-            <label>
-                What to convert
-            </label>
-            <div class="form-horizontal">
-                <div class="checkbox">
-                    <label for="content-convert-users-signatures">
-                        <input checked type="checkbox" id="content-convert-users-signatures" name="content-convert-users-signatures"> User's signatures
-                    </label>
-                </div>
-                <div class="checkbox">
-                    <label for="content-convert-categories-names">
-                        <input checked type="checkbox" id="content-convert-categories-names" name="content-convert-categories-names"> Categories names
-                    </label>
-                </div>
-                <div class="checkbox">
-                    <label for="content-convert-categories-descriptions">
-                        <input checked type="checkbox" id="content-convert-categories-descriptions" name="content-convert-categories-descriptions"> Categories descriptions
-                    </label>
-                </div>
-                <div class="checkbox">
-                    <label for="content-convert-topics-titles">
-                        <input checked type="checkbox" id="content-convert-topics-titles" name="content-convert-topics-titles"> Topics titles
-                    </label>
-                </div>
-                <div class="checkbox">
-                    <label for="content-convert-topics-content">
-                        <input checked type="checkbox" id="content-convert-topics-content" name="content-convert-topics-content"> Topics content
-                    </label>
-                </div>
-                <div class="checkbox">
-                    <label for="content-convert-posts-content">
-                        <input checked type="checkbox" id="content-convert-posts-content" name="content-convert-posts-content"> Posts content
-                    </label>
-                </div>
-            </div>
-
-            <button
-                    title="Attempts to convert all selected content"
-                    class="btn btn-lg btn-default import-convert-btn disabled"
-                    disabled="disabled"
-                    data-on="click"
-                    data-action="convertContent"
-                    id="convert-content"
-                    type="button">Start Convert (might take some time)
-            </button>
-
-        </div>
-
-        <hr />
-
-        <div class="form-group">
-            <h4 for="importer-templates">Redirection templates</h4>
-            <p class="help-block">
-                These templates allow you to create redirection maps; Set the desirable templates and click on 'redirect.map.json' to download it the prepared map.
-                The map will include each old path mapped to a relevant new NodeBB one, based on the templates provided.
-                For example, some forums uses IDs in the URLs, some uses slugs. The old paths here are an example of the
-                UBB forum's way, and the disabled ones are the NodeBB way. Change the old paths at will.
-                <br />
-                You can use them with,
-                either an <a href="http://wiki.nginx.org/HttpMapModule" target="_blank">NGINX MapModule</a> or this lite <a href="https://github.com/akhoury/RedirectBB" target="_blank">"redirector"</a> that I wrote for this purpose.
-                <br />
-                Note the templating syntax, it uses the <a href="http://underscorejs.org/#template" target="_blank">Underscore.js's template</a>
-            </p>
-            <div class="redirection-templates-configs">
-                <label for="redirection-templates-users-oldpath">Users old path</label>
-                <input value="/forums/ubbthreads.php/users/<%= _uid %>" type="text" class="form-control" id="redirection-templates-users-oldpath" name="redirection-templates-users-oldpath" placeholder="/forums/ubbthreads.php/users/<%= _uid %>">
-                <label for="redirection-templates-users-newpath">Users new path</label>
-                <input disabled="disabled" value="/user/<%= userslug %>" type="text" class="form-control" id="redirection-templates-users-newpath" name="redirection-templates-users-newpath" placeholder="/user/<%= userslug %>">
-
-                <label for="redirection-templates-categories-oldpath">Categories old path</label>
-                <input value="/forums/ubbthreads.php/forums/<%= _cid %>" type="text" class="form-control" id="redirection-templates-categories-oldpath" name="redirection-templates-categories-oldpath" placeholder="/forums/ubbthreads.php/forums/<%= _cid %>">
-                <label for="redirection-templates-categories-newpath">Categories new path</label>
-                <input disabled="disabled" value="/category/<%= cid %>" type="text" class="form-control" id="redirection-templates-categories-newpath" name="redirection-templates-categories-newpath" placeholder="/category/<%= cid %>">
-
-                <label for="redirection-templates-topics-oldpath">Topics old path</label>
-                <input value="/forums/ubbthreads.php/topics/<%= _tid %>" type="text" class="form-control" id="redirection-templates-topics-oldpath" name="redirection-templates-topics-oldpath" placeholder="/forums/ubbthreads.php/topics/<%= _tid %>">
-                <label for="redirection-templates-topics-newpath">Topics new path</label>
-                <input disabled="disabled" value="/topic/<%= tid %>" type="text" class="form-control" id="redirection-templates-topics-newpath" name="redirection-templates-topics-newpath" placeholder="/topic/<%= tid %>">
-
-                <label for="redirection-templates-posts-oldpath">Posts old path</label>
-                <p class="help-block">
-                    Most Forums uses the '#' (location.hash) to add the post id to the path, this cannot be easily redirected
-                    without some client side JS 'Redirector' that grabs that # value and add to the query string or something
-                    but if your old-forums doesn't do that, feel free to edit that config.
-
-                    By default this it's blank to disable it and increase performance,
-                    it is a little bit of a CPU hog since the posts have the highest number of records
-                    and this require string processing, so if
-                    you're okay with redirecting oldTopicPaths and oldPostsPaths to the newTopicPaths without scrolling to the right post in the topic, leave this empty.
-                </p>
-                <input value="" type="text" class="form-control" id="redirection-templates-posts-oldpath" name="redirection-templates-posts-oldpath" placeholder="/topics/<%= _tid %>/*#Post<%= _pid %>" >
-                <label for="redirection-templates-posts-newpath">Posts new path</label>
-                <input disabled="disabled" value="/topic/<%= tid %>/#<%= pid %>" type="text" class="form-control" id="redirection-templates-posts-newpath" name="redirection-templates-posts-newpath" placeholder="/topic/<%= tid %>/#<%= pid %>">
-            </div>
-            <p></p>
-            <button
-                    title="Attempts to retrieve and download redirect.map.json of your last import run"
-                    class="btn btn-lg btn-default import-download-btn disabled"
-                    disabled="disabled"
-                    data-on="click"
-                    data-action="downloadRedirectionJson"
-                    id="download-redirection-json"
-                    type="button">Download redirect.map.json (might take some time)
-            </button>
-        </div>
-
-        <div class="form-group">
-            <h4>Users download</h4>
-            <p class="help-block">
-                Download a CSV or a JSON file that contains many of your users info, so you can blast an email to them or something, (you can use the CSV file with <a target="_blank" href="http://akhoury.github.io/pages/mandrill-blast/">this tool</a>)
-            </p>
-
-            <button
-                    title="Attempts to retrieve and download users.csv from your last import run"
-                    class="btn btn-lg btn-default import-download-btn disabled"
-                    disabled="disabled"
-                    data-on="click"
-                    data-action="downloadUsersCsv"
-                    id="download-users-csv"
-                    type="button">Download users.csv (might take some time)
-            </button>
-
-            <button
-                    title="Attempts to retrieve and download users.json from your last import run"
-                    class="btn btn-lg btn-default import-download-btn disabled"
-                    disabled="disabled"
-                    data-on="click"
-                    data-action="downloadUsersJson"
-                    id="download-users-json"
-                    type="button">Download users.json (might take some time)
-            </button>
-        </div>
-
-
-        <div class="form-group">
-            <h4>Delete the old original data from NodeBB Database</h4>
-            <p class="help-block">
-                If you're done using the post-import-tools, you can clean up the original data from your db, however,
-                you cannot revert this step, so you won't be able to use the post-import-tools unless you re-import your data.
-                However, this <b>will not</b> touch your original Database.
-            </p>
-            <button
-                    title="Deletes all the extra added fields to the NodeBB records"
-                    class="btn btn-lg btn-danger import-delete-originals disabled"
-                    disabled="disabled"
-                    data-on="click"
-                    data-action="deleteExtraFields"
-                    id="delete-originals"
-                    type="button">Deletes all the extra added fields to the NodeBB records, I'm done with them, (might take some time) I understand that I cannot revert this action.
-            </button>
-        </div>
-
+        <input value="" type="text" class="form-control" id="redirection-templates-posts-oldpath" name="redirection-templates-posts-oldpath" placeholder="/topics/<%= _tid %>/*#Post<%= _pid %>" >
+        <label for="redirection-templates-posts-newpath">Posts new path</label>
+        <input disabled="disabled" value="/topic/<%= tid %>/#<%= pid %>" type="text" class="form-control" id="redirection-templates-posts-newpath" name="redirection-templates-posts-newpath" placeholder="/topic/<%= tid %>/#<%= pid %>">
     </div>
-    <div class="text-center">
-        <span title="Toggle settings" data-target-visible-direction="down" data-on="click" data-action="slideVerticalToggle" data-target=".import-tools" class="import-hand">Toggle post-import tools</span>
-    </div>
+    <p></p>
+    <button
+            title="Attempts to retrieve and download redirect.map.json of your last import run"
+            class="btn btn-lg btn-default import-download-btn disabled"
+            disabled="disabled"
+            data-on="click"
+            data-action="downloadRedirectionJson"
+            id="download-redirection-json"
+            type="button">Download redirect.map.json (might take some time)
+    </button>
+</div>
+
+<div class="form-group">
+    <h4>Users download</h4>
+    <p class="help-block">
+        Download a CSV or a JSON file that contains many of your users info, so you can blast an email to them or something, (you can use the CSV file with <a target="_blank" href="http://akhoury.github.io/pages/mandrill-blast/">this tool</a>)
+    </p>
+
+    <button
+            title="Attempts to retrieve and download users.csv from your last import run"
+            class="btn btn-lg btn-default import-download-btn disabled"
+            disabled="disabled"
+            data-on="click"
+            data-action="downloadUsersCsv"
+            id="download-users-csv"
+            type="button">Download users.csv (might take some time)
+    </button>
+
+    <button
+            title="Attempts to retrieve and download users.json from your last import run"
+            class="btn btn-lg btn-default import-download-btn disabled"
+            disabled="disabled"
+            data-on="click"
+            data-action="downloadUsersJson"
+            id="download-users-json"
+            type="button">Download users.json (might take some time)
+    </button>
+</div>
+
+
+<div class="form-group">
+    <h4>Delete the old original data from NodeBB Database</h4>
+    <p class="help-block">
+        If you're done using the post-import-tools, you can clean up the original data from your db, however,
+        you cannot revert this step, so you won't be able to use the post-import-tools unless you re-import your data.
+        However, this <b>will not</b> touch your original Database.
+    </p>
+    <button
+            title="Deletes all the extra added fields to the NodeBB records"
+            class="btn btn-lg btn-danger import-delete-originals disabled"
+            disabled="disabled"
+            data-on="click"
+            data-action="deleteExtraFields"
+            id="delete-originals"
+            type="button">
+             Delete all the extra records that this plugin has added to my NodeBB DB, I understand that I will not be able to use the Post-Import tools and I cannot revert this action.
+    </button>
+</div>
+
+</div>
+<div class="text-center">
+    <span title="Toggle settings" data-target-visible-direction="down" data-on="click" data-action="slideVerticalToggle" data-target=".import-tools" class="import-hand">Toggle post-import tools</span>
+</div>
 </div>
 </fieldset>
 
@@ -410,7 +413,7 @@
         </div>
         <div class="checkbox">
             <label for="log-control-client">
-                <input class="log-control" type="checkbox" id="log-control-client" name="log-control-client"> Log on client
+                <input checked class="log-control" type="checkbox" id="log-control-client" name="log-control-client">  Log on client
             </label>
             <p class="help-block">
                 Show logs on in the logs area below
@@ -427,6 +430,8 @@
     </div>
 </div>
 </form>
+
+<input id="csrf_token" type="hidden" value="{csrf}" data-generatedby="nodebb-plugin-import" />
 
 <div class="import-state-container">
     <h4>
