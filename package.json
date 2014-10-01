@@ -40,11 +40,9 @@
         "eventemitter2": "~0.4.14",
         "npm": "^1.4.6",
         "underscore": "~1.5.2",
-        "jquery": "~2.1.0",
-        "jsdom": "~0.8.11",
-        "marked": "~0.1.6",
-        "html-md-optional_window": "git://github.com/akhoury/html-md-optional_window.git#master",
-        "bbcode-to-markdown": "~0.0.x",
+        "jsdom-nogyp": "~0.8.3",
+        "html-md-optional_window": "~3.0.2",
+        "bbcode-to-markdown": "~0.0.8",
         "html-entities": "1.0.10"
     }
 }

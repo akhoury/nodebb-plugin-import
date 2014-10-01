@@ -185,7 +185,9 @@ var db = module.parent.require('../../../src/database.js'),
     };
 
     Data.isImported = function(setKey, _id, callback) {
-        return db.isSetMember(setKey, _id, callback);
+        return db.isSortedSetMember(setKey, _id, function(a, b, c) {
+            callback(a, b, c);
+        });
     };
 
     Data.getImported = function(setKey, objPrefix, _id, callback) {

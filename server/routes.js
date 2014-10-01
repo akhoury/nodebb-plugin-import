@@ -25,5 +25,7 @@ module.exports =  {
 
         app.get(apiPrefix + '/convert/all', middleware.admin.isAdmin, Plugin.api.get.convert);
         app.post(apiPrefix + '/convert/content', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.convert);
+
+        app.get(apiPrefix + '/data', middleware.admin.isAdmin, Plugin.api.get.data);
     }
 };

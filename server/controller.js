@@ -377,7 +377,7 @@ var fs = require('fs-extra'),
             return parseAfter(parseMain(parseBefore(s)));
         };
     };
-    var window = require("jsdom").jsdom(null, null, {features: {FetchExternalResources: false}}).createWindow();
+    var window = require("jsdom-nogyp").jsdom(null, null, {features: {FetchExternalResources: false}}).parentWindow;
     var htmlMd = require('html-md-optional_window');
     // using my fork of html-md, we create the window via jsdom once at the top, then just pass the reference,
     // which will avoid jsdom.jsdom().createWindow() every time, much, much faster, and avoids memory leaks

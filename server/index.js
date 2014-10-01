@@ -1,6 +1,7 @@
 var
     fs = require('fs-extra'),
     path = require('path'),
+    Data = require('./data.js'),
     winston = module.parent.require('winston'),
     nconf = module.parent.require('nconf'),
     async = module.parent.require('async'),
@@ -84,6 +85,23 @@ var
 
     Plugin.api = {
         'get': {
+
+            data: function(req, res, next) {
+                var fn = req.query.fn,
+                    args = (req.query.args || '').split(',');
+                args.push(function(err, result) {
+                    if (err) {
+                        res.status(500).json(err);
+                    } else {
+                        res.json(result);
+                    }
+                });
+                if (typeof Data[fn] === 'function') {
+                    Data[fn].apply(Data, args);
+                } else {
+                    res.status(500).json({ error: 'message' });
+                }
+            },
 
             isDirty: function(req, res, next) {
                 res.json({isDirty: Plugin.controller.isDirty()});

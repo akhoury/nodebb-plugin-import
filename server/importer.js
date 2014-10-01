@@ -26,6 +26,19 @@ var async = require('async'),
     DIRTY_CATEGORIES_FILE = path.join(__dirname, '/tmp/importer.dirty.categories'),
     DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
     DIRTY_POSTS_FILE = path.join(__dirname, '/tmp/importer.dirty.posts'),
+    areUsersDirty,
+    areCategoriesDirty,
+    areTopicsDirty,
+    arePostsDirty,
+
+    isAnythingDirty,
+
+    alreadyImportedAllUsers = false,
+    alreadyImportedAllCategories = false,
+    alreadyImportedAllTopics = false,
+    alreadyImportedAllPosts = false,
+
+    flushed = false,
 
     defaults = {
         log: true,
@@ -167,37 +180,37 @@ var async = require('async'),
     // todo: really? wtf is this logic
     Importer.isDirty = function(done) {
 
-        Importer.areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
-        Importer.areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
-        Importer.areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
-        Importer.arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
+        areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
+        areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
+        areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
+        arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
 
-        Importer.isAnythingDirty = Importer.areUsersDirty || Importer.areCategoriesDirty || Importer.areTopicsDirty || Importer.arePostsDirty;
+        isAnythingDirty = areUsersDirty || areCategoriesDirty || areTopicsDirty || arePostsDirty;
 
         // order matters
-        if (Importer.areUsersDirty) {
-            Importer.alreadyImportedAllUsers = false;
-            Importer.alreadyImportedAllCategories = false;
-            Importer.alreadyImportedAllTopics = false;
-            Importer.alreadyImportedAllPosts = false;
-        } else if (Importer.areCategoriesDirty) {
-            Importer.alreadyImportedAllUsers = true;
-            Importer.alreadyImportedAllCategories = false;
-            Importer.alreadyImportedAllTopics = false;
-            Importer.alreadyImportedAllPosts = false;
-        } else if (Importer.areTopicsDirty) {
-            Importer.alreadyImportedAllUsers = true;
-            Importer.alreadyImportedAllCategories = true;
-            Importer.alreadyImportedAllTopics = false;
-            Importer.alreadyImportedAllPosts = false;
-        } else if (Importer.arePostsDirty) {
-            Importer.alreadyImportedAllUsers = true;
-            Importer.alreadyImportedAllCategories = true;
-            Importer.alreadyImportedAllTopics = true;
-            Importer.alreadyImportedAllPosts = false;
+        if (areUsersDirty) {
+            alreadyImportedAllUsers = false;
+            alreadyImportedAllCategories = false;
+            alreadyImportedAllTopics = false;
+            alreadyImportedAllPosts = false;
+        } else if (areCategoriesDirty) {
+            alreadyImportedAllUsers = true;
+            alreadyImportedAllCategories = false;
+            alreadyImportedAllTopics = false;
+            alreadyImportedAllPosts = false;
+        } else if (areTopicsDirty) {
+            alreadyImportedAllUsers = true;
+            alreadyImportedAllCategories = true;
+            alreadyImportedAllTopics = false;
+            alreadyImportedAllPosts = false;
+        } else if (arePostsDirty) {
+            alreadyImportedAllUsers = true;
+            alreadyImportedAllCategories = true;
+            alreadyImportedAllTopics = true;
+            alreadyImportedAllPosts = false;
         }
 
-        return typeof done === 'function' ? done() : Importer.isAnythingDirty;
+        return typeof done === 'function' ? done(null, isAnythingDirty) : isAnythingDirty;
     };
 
     Importer.flushData = function(next) {
@@ -259,7 +272,7 @@ var async = require('async'),
                 });
             },
             function(done) {
-                Importer.flushed = true;
+                flushed = true;
 
                 Importer.phase('resetGlobalsStart');
                 Importer.progress(0, 1);
@@ -323,28 +336,28 @@ var async = require('async'),
     };
 
     var getImportedUser = function(_uid, callback) {
-        if (! Importer.flushed && (Importer.alreadyImportedAllUsers || Importer.areUsersDirty)) {
+        if (! flushed && (alreadyImportedAllUsers || areUsersDirty)) {
             return Data.getImportedUser(_uid, callback);
         }
         return callback(null, null);
     };
 
     var getImportedCategory = function(_cid, callback) {
-        if (! Importer.flushed && (Importer.alreadyImportedAllCategories || Importer.areCategoriesDirty)) {
+        if (! flushed && (alreadyImportedAllCategories || areCategoriesDirty)) {
             return Data.getImportedCategory(_cid, callback);
         }
         return callback(null, null);
     };
 
     var getImportedTopic = function(_tid, callback) {
-        if (! Importer.flushed && (Importer.alreadyImportedAllTopics || Importer.areTopicsDirty)) {
+        if (! flushed && (alreadyImportedAllTopics || areTopicsDirty)) {
             return Data.getImportedTopic(_tid, callback);
         }
         return callback(null, null);
     };
 
     var getImportedPost = function(_pid, callback) {
-        if (! Importer.flushed && (Importer.alreadyImportedAllPosts || Importer.arePostsDirty)) {
+        if (! flushed && (alreadyImportedAllPosts || arePostsDirty)) {
             return Data.getImportedPost(_pid, callback);
         }
         return callback(null, null);
