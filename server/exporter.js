@@ -12,14 +12,14 @@ var async = require('async'),
     noop = function() {},
 
     getModuleId = function(module) {
-        if (module.indexOf('git://github.com') > -1) {
+        if (module.indexOf('github.com') > -1) {
             return module.split('/').pop().split('#')[0];
         }
         return module.split('@')[0];
     },
 
     searchModulesCache = function(moduleName, callback) {
-        var mod = require.resolve(moduleName);
+        var mod = require.resolve(getModuleId(moduleName));
         if (mod && ((mod = require.cache[mod]) !== undefined)) {
             (function run(mod) {
                 mod.children.forEach(function (child) {
@@ -268,7 +268,7 @@ var async = require('async'),
             options = {};
         }
 
-        if (options.skipInstall || true) {
+        if (options.skipInstall) {
             var mid = getModuleId(module);
             Exporter._exporter = reloadModule(mid);
             Exporter._module = module;

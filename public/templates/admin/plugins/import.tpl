@@ -40,7 +40,14 @@
             <h4>Select an Exporter</h4>
 
             <label for="exporter-module">Select one of the few detected on npmjs's registry</label><i class="fa fa-spinner exporter-module-spinner"></i>
-            <select class="form-control" id="exporter-module" name="exporter-module"></select>
+            <select
+				data-on="change"
+				data-action="matchVal"
+				data-target="#exporter-module-input"
+            	class="form-control"
+            	id="exporter-module"
+            	name="exporter-module">
+          	</select>
 
             <label for="exporter-module-input">Or just enter the module's name or url you want to install</label>
             <p class="help-block">
@@ -52,6 +59,19 @@
                 if a value exists here, it will take precedence over the select box value right above it.
             </p>
             <input type="text" class="form-control" id="exporter-module-input" name="exporter-module-input" placeholder="nodebb-plugin-my-compatible-exporter@0.0.1">
+
+
+			<div class="checkbox">
+				<label for="exporter-module-skip-install">
+					<input type="checkbox" id="exporter-module-skip-install" name="exporter-module-skip-install" />
+					Skip the module install
+				</label>
+				<p class="help-block">
+					[Advanced] skips the install of the selected module, with the assumption that you already installed it your self,
+					say you're developing and you don't want the importer to touch your files, but you still need to specify it in the fields above.
+					If you're in doubt, don't check it.
+				</p>
+			</div>
         </div>
 
         <div class="form-group">
@@ -84,7 +104,7 @@
 
             <div class="form-group">
                 <div class="checkbox">
-                    <label for="importer-admin-take-ownership">
+                    <label for="importer-admin-take-8ownership">
                         <input
                                 data-on="change"
                                 data-action="visibleToggle"
@@ -93,8 +113,8 @@
                                 name="importer-admin-take-ownership"> I want to take ownership of a specific user's posts
                     </label>
                     <p class="help-block">
-                        Say in your old forum you were the main admin, and your username was 'italiandesire', now after you've setup NodeBB, you decided to use the same
-                        username; 'italiandesire' (meaning when you ran <code>node app --setup</code> or <code>./nodebb setup</code>).
+                        Say in your old forum you were the main admin, and your username was 'italian-desire', now after you've setup NodeBB, you decided to use the same
+                        username; 'italian-desire' (meaning when you ran <code>node app --setup</code> or <code>./nodebb setup</code>).
 
                         <br /> If you check this box and enter the username hat you want to take ownership of its posts, that user 'creation' will be skipped, and all of its posts, will owned by you, the main NodeBB admin and first user (uid=1).
                         <br /> If you do not check this box, and it happens that you've chosen a username that already exists in your old database, that username's account creation,
@@ -102,8 +122,10 @@
                     </p>
                 </div>
                 <div class="importer-admin-take-ownership-fields hidden">
+                    <label for="importer-admin-take-ownership-uid">Old User Id</label>
                     <input class="form-control" type="text" id="importer-admin-take-ownership-uid" name="importer-admin-take-ownership-uid" placeholder="0 (old user id, aka _uid)"/>
-                    <input class="form-control" type="text" id="importer-admin-take-ownership-username" name="importer-admin-take-ownership-username" placeholder="italiandesire (case insensitive)"/>
+                    <label for="importer-admin-take-ownership-username">Old Username</label>
+                    <input class="form-control" type="text" id="importer-admin-take-ownership-username" name="importer-admin-take-ownership-username" placeholder="italian-desire (case insensitive)"/>
                     <p class="help-block">
                         No need to use both, either fields would work, if you use both, the <code>username</code> will be ignored, only the <code>uid</code> will be used.
                     </p>
@@ -120,8 +142,8 @@
                     <p class="help-block">
                         Let the importer auto confirm the users new email automatically
                         <br/>
-                        It will try to set the nodebb 'email:*:confirm' records to true
-                        and also delete all the 'confirm:*KEYS*:emails'
+                        It will try to set the nodebb <code>email:*:confirm</code> records to true
+                        and also delete all the <code>confirm:*KEYS*:emails</code>
                     </p>
                 </div>
             </div>
@@ -381,11 +403,12 @@
 
 
 <div class="form-group">
-    <h4>Delete the old original data from NodeBB Database</h4>
+    <h4>Delete the old original data which was augmented to my NodeBB Database</h4>
     <p class="help-block">
-        If you're done using the post-import-tools, you can clean up the original data from your db, however,
+        If you're done using the post-import-tools, you can clean up the original/augmented data from your NodeBB DB, however,
         you cannot revert this step, so you won't be able to use the post-import-tools unless you re-import your data.
-        However, this <b>will not</b> touch your original Database.
+
+        Note: This <b>will not</b> touch your original source forum database and will not delete your legitimate NodeBB records - only the ones this plugin added for convenience.
     </p>
     <button
             title="Deletes all the extra added fields to the NodeBB records"
@@ -418,10 +441,10 @@
         </div>
         <div class="checkbox">
             <label for="log-control-client">
-                <input checked class="log-control" type="checkbox" id="log-control-client" name="log-control-client">  Log on client
+                <input checked class="log-control" type="checkbox" id="log-control-client" name="log-control-client"> Log on client
             </label>
             <p class="help-block">
-                Show logs on in the logs area below
+                Show logs on in the logs area below, might crash your page with a large DB, its' ok the process will keep going. Just refresh.
             </p>
         </div>
         <div class="checkbox">
@@ -429,7 +452,7 @@
                 <input data-on="change" data-action="toggleVerboseLogs" class="log-control" type="checkbox" id="log-control-verbose" name="log-control-verbose"> Verbose
             </label>
             <p class="help-block">
-                May crash your page.
+               Will probably crash your page, and exhaust your CPU when importing large a large database
             </p>
         </div>
     </div>

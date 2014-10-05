@@ -70,6 +70,11 @@ var fs = require('fs-extra'),
         Controller.config(config);
         config = Controller.config();
 
+		var state = Controller.state();
+		if (state.now !== 'idle' && state.now !== 'errored') {
+			return Controller.emit('importer.warn', {message: 'Busy, cannot import now', state: state});
+		}
+
         var start = function() {
             Controller.requireExporter(config, function(err, exporter) {
                 Controller.startImport(exporter, config, callback);
@@ -92,6 +97,11 @@ var fs = require('fs-extra'),
     Controller.resume = function(config, callback) {
         Controller.config(config);
         config = Controller.config();
+
+		var state = Controller.state();
+		if (state.now !== 'idle' && state.now !== 'errored') {
+			return Controller.emit('importer.warn', {message: 'Busy, cannot import now', state: state});
+		}
 
         var resume = function() {
             Controller.requireExporter(config, function(err, exporter) {
@@ -133,6 +143,11 @@ var fs = require('fs-extra'),
             callback(null, exporter);
         });
 
+		Controller.state({
+			now: 'busy',
+			event: 'exporter.require'
+		});
+
         exporter.init(Controller.config());
 
         Controller._exporter = exporter;
@@ -148,11 +163,6 @@ var fs = require('fs-extra'),
 
     Controller._requireImporter = function(callback) {
         callback = _.isFunction(callback) ? callback : function(){};
-
-        var state = Controller.state();
-        if (state.now !== 'idle' && state.now !== 'errored') {
-            return Controller.emit('importer.warn', {message: 'Busy, cannot import now', state: state});
-        }
 
         if (Controller._importer) {
             Controller._importer.removeAllListeners();

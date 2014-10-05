@@ -1,7 +1,11 @@
-## A great example to follow:
+## Examples to fork:
 https://github.com/akhoury/nodebb-plugin-import-ubb
-or
 https://github.com/akhoury/nodebb-plugin-import-vbulletin
+https://github.com/a5mith/nodebb-plugin-import-smf
+https://github.com/psychobunny/nodebb-plugin-import-phpbb
+https://github.com/akhoury/nodebb-plugin-import-ipboard
+https://github.com/akhoury/nodebb-plugin-import-punbb
+
 
 ## Terminology
 This section is up here because it's very important for you to read it, so let's make few things clear before we go on.
@@ -42,8 +46,13 @@ You need node module that has the following interface.
   - config: just return the configs that were setup on the exporter, in case they were modified
 ```
 
-### YourModule.getUsers(callback)
-Query the users, filter them at will, then call the `callback(err, map)` wih the following argurments
+### YourModule.getUsers(callback) [deprecated]
+
+### YourModule.getPaginatedUsers(start, limit, callback)
+* `start` of the query row
+* `limit` of the query results
+* `callback`  Query the users, filter them at will, then call the `callback(err, map)` wih the following argurments
+
 ```
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the users ready to import
@@ -95,10 +104,15 @@ Each record should look like this:
 }
 ```
 
-### YourModule.getCategories(callback)
+### YourModule.getCategories(callback) [deprecated]
+
+### YourModule.getPaginatedCategories(start, limit, callback)
+* `start` of the query row
+* `limit` of the query results
+* `callback`  Query the categories, filter them at will, then call the `callback(err, map)` wih the following argurments
+
 Note: Categories are sometimes known as __forums__ in some forums software
 
-Query the categories, filter them at will, then call `callback(err, map)` wih the following argurments
 ```
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the categories ready to import
@@ -123,10 +137,16 @@ Each record should look like this:
 ```
 
 
-### YourModule.getTopics(callback)
+
+### YourModule.getTopics(callback) [deprecated]
+
+### YourModule.getPaginatedTopics(start, limit, callback)
+* `start` of the query row
+* `limit` of the query results
+* `callback`  Query the topics, filter them at will, then call the `callback(err, map)` wih the following argurments
+
 Note: Topics are sometimes known as __threads__ in some forums software
 
-Query the topics, filter them at will, then call `callback(err, map)` wih the following argurments
 ```
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the topics ready to import
@@ -163,9 +183,14 @@ Each record should look like this:
 }
 ```
 
-### YourModule.getPosts(callback)
 
-Query the posts, filter them at will, then call `callback(err, map)` wih the following argurments
+### YourModule.getPosts(callback) [deprecated]
+
+### YourModule.getPaginatedPosts(start, limit, callback)
+* `start` of the query row
+* `limit` of the query results
+* `callback`  Query the topics, filter them at will, then call the `callback(err, map)` wih the following argurments
+
 ```
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the posts ready to import

@@ -8,7 +8,7 @@
         plugin.apiHost = '/api/admin/plugins/' + 'import';
 
         var STORAGE_KEY = 'nodebb-plugin-' + plugin.name + ':exporters';
-        var STORAGE_TTL = 1 * 24 * 60 * 60 * 1000; // 1 day
+        var STORAGE_TTL = 2 * 24 * 60 * 60 * 1000; // 2 days
 
         var $wrapper = $('.' + plugin.name + '-wrapper');
         var $form = $('.' + plugin.name + '-settings');
@@ -44,6 +44,13 @@
 
                 return utils.toggleAvailable(target);
             },
+
+			matchVal: function(e) {
+				var btn = $(e.target),
+					target = $wrapper.find(btn.attr('data-target'));
+
+				return target.val(btn.val());
+			},
 
             saveSettings: function(e) {
                 if (e) {
@@ -495,7 +502,8 @@
                 dbpass: $('#exporter-dbpass').val(),
                 dbport: $('#exporter-dbport').val(),
                 tablePrefix: $('#exporter-tablePrefix').val(),
-                module: $('#exporter-module-input').val() || $('#exporter-module').val()
+                module: $('#exporter-module-input').val() || $('#exporter-module').val(),
+				skipInstall:  $('#exporter-module-skip-install').is(':checked')
             };
 
             var importer = {
@@ -523,8 +531,8 @@
                     return null;
                 }
 
-                if (importer.adminTakeOwnership.enable && !importer.adminTakeOwnership.username) {
-                    app.alertError('You must enter the old username that you want to take posts ownerships from');
+                if (importer.adminTakeOwnership.enable && !importer.adminTakeOwnership._uid && !importer.adminTakeOwnership._username) {
+                    app.alertError('You must enter the old uid or username that you want to take posts ownerships from');
                     return null;
                 }
             }
