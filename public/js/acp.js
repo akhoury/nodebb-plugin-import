@@ -506,7 +506,8 @@
                 },
                 adminTakeOwnership: {
                     enable: $wrapper.find('#importer-admin-take-ownership').is(':checked'),
-                    username: $wrapper.find('#importer-admin-take-ownership-username').val()
+                    _username: $wrapper.find('#importer-admin-take-ownership-username').val(),
+                    _uid: $wrapper.find('#importer-admin-take-ownership-uid').val()
                 },
                 autoConfirmEmails: $('#importer-autoconfirm-emails').is('checked'),
                 userReputationMultiplier: parseInt($('#importer-user-reputation-multiplier').val(), 10),

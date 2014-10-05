@@ -19,6 +19,9 @@ var async = require('async'),
     IMPORT_BATCH_SIZE = 10,
     FLUSH_BATCH_SIZE = 10,
 
+    //todo use the real one
+    LOGGEDIN_UID = 1,
+
     logPrefix = '[nodebb-plugin-import]',
 
     BACKUP_CONFIG_FILE = path.join(__dirname, '/tmp/importer.nbb.backedConfig.json'),
@@ -56,7 +59,8 @@ var async = require('async'),
 
         adminTakeOwnership: {
             enable: false,
-            username: 'admin'
+            _username: 'admin',
+            _uid: 0
         },
 
         nbbTmpConfig: {
@@ -396,7 +400,7 @@ var async = require('async'),
                                     password: user._password || passwordGen()
                                 };
                                 if (!userData.username) {
-                                    Importer.warn('[count:' + count + '] skipping user: ' + user._username + ':' + user._uid + ', username is invalid.');
+                                    Importer.warn('[count:' + count + '] skipping _username:' + user._username + ':_uid' + user._uid + ', username is invalid.');
                                     Importer.progress(count, total);
                                     return done();
                                 }
@@ -471,7 +475,10 @@ var async = require('async'),
                                         }
                                     }
                                 };
-                                if (oldOwnerNotFound && (user._username || '').toLowerCase() === config.adminTakeOwnership.username.toLowerCase()) {
+                                if (oldOwnerNotFound
+                                        && parseInt(user._uid, 10) === parseInt(config.adminTakeOwnership._uid, 10)
+                                            || (user._username || '').toLowerCase() === config.adminTakeOwnership._username.toLowerCase()
+                                    ) {
                                     Importer.warn('[count:' + count + '] skipping user: ' + user._username + ':'+ user._uid + ', it was revoked ownership');
                                     // cache the _uid for the next phases
                                     Importer.config('adminTakeOwnership', {
@@ -486,7 +493,7 @@ var async = require('async'),
                                     // set to false so we don't have to match all users
                                     oldOwnerNotFound = false;
                                     // dont create, but set the fields
-                                    return onCreate(null, 1);
+                                    return onCreate(null, LOGGEDIN_UID);
                                 } else {
                                     User.create(userData, onCreate);
                                 }
@@ -696,7 +703,7 @@ var async = require('async'),
 
                                     var onPost = function (err, returnTopic) {
                                         if (err) {
-                                            Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ':cid:' + category.cid + ':_cid:' + topic._cid + '_uid:' + topic._uid +  + err);
+                                            Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ':cid:' + category.cid + ':_cid:' + topic._cid + ':uid:' + user.uid +  ':_uid:' + topic._uid + ' err: ' + err);
                                             Importer.progress(count, total);
                                             done();
                                         } else {
@@ -769,7 +776,7 @@ var async = require('async'),
                                         }
                                     };
                                     Topics.post({
-                                        uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === topic._uid ? 1 : user.uid,
+                                        uid: !config.adminTakeOwnership.enable ? user.uid : parseInt(config.adminTakeOwnership._uid, 10) === parseInt(topic._uid, 10) ? LOGGEDIN_UID : user.uid,
                                         title: topic._title || '',
                                         content: topic._content || '',
                                         cid: category.cid,

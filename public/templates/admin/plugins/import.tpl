@@ -88,7 +88,7 @@
                         <input
                                 data-on="change"
                                 data-action="visibleToggle"
-                                data-target="#importer-admin-take-ownership-username"
+                                data-target=".importer-admin-take-ownership-fields"
                                 type="checkbox" id="importer-admin-take-ownership"
                                 name="importer-admin-take-ownership"> I want to take ownership of a specific user's posts
                     </label>
@@ -101,8 +101,13 @@
                         will be skipped, because NodeBB cannot create 2 accounts with the same username, and all of its posts will be posted as 'guest'.
                     </p>
                 </div>
-
-                <input class="form-control hidden" type="text" id="importer-admin-take-ownership-username" name="importer-admin-take-ownership-username" placeholder="italiandesire (case insensitive)"/>
+                <div class="importer-admin-take-ownership-fields hidden">
+                    <input class="form-control" type="text" id="importer-admin-take-ownership-uid" name="importer-admin-take-ownership-uid" placeholder="0 (old user id, aka _uid)"/>
+                    <input class="form-control" type="text" id="importer-admin-take-ownership-username" name="importer-admin-take-ownership-username" placeholder="italiandesire (case insensitive)"/>
+                    <p class="help-block">
+                        No need to use both, either fields would work, if you use both, the <code>username</code> will be ignored, only the <code>uid</code> will be used.
+                    </p>
+                </div>
             </div>
 
             <hr />

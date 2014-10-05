@@ -2,12 +2,12 @@ var exporter  = require('./exporter.js');
 
 exporter.once('exporter.ready', function() {
     var c = 1;
-    exporter.exportPosts(function(err, map, arr, nextBatch) {
-        console.log('outertest', err, Object.keys(map).length, arr.length, c++);
-        setTimeout(nextBatch, 2500);
+    exporter.exportUsers(function(err, map, arr, nextBatch) {
+        console.log('outertest', err, Object.keys(map), arr.length, c++);
+        // setTimeout(nextBatch, 2500);
     },
     {
-        batch: 10000
+        batch: 5
     },
     function() {
         console.log('\n\n\n\nim done');
