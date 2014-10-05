@@ -16,7 +16,6 @@ var async = require('async'),
     Categories = require('../../../src/categories.js'),
     db = module.parent.require('../../../src/database.js'),
 
-    EXPORT_BATCH_SIZE = 500,
     IMPORT_BATCH_SIZE = 10,
     FLUSH_BATCH_SIZE = 10,
 
@@ -386,7 +385,7 @@ var async = require('async'),
                             var _uid = user._uid;
                             recoverImporterUser(_uid, function(err, _user) {
                                 if (_user) {
-                                    Importer.warn('[count:' + count + '] skipping user: "' + _user._username + '", already imported');
+                                    Importer.warn('[count:' + count + '] skipping user: ' + user._username + ':' + user._uid + ', already imported');
                                     Importer.progress(count, total);
                                     return done();
                                 }
@@ -397,7 +396,7 @@ var async = require('async'),
                                     password: user._password || passwordGen()
                                 };
                                 if (!userData.username) {
-                                    Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" username is invalid.');
+                                    Importer.warn('[count:' + count + '] skipping user: ' + user._username + ':' + user._uid + ', username is invalid.');
                                     Importer.progress(count, total);
                                     return done();
                                 }
@@ -473,7 +472,7 @@ var async = require('async'),
                                     }
                                 };
                                 if (oldOwnerNotFound && (user._username || '').toLowerCase() === config.adminTakeOwnership.username.toLowerCase()) {
-                                    Importer.warn('[count:' + count + '] skipping user: "' + user._username + '" because it was revoked ownership');
+                                    Importer.warn('[count:' + count + '] skipping user: ' + user._username + ':'+ user._uid + ', it was revoked ownership');
                                     // cache the _uid for the next phases
                                     Importer.config('adminTakeOwnership', {
                                         enable: true,
@@ -697,7 +696,7 @@ var async = require('async'),
 
                                     var onPost = function (err, returnTopic) {
                                         if (err) {
-                                            Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ' ' + err);
+                                            Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ':cid:' + category.cid + ':_cid:' + topic._cid + '_uid:' + topic._uid +  + err);
                                             Importer.progress(count, total);
                                             done();
                                         } else {
@@ -856,7 +855,7 @@ var async = require('async'),
 
                                     var onCreate = function(err, postReturn){
                                         if (err) {
-                                            Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ' ' + err);
+                                            Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + err);
                                             Importer.progress(count, total);
                                             done();
                                         } else {

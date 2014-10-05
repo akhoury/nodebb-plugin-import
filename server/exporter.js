@@ -2,12 +2,14 @@ var async = require('async'),
     _ = require('underscore'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
 
-    DEFAULT_BATCH_SIZE = 1000,
-    noop = function() {},
+    COUNT_BATCH_SIZE = 1000000,
+    DEFAULT_EXPORT_BATCH_SIZE = 5000,
 
     // http://dev.mysql.com/doc/refman/5.5/en/select.html
     // mysql is terrible
     MAX_MYSQL_INT = 18446744073709551615,
+
+    noop = function() {},
 
     getModuleId = function(module) {
         if (module.indexOf('git://github.com') > -1) {
@@ -56,7 +58,11 @@ var async = require('async'),
         Exporter.config = config.exporter || {} ;
         async.series([
             function(next) {
-                Exporter.install(config.exporter.module, {force: false}, next);
+                var opt = {force: false};
+                if (config.exporter.skipInstall) {
+                    opt.skipInstall = true;
+                }
+                Exporter.install(config.exporter.module, opt, next);
             },
             Exporter.setup
         ], _.isFunction(cb) ? cb() : noop);
@@ -100,7 +106,7 @@ var async = require('async'),
             nextBatch();
         },
         {
-            batch: 5000
+            batch: COUNT_BATCH_SIZE
         },
         function(err) {
             cb(err, count);
@@ -116,7 +122,7 @@ var async = require('async'),
             nextBatch();
         },
         {
-            batch: 5000
+            batch: COUNT_BATCH_SIZE
         },
         function(err) {
             cb(err, count);
@@ -132,7 +138,7 @@ var async = require('async'),
                 nextBatch();
             },
             {
-                batch: 5000
+                batch: COUNT_BATCH_SIZE
             },
             function(err) {
                 cb(err, count);
@@ -148,7 +154,7 @@ var async = require('async'),
                 nextBatch();
             },
             {
-                batch: 5000
+                batch: COUNT_BATCH_SIZE
             },
             function(err) {
                 cb(err, count);
@@ -260,6 +266,14 @@ var async = require('async'),
         if (_.isFunction(options)) {
             next = options;
             options = {};
+        }
+
+        if (options.skipInstall || true) {
+            var mid = getModuleId(module);
+            Exporter._exporter = reloadModule(mid);
+            Exporter._module = module;
+            Exporter._moduleId = mid;
+            return next();
         }
 
         npm.load(options, function(err) {
@@ -401,9 +415,10 @@ var async = require('async'),
         // will fallback to get[Type] is pagination is not supported
         var fnName = 'getPaginated' + (type[0].toUpperCase() + type.substr(1).toLowerCase());
 
-        var batch = options.batch || Exporter._exporter.DEFAULT_BATCH_SIZE || DEFAULT_BATCH_SIZE;
+        var batch = Exporter.supportsPagination(null, type) ? options.batch || Exporter._exporter.DEFAULT_EXPORT_BATCH_SIZE || DEFAULT_EXPORT_BATCH_SIZE : MAX_MYSQL_INT;
+
         var start = 0;
-        var end = batch;
+        var limit = batch;
         var done = false;
 
         async.whilst(
@@ -418,12 +433,11 @@ var async = require('async'),
                     done = true;
                     return next();
                 }
-
-                Exporter[fnName](start, end, function(err, map, arr) {
+                Exporter[fnName](start, limit, function(err, map, arr) {
                     if (err) {
                         return next(err);
                     }
-                    if (!arr.length || options.doneIf(start, end, map, arr)) {
+                    if (!arr.length || options.doneIf(start, limit, map, arr)) {
                         done = true;
                         return next();
                     }
@@ -432,7 +446,6 @@ var async = require('async'),
                             return next(err);
                         }
                         start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
-                        end = start + batch;
                         next();
                     });
                 })
