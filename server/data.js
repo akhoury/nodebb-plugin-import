@@ -8,7 +8,7 @@ var db = module.parent.require('../../../src/database.js'),
     Topics = require('../../../src/topics.js'),
     Posts = require('../../../src/posts.js'),
     Categories = require('../../../src/categories.js'),
-    
+
     DEFAULT_BATCH_SIZE = 100;
 
 
@@ -185,20 +185,24 @@ var db = module.parent.require('../../../src/database.js'),
     };
 
     Data.isImported = function(setKey, _id, callback) {
-        return db.isSortedSetMember(setKey, _id, function(a, b, c) {
-            callback(a, b, c);
+        return db.isSortedSetMember(setKey, _id, function(err, result) {
+            callback(err, result);
         });
     };
 
     Data.getImported = function(setKey, objPrefix, _id, callback) {
-        Data.isImported(setKey, _id, function(err, isImported) {
-            if (!isImported) {
+        Data.isImported(setKey, _id, function(err, result) {
+            if (err || !result) {
                 return callback(null, null);
             }
             db.getObject(objPrefix + _id, function(err, obj) {
+                if (err) {
+                    return callback(null, null);
+                }
                 callback(null, obj);
             });
         });
+
     };
 
     Data.getImportedUser = function(_uid, callback) {
@@ -224,7 +228,7 @@ var db = module.parent.require('../../../src/database.js'),
             if (err) {
                 return callback(err);
             }
-            db.sortedSetAdd(setKey, _id, id, callback);
+            db.sortedSetAdd(setKey, id, _id, callback);
         });
     };
 
@@ -258,6 +262,38 @@ var db = module.parent.require('../../../src/database.js'),
 
     Data.isPostImported = function(_pid, callback) {
         return Data.isImported('_imported:_posts', _pid, callback);
+    };
+
+    Data.countImportedUsers = function(callback) {
+        Data.count('_imported:_users', callback);
+    };
+
+    Data.countImportedCategories = function(callback) {
+        Data.count('_imported:_categories', callback);
+    };
+
+    Data.countImportedTopics = function(callback) {
+        Data.count('_imported:_topics', callback);
+    };
+
+    Data.countImportedPosts = function(callback) {
+        Data.count('_imported:_posts', callback);
+    };
+
+    Data.eachImportedUser = function(iterator, options, callback) {
+        return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
+    };
+
+    Data.eachImportedCategory = function(iterator, options, callback) {
+        return Data.each('_imported:_categories', '_imported_category:', iterator, options, callback);
+    };
+
+    Data.eachImportedTopic = function(iterator, options, callback) {
+        return Data.each('_imported:_topics', '_imported_topic:', iterator, options, callback);
+    };
+
+    Data.eachImportedPost = function(iterator, options, callback) {
+        return Data.each('_imported:_posts', '_imported_post:', iterator, options, callback);
     };
 
 })(module.exports);

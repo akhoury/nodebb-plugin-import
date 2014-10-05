@@ -150,7 +150,7 @@
 
         <button class="btn btn-lg btn-info hidden" data-on="click" data-action="resume" id="import-resume" type="button">Last run was interrupted, try to resume</button>
 
-        <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Delete everything, then re-import to NodeBB</button>
+        <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Flush NodeBB DB, then import</button>
 
         <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
 

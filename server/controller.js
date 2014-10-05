@@ -5,7 +5,7 @@ var fs = require('fs-extra'),
     async = require('async'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
     nodeExtend = require('node.extend'),
-    noop = function(s){return s;},
+    noop = function(s) { return s;},
     db = module.parent.require('../../../src/database.js'),
     Data = require('./data.js'),
     Meta = require('../../../src/meta.js'),
@@ -20,8 +20,8 @@ var fs = require('fs-extra'),
 
     DIRTY_FILE = path.join(__dirname + '/tmp/controller.dirty'),
 
-    DELETE_EACH_LIMIT = 50,
-    CONVERT_EACH_LIMIT = 50,
+    DELETE_BATCH_LIMIT = 50,
+    CONVERT_BATCH_LIMIT = 50,
 
     defaults = {
         redirectionTemplates: {
@@ -68,16 +68,17 @@ var fs = require('fs-extra'),
 
     Controller.start = function(config, callback) {
         Controller.config(config);
+        config = Controller.config();
 
         var start = function() {
-            Controller.startExport(Controller.config(), function(err, data) {
-                Controller.startImport(data, Controller.config(), callback);
+            Controller.requireExporter(config, function(err, exporter) {
+                Controller.startImport(exporter, config, callback);
             });
         };
 
         fs.remove(LAST_IMPORT_TIMESTAMP_FILE, function(err) {
             fs.remove(LOG_FILE, function (err) {
-                if (Controller.config('log').server) {
+                if (config['log'].server) {
                     fs.ensureFile(LOG_FILE, function () {
                         start();
                     });
@@ -90,23 +91,24 @@ var fs = require('fs-extra'),
 
     Controller.resume = function(config, callback) {
         Controller.config(config);
+        config = Controller.config();
 
         var resume = function() {
-            Controller.startExport(Controller.config(), function(err, data) {
-                Controller.resumeImport(data, Controller.config(), callback);
+            Controller.requireExporter(config, function(err, exporter) {
+                Controller.startImport(exporter, config, callback);
             });
         };
 
         if (Controller.config('log').server) {
             fs.ensureFile(LOG_FILE, function () {
-                start();
+                resume();
             });
         } else {
             resume();
         }
     };
 
-    Controller.startExport = function(config, callback) {
+    Controller.requireExporter = function(config, callback) {
         if (_.isFunction(config)) {
             callback = config;
             config  = null;
@@ -117,62 +119,23 @@ var fs = require('fs-extra'),
             Controller.config(config);
         }
 
-        var state = Controller.state();
-        if (state.now !== 'idle' && state.now !== 'errored') {
-            return Controller.emit('exporter.warn', {message: 'Busy, cannot export'});
-        }
-
-        Controller.state({
-            now: 'busy',
-            event: 'exporter.require'
-        });
-
         if(Controller._exporter) {
             Controller._exporter.removeAllListeners();
         }
 
-        Controller._exporter = require('./exporter');
+        var exporter = require('./exporter');
 
-        Controller._exporter.on('exporter.*', function(type, data) {
+        exporter.on('exporter.*', function(type, data) {
             Controller.emit(type, data);
         });
 
-        Controller._exporter.once('exporter.complete', function(type, data) {
-            Controller.state({
-                now: 'idle',
-                event: 'exporter.complete'
-            });
+        exporter.once('exporter.ready', function() {
+            callback(null, exporter);
         });
 
-        Controller._exporter.once('exporter.error', function(type, data) {
-            Controller.state({
-                now: 'errored',
-                event: 'exporter.error'
-            });
-        });
+        exporter.init(Controller.config());
 
-        Controller._exporter.once('exporter.start', function() {
-            Controller.state({
-                now: 'busy',
-                event: 'exporter.start'
-            });
-        });
-        Controller._exporter.once('exporter.ready', function() {
-            Controller._exporter.start(function(err, results) {
-                Controller._exporter.data = {
-                    users: results[0],
-                    categories: results[1],
-                    topics: results[2],
-                    posts: results[3]
-                };
-                results = null;
-
-                Controller._exporter.emit('exporter.complete');
-                callback(err, Controller._exporter.data);
-            });
-        });
-
-        Controller._exporter.init(Controller.config());
+        Controller._exporter = exporter;
     };
 
     Controller.state = function(state) {
@@ -227,7 +190,7 @@ var fs = require('fs-extra'),
         });
     };
 
-    Controller.startImport = function(data, config, callback) {
+    Controller.startImport = function(exporter, config, callback) {
         fs.writeFileSync(DIRTY_FILE, +new Date(), {encoding: 'utf8'});
         Controller._requireImporter(callback);
 
@@ -240,10 +203,10 @@ var fs = require('fs-extra'),
             Controller._importer.start();
         });
 
-        Controller._importer.init(data, config || Controller.config(), callback);
+        Controller._importer.init(exporter, config || Controller.config(), callback);
     };
 
-    Controller.resumeImport = function(data, config, callback) {
+    Controller.resumeImport = function(config, callback) {
         Controller._requireImporter(callback);
 
         if (_.isFunction(config)) {
@@ -262,7 +225,7 @@ var fs = require('fs-extra'),
             Controller._importer.resume();
         });
 
-        Controller._importer.init(data, config || Controller.config(), callback);
+        Controller._importer.init(exporter, config || Controller.config(), callback);
     };
 
     Controller.findModules = function(q, callback) {
@@ -523,7 +486,7 @@ var fs = require('fs-extra'),
                     if (lastCommaIdx > -1) {
                         content = content.substring(0, lastCommaIdx);
                     }
-                    content += '\n}';
+                    content += '\n]';
 
                     var filename = 'users.json';
                     var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
@@ -797,7 +760,7 @@ var fs = require('fs-extra'),
                                     nxt();
                                 }
                             },
-                            {async: true, eachLimit: DELETE_EACH_LIMIT},
+                            {async: true, eachLimit: DELETE_BATCH_LIMIT},
                             function(err) {
                                 Controller.progress(1, 1);
                                 Controller.phase('deleteExtraFieldsUsersDone');
@@ -838,7 +801,7 @@ var fs = require('fs-extra'),
                                     nxt();
                                 }
                             },
-                            {async: true, eachLimit: DELETE_EACH_LIMIT},
+                            {async: true, eachLimit: DELETE_BATCH_LIMIT},
                             function(err) {
                                 Controller.progress(1, 1);
                                 Controller.phase('deleteExtraFieldsCategoriesDone');
@@ -883,7 +846,7 @@ var fs = require('fs-extra'),
                                     nxt();
                                 }
                             },
-                            {async: true, eachLimit: DELETE_EACH_LIMIT},
+                            {async: true, eachLimit: DELETE_BATCH_LIMIT},
                             function(err) {
                                 Controller.progress(1, 1);
                                 Controller.phase('deleteExtraFieldsTopicsDone');
@@ -921,7 +884,7 @@ var fs = require('fs-extra'),
                                     nxt();
                                 }
                             },
-                            {async: true, eachLimit: DELETE_EACH_LIMIT},
+                            {async: true, eachLimit: DELETE_BATCH_LIMIT},
                             function(err) {
                                 Controller.progress(1, 1);
                                 Controller.phase('deleteExtraFieldsPostsDone');
@@ -1007,7 +970,7 @@ var fs = require('fs-extra'),
                                         nxt();
                                     }
                                 },
-                                {async: true, eachLimit: CONVERT_EACH_LIMIT},
+                                {async: true, eachLimit: CONVERT_BATCH_LIMIT},
                                 function(err) {
                                     Controller.progress(1, 1);
                                     Controller.phase('convertUsersDone');
@@ -1051,7 +1014,7 @@ var fs = require('fs-extra'),
                                         nxt();
                                     }
                                 },
-                                {async: true, eachLimit: CONVERT_EACH_LIMIT},
+                                {async: true, eachLimit: CONVERT_BATCH_LIMIT},
                                 function(err) {
                                     Controller.progress(1, 1);
                                     Controller.phase('convertCategoriesDone');
@@ -1099,7 +1062,7 @@ var fs = require('fs-extra'),
                                         nxt();
                                     }
                                 },
-                                {async: true, eachLimit: CONVERT_EACH_LIMIT},
+                                {async: true, eachLimit: CONVERT_BATCH_LIMIT},
                                 function(err) {
                                     Controller.progress(1, 1);
                                     Controller.phase('convertTopicsDone');
@@ -1128,7 +1091,7 @@ var fs = require('fs-extra'),
                                         nxt();
                                     }
                                 },
-                                {async: true, eachLimit: CONVERT_EACH_LIMIT},
+                                {async: true, eachLimit: CONVERT_BATCH_LIMIT},
                                 function(err) {
                                     Controller.progress(1, 1);
                                     Controller.phase('convertPostsDone');

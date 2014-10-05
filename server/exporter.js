@@ -1,11 +1,18 @@
 var async = require('async'),
     _ = require('underscore'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
+
+    DEFAULT_BATCH_SIZE = 1000,
+    noop = function() {},
+
+    // http://dev.mysql.com/doc/refman/5.5/en/select.html
+    // mysql is terrible
+    MAX_MYSQL_INT = 18446744073709551615,
+
     getModuleId = function(module) {
         if (module.indexOf('git://github.com') > -1) {
             return module.split('/').pop().split('#')[0];
         }
-
         return module.split('@')[0];
     },
 
@@ -37,6 +44,7 @@ var async = require('async'),
     };
 
 (function(Exporter) {
+    var utils = require('../public/js/utils.js');
 
     Exporter._exporter = null;
 
@@ -44,86 +52,219 @@ var async = require('async'),
         wildcard: true
     });
 
-    Exporter.init = function(config) {
+    Exporter.init = function(config, cb) {
         Exporter.config = config.exporter || {} ;
         async.series([
             function(next) {
-                Exporter.install(config.exporter.module, {force: true}, next);
+                Exporter.install(config.exporter.module, {force: false}, next);
             },
             Exporter.setup
-        ], function(err, result) {
-
-        });
+        ], _.isFunction(cb) ? cb() : noop);
     };
 
-    Exporter.start = function(callback) {
-        Exporter.emit('exporter.start');
-
-        async.series([
-            Exporter.getUsers,
-            Exporter.getCategories,
-            Exporter.getTopics,
-            Exporter.getPosts,
-            Exporter.teardown
-        ], callback);
-    };
-
-    Exporter.setup = function(next) {
-        Exporter.emit('exporter.setup.start');
-
+    Exporter.setup = function(cb) {
         Exporter.augmentLogFunctions();
-
-        Exporter._exporter.setup(Exporter.config, function(err, map) {
-            Exporter.emit('exporter.setup.done');
+        Exporter._exporter.setup(Exporter.config, function(err) {
+            debugger;
+            if (err) {
+                Exporter.emit('exporter.error', {error: err});
+                return cb(err);
+            }
             Exporter.emit('exporter.ready');
-            next(err, map);
+            cb();
+        });
+    };
+    Exporter.countAll = function(cb) {
+        async.series([
+            Exporter.countUsers,
+            Exporter.countCategories,
+            Exporter.countTopics,
+            Exporter.countPosts
+        ], function(err, results) {
+            if (err) return cb(err);
+            cb({
+                users: results[0],
+                categories: results[1],
+                topics: results[2],
+                posts: results[3]
+            });
+        });
+    };
+    Exporter.countUsers = function(cb) {
+        if (Exporter._exporter.countUsers) {
+            return Exporter._exporter.countUsers(cb);
+        }
+        var count = 0;
+        Exporter.exportUsers(function(err, map, arr, nextBatch) {
+            count += arr.length;
+            nextBatch();
+        },
+        {
+            batch: 5000
+        },
+        function(err) {
+            cb(err, count);
+        });
+    };
+    Exporter.countCategories = function(cb) {
+        if (Exporter._exporter.countCategories) {
+            return Exporter._exporter.countCategories(cb);
+        }
+        var count = 0;
+        Exporter.exportCategories(function(err, map, arr, nextBatch) {
+            count += arr.length;
+            nextBatch();
+        },
+        {
+            batch: 5000
+        },
+        function(err) {
+            cb(err, count);
+        });
+    };
+    Exporter.countTopics = function(cb) {
+        if (Exporter._exporter.countTopics) {
+            return Exporter._exporter.countTopics(cb);
+        }
+        var count = 0;
+        Exporter.exportTopics(function(err, map, arr, nextBatch) {
+                count += arr.length;
+                nextBatch();
+            },
+            {
+                batch: 5000
+            },
+            function(err) {
+                cb(err, count);
+            });
+    };
+    Exporter.countPosts = function(cb) {
+        if (Exporter._exporter.countPosts) {
+            return Exporter._exporter.countPosts(cb);
+        }
+        var count = 0;
+        Exporter.exportPosts(function(err, map, arr, nextBatch) {
+                count += arr.length;
+                nextBatch();
+            },
+            {
+                batch: 5000
+            },
+            function(err) {
+                cb(err, count);
+            });
+    };
+    var onUsers = function(err, arg1, arg2, cb) {
+        if (err) return cb(err);
+
+//        if (_.isObject(arg1)) {
+//            return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+//        }
+//        if (_.isArray(arg1)) {
+//            return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid'), arg1);
+//        }
+        var m = {}, a = [];
+        if(_.isObject(arg1)) {
+            m = arg1;
+            a = _.isArray(arg2) ? arg2 : _.toArray(arg1);
+        } else if (_.isArray(arg1)) {
+            m = _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid');
+            a = arg1;
+        }
+
+        cb(null, m, a);
+    };
+    Exporter.getUsers = function(cb) {
+        Exporter._exporter.getUsers(function(err, arg1, arg2) {
+            onUsers(err, arg1, arg2, cb);
+        });
+    };
+    Exporter.getPaginatedUsers = function(start, end, cb) {
+        if (!Exporter._exporter.getPaginatedUsers) {
+            return Exporter.getUsers(cb);
+        }
+        Exporter._exporter.getPaginatedUsers(start, end, function(err, arg1, arg2) {
+            onUsers(err, arg1, arg2, cb);
         });
     };
 
-    Exporter.getUsers = function(next) {
-        Exporter.emit('exporter.users.start');
-        Exporter._exporter.getUsers(function(err, map) {
-            Exporter.emit('exporter.users.done');
-            next(err, map);
+    var onCategories = function(err, arg1, arg2, cb) {
+        if (err) return cb(err);
+
+        if (_.isObject(arg1)) {
+            return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+        }
+        if (_.isArray(arg1)) {
+            return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_cid'), arg1);
+        }
+    };
+    Exporter.getCategories = function(cb) {
+        Exporter._exporter.getCategories(function(err, arg1, arg2) {
+            onCategories(err, arg1, arg2, cb);
+        });
+    };
+    Exporter.getPaginatedCategories = function(start, end, cb) {
+        if (!Exporter._exporter.getPaginatedCategories) {
+            return Exporter.getCategories(cb);
+        }
+        Exporter._exporter.getPaginatedCategories(start, end, function(err, arg1, arg2) {
+            onCategories(err, arg1, arg2, cb);
         });
     };
 
-    Exporter.getCategories = function(next) {
-        Exporter.emit('exporter.categories.start');
-        Exporter._exporter.getCategories(function(err, map) {
-            Exporter.emit('exporter.categories.done');
-            next(err, map);
-        });
+    var onTopics = function(err, arg1, arg2, cb) {
+        if (err) return cb(err);
 
+        if (_.isObject(arg1)) {
+            return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+        }
+        if (_.isArray(arg1)) {
+            return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_tid'), arg1);
+        }
     };
-
-    Exporter.getTopics = function(next) {
-        Exporter.emit('exporter.topics.start');
-        Exporter._exporter.getTopics(function(err, map) {
-            Exporter.emit('exporter.topics.done');
-            next(err, map);
-        });
-
-    };
-
-    Exporter.getPosts = function(next) {
-        Exporter.emit('exporter.posts.start');
-        Exporter._exporter.getPosts(function(err, map) {
-            Exporter.emit('exporter.posts.done');
-            next(err, map);
+    Exporter.getTopics = function(cb) {
+        Exporter._exporter.getTopics(function(err, arg1, arg2) {
+            onTopics(err, arg1, arg2, cb);
         });
     };
-
-    Exporter.teardown = function(next) {
-        Exporter.emit('exporter.teardown.start');
-        Exporter._exporter.teardown(function(err, map) {
-            Exporter.emit('exporter.teardown.done');
-            next(err, map);
+    Exporter.getPaginatedTopics = function(start, end, cb) {
+        if (!Exporter._exporter.getPaginatedTopics) {
+            return Exporter.getTopics(cb);
+        }
+        Exporter._exporter.getPaginatedTopics(start, end, function(err, arg1, arg2) {
+            onTopics(err, arg1, arg2, cb);
         });
+    };
+
+    var onPosts = function(err, arg1, arg2, cb) {
+        if (err) return cb(err);
+
+        if (_.isObject(arg1)) {
+            return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+        }
+        if (_.isArray(arg1)) {
+            return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_pid'), arg1);
+        }
+    };
+    Exporter.getPosts = function(cb) {
+        Exporter._exporter.getPosts(function(err, arg1, arg2) {
+            onPosts(err, arg1, arg2, cb);
+        });
+    };
+    Exporter.getPaginatedPosts = function(start, end, cb) {
+        if (!Exporter._exporter.getPaginatedPosts) {
+            return Exporter.getPosts(cb);
+        }
+        Exporter._exporter.getPaginatedPosts(start, end, function(err, arg1, arg2) {
+            onPosts(err, arg1, arg2, cb);
+        });
+    };
+
+    Exporter.teardown = function(cb) {
+        Exporter._exporter.teardown(cb);
     };
 
     Exporter.install = function(module, options, next) {
-        Exporter.emit('exporter.install.start');
         var	npm = require('npm');
         Exporter._exporter = null;
 
@@ -136,19 +277,17 @@ var async = require('async'),
             if (err) {
                 next(err);
             }
+
             Exporter.emit('exporter.log', 'installing: ' + module);
 
             npm.config.set('spin', false);
-            npm.config.set('force', true);
+            // npm.config.set('force', true);
             npm.config.set('verbose', true);
 
             npm.commands.install([module], function(err) {
                 if (err) {
                     next(err);
                 }
-
-                Exporter.emit('exporter.install.done');
-                Exporter.emit('exporter.log', 'install done: ' + module);
 
                 var moduleId = getModuleId(module);
                 var exporter = reloadModule(moduleId);
@@ -173,6 +312,13 @@ var async = require('async'),
                     }
                 } else {
 
+                    if (Exporter.supportsPagination(exporter)) {
+                        Exporter.emit('exporter.warn', {warn: module + ' does not support Pagination, '
+                            + 'it will work, but if you run into memory issues, you might want to contact the developer of it or add support your self. '
+                            + 'See https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md'
+                        });
+                    }
+
                     Exporter._exporter = exporter;
                     Exporter._module = module;
                     Exporter._moduleId = moduleId;
@@ -187,12 +333,123 @@ var async = require('async'),
         exporter = exporter || Exporter._exporter;
 
         return exporter
-            && typeof exporter.setup === 'function'
-            && typeof exporter.getUsers === 'function'
-            && typeof exporter.getCategories === 'function'
-            && typeof exporter.getTopics === 'function'
-            && typeof exporter.getPosts === 'function'
-            && typeof exporter.teardown === 'function';
+            && _.isFunction(exporter.setup)
+            && (
+                Exporter.supportsPagination(exporter) ||
+                (
+                    _.isFunction(exporter.getUsers)
+                    && _.isFunction(exporter.getCategories)
+                    && _.isFunction(exporter.getTopics)
+                    && _.isFunction(exporter.getPosts)
+                )
+            )
+            && _.isFunction(exporter.teardown)
+    };
+
+    Exporter.supportsPagination = function(exporter, type) {
+        exporter = exporter || Exporter._exporter;
+
+        return exporter
+            && (function(type) {
+                switch (type) {
+                    case 'users':
+                        return _.isFunction(exporter.getPaginatedUsers);
+                        break;
+                    case 'categories':
+                        return _.isFunction(exporter.getPaginatedCategories);
+                        break;
+                    case 'topics':
+                        return _.isFunction(exporter.getPaginatedTopics);
+                        break;
+                    case 'posts':
+                        return _.isFunction(exporter.getPaginatedPosts);
+                        break;
+                    default:
+                        return _.isFunction(exporter.getPaginatedUsers)
+                            && _.isFunction(exporter.getPaginatedCategories)
+                            && _.isFunction(exporter.getPaginatedTopics)
+                            && _.isFunction(exporter.getPaginatedPosts);
+                }
+            })(type);
+    };
+
+    Exporter.exportUsers = function(process, options, callback) {
+        return Exporter.exportType('users', process, options, callback);
+    };
+
+    Exporter.exportCategories = function(process, options, callback) {
+        return Exporter.exportType('categories', process, options, callback);
+    };
+
+    Exporter.exportTopics = function(process, options, callback) {
+        return Exporter.exportType('topics', process, options, callback);
+    };
+
+    Exporter.exportPosts = function(process, options, callback) {
+        return Exporter.exportType('posts', process, options, callback);
+    };
+
+    Exporter.exportType = function(type, process, options, callback) {
+        if (typeof options === 'function') {
+            callback = options;
+            options = {};
+        }
+
+        callback = typeof callback === 'function' ? callback : function(){};
+        options = options || {};
+
+        if (typeof process !== 'function') {
+            throw new Error(process + ' is not a function');
+        }
+
+        // custom done condition
+        options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function(){};
+
+        // always start at, useful when deleting all records
+        // options.alwaysStartAt
+
+        // i.e. exporter.getPaginatedPosts
+        // will fallback to get[Type] is pagination is not supported
+        var fnName = 'getPaginated' + (type[0].toUpperCase() + type.substr(1).toLowerCase());
+
+        var batch = options.batch || Exporter._exporter.DEFAULT_BATCH_SIZE || DEFAULT_BATCH_SIZE;
+        var start = 0;
+        var end = batch;
+        var done = false;
+
+        async.whilst(
+            function(err) {
+                if (err) {
+                    return true;
+                }
+                return !done;
+            },
+            function(next) {
+                if (!Exporter.supportsPagination(null, type) && start > 0) {
+                    done = true;
+                    return next();
+                }
+
+                Exporter[fnName](start, end, function(err, map, arr) {
+                    if (err) {
+                        return next(err);
+                    }
+                    if (!arr.length || options.doneIf(start, end, map, arr)) {
+                        done = true;
+                        return next();
+                    }
+                    process(err, map, arr, function(err) {
+                        if (err) {
+                            return next(err);
+                        }
+                        start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
+                        end = start + batch;
+                        next();
+                    });
+                })
+            },
+            callback
+        );
     };
 
     Exporter.emit = function (type, b, c) {
