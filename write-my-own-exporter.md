@@ -1,5 +1,7 @@
 ## A great example to follow:
-https://github.com/akhoury/nodebb-plugin-import-ubb or https://github.com/akhoury/nodebb-plugin-import-vbulletin
+https://github.com/akhoury/nodebb-plugin-import-ubb
+or
+https://github.com/akhoury/nodebb-plugin-import-vbulletin
 
 ## Terminology
 This section is up here because it's very important for you to read it, so let's make few things clear before we go on.
