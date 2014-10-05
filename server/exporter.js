@@ -156,23 +156,12 @@ var async = require('async'),
     };
     var onUsers = function(err, arg1, arg2, cb) {
         if (err) return cb(err);
-
-//        if (_.isObject(arg1)) {
-//            return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
-//        }
-//        if (_.isArray(arg1)) {
-//            return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid'), arg1);
-//        }
-        var m = {}, a = [];
-        if(_.isObject(arg1)) {
-            m = arg1;
-            a = _.isArray(arg2) ? arg2 : _.toArray(arg1);
-        } else if (_.isArray(arg1)) {
-            m = _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid');
-            a = arg1;
+        if (_.isObject(arg1)) {
+            return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
         }
-
-        cb(null, m, a);
+        if (_.isArray(arg1)) {
+            return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid'), arg1);
+        }
     };
     Exporter.getUsers = function(cb) {
         Exporter._exporter.getUsers(function(err, arg1, arg2) {
