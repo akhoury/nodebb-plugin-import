@@ -59,8 +59,8 @@ var async = require('async'),
 
         adminTakeOwnership: {
             enable: false,
-            _username: 'admin',
-            _uid: 0
+            _username: null,
+            _uid: null
         },
 
         nbbTmpConfig: {
