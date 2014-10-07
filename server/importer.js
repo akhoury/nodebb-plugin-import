@@ -30,7 +30,8 @@ var async = require('async'),
     DIRTY_CATEGORIES_FILE = path.join(__dirname, '/tmp/importer.dirty.categories'),
     DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
     DIRTY_POSTS_FILE = path.join(__dirname, '/tmp/importer.dirty.posts'),
-    areUsersDirty,
+
+	areUsersDirty,
     areCategoriesDirty,
     areTopicsDirty,
     arePostsDirty,
@@ -137,6 +138,8 @@ var async = require('async'),
                 }
                 : null;
         })();
+
+		flushed = false;
 
         Importer.emit('importer.setup.done');
         Importer.emit('importer.ready');
