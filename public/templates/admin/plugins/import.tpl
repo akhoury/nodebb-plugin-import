@@ -444,7 +444,7 @@
                 <input checked class="log-control" type="checkbox" id="log-control-client" name="log-control-client"> Log on client
             </label>
             <p class="help-block">
-                Show logs on in the logs area below, might crash your page with a large DB, its' ok the process will keep going. Just refresh.
+                Show logs on in the logs area below, might crash your page with a large DB, it's ok the process will keep going. Just refresh the page, or close it.
             </p>
         </div>
         <div class="checkbox">
@@ -452,7 +452,7 @@
                 <input data-on="change" data-action="toggleVerboseLogs" class="log-control" type="checkbox" id="log-control-verbose" name="log-control-verbose"> Verbose
             </label>
             <p class="help-block">
-               Will probably crash your page, and exhaust your CPU when importing large a large database
+               Will probably crash your page, and exhaust your CPU when importing a large database
             </p>
         </div>
     </div>
