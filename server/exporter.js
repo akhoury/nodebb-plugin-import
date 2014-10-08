@@ -316,7 +316,7 @@ var async = require('async'),
                     }
                 } else {
 
-                    if (Exporter.supportsPagination(exporter)) {
+                    if (! Exporter.supportsPagination(exporter)) {
                         Exporter.emit('exporter.warn', {warn: module + ' does not support Pagination, '
                             + 'it will work, but if you run into memory issues, you might want to contact the developer of it or add support your self. '
                             + 'See https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md'
