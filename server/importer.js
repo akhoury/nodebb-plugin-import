@@ -881,8 +881,7 @@ var async = require('async'),
                                     done();
                                 } else {
 
-                                    // Importer.log('[count: ' + count + '] saving post: ' + _pid);
-									console.log('[count: ' + count + '] saving post: ' + _pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid);
+									Importer.log('[count: ' + count + '] saving post: ' + _pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid);
 
                                     var onCreate = function(err, postReturn){
                                         if (err) {
