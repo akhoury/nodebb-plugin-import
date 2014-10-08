@@ -58,9 +58,10 @@ var async = require('async'),
         Exporter.config = config.exporter || {} ;
         async.series([
             function(next) {
-                var opt = {force: false};
+                var opt = {force: true};
                 if (config.exporter.skipInstall) {
                     opt.skipInstall = true;
+					opt.force = false;
                 }
                 Exporter.install(config.exporter.module, opt, next);
             },
@@ -284,7 +285,7 @@ var async = require('async'),
             Exporter.emit('exporter.log', 'installing: ' + module);
 
             npm.config.set('spin', false);
-            // npm.config.set('force', true);
+            npm.config.set('force', !!options.force);
             npm.config.set('verbose', true);
 
             npm.commands.install([module], function(err) {
