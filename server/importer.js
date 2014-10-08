@@ -66,6 +66,7 @@ var async = require('async'),
 
         nbbTmpConfig: {
             postDelay: 0,
+            initialPostDelay: 0,
             minimumPostLength: 1,
             minimumPasswordLength: 0,
             minimumTitleLength: 1,
