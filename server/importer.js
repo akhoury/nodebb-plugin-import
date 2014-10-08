@@ -169,16 +169,36 @@ var async = require('async'),
         Importer.emit('importer.start');
         Importer.emit('importer.resume');
 
-        async.series([
-            Importer.importUsers,
-            Importer.importCategories,
-            Importer.importTopics,
-            Importer.importPosts,
-            Importer.relockUnlockedTopics,
-            Importer.fixTopicTimestamps,
-            Importer.restoreConfig,
-            Importer.teardown
-        ], callback);
+		Importer.isDirty();
+
+		var series = [];
+		if (! alreadyImportedAllUsers) {
+			series.push(Importer.importUsers);
+		} else {
+			Importer.warn('alreadyImportedAllUsers=true, skipping importUsers Phase');
+		}
+		if (! alreadyImportedAllCategories) {
+			series.push(Importer.importCategories);
+		} else {
+			Importer.warn('alreadyImportedAllCategories=true, skipping importCategories Phase');
+		}
+		if (! alreadyImportedAllTopics) {
+			series.push(Importer.importTopics);
+		} else {
+			Importer.warn('alreadyImportedAllTopics=true, skipping importTopics Phase');
+		}
+		if (! alreadyImportedAllPosts) {
+			series.push(Importer.importPosts);
+		} else {
+			Importer.warn('alreadyImportedAllPosts=true, skipping importPosts Phase');
+		}
+
+		series.push(Importer.relockUnlockedTopics);
+		series.push(Importer.fixTopicTimestamps);
+		series.push(Importer.restoreConfig);
+		series.push(Importer.teardown);
+
+        async.series(series, callback);
     };
 
     // todo: really? wtf is this logic
@@ -403,7 +423,7 @@ var async = require('async'),
                                     password: user._password || passwordGen()
                                 };
                                 if (!userData.username) {
-                                    Importer.warn('[count:' + count + '] skipping _username:' + user._username + ':_uid' + user._uid + ', username is invalid.');
+                                    Importer.warn('[count:' + count + '] skipping _username:' + user._username + ':_uid:' + user._uid + ', username is invalid.');
                                     Importer.progress(count, total);
                                     return done();
                                 }
@@ -830,7 +850,7 @@ var async = require('async'),
 
                         recoverImportedPost(_pid, function(err, _post) {
                             if (_post) {
-                                Importer.warn('skipping post:_pid: ' + _pid + ', already imported');
+                                Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ', already imported');
                                 Importer.progress(count, total);
                                 return done();
                             }
@@ -857,15 +877,16 @@ var async = require('async'),
                                 var user = results[1] || {};
 
                                 if (!topic) {
-                                    Importer.warn('skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ' imported: ' + !!topic);
+                                    Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ' imported: ' + !!topic);
                                     done();
                                 } else {
 
-                                    Importer.log('[count: ' + count + '] saving post: ' + _pid);
+                                    // Importer.log('[count: ' + count + '] saving post: ' + _pid);
+									console.log('[count: ' + count + '] saving post: ' + _pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid);
 
                                     var onCreate = function(err, postReturn){
                                         if (err) {
-                                            Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + err);
+                                            Importer.warn('[count: ' + count + '] skipping post: ' + post._pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' ' + err);
                                             Importer.progress(count, total);
                                             done();
                                         } else {
@@ -898,14 +919,13 @@ var async = require('async'),
                                             Posts.setPostFields(postReturn.pid, fields, onPostFields);
                                         }
                                     };
-                                    Posts.create({
-                                        uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
-                                        tid: topic.tid,
-                                        content: post._content || '',
-                                        timestamp: post._timestamp || startTime,
-                                        // i seriously doubt you have this, but it's ok if you don't
-                                        toPid: post['_nbb-toPid']
-                                    }, onCreate);
+
+									Posts.create({
+										uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
+										tid: topic.tid,
+										content: post._content || '',
+										timestamp: post._timestamp || startTime,
+									}, onCreate);
                                 }
                             });
                         });

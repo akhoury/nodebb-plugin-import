@@ -3,7 +3,7 @@ var async = require('async'),
     EventEmitter2 = require('eventemitter2').EventEmitter2,
 
     COUNT_BATCH_SIZE = 1000000,
-    DEFAULT_EXPORT_BATCH_SIZE = 5000,
+    DEFAULT_EXPORT_BATCH_SIZE = 25000,
 
     // http://dev.mysql.com/doc/refman/5.5/en/select.html
     // mysql is terrible

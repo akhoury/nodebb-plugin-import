@@ -105,7 +105,7 @@ var fs = require('fs-extra'),
 
         var resume = function() {
             Controller.requireExporter(config, function(err, exporter) {
-                Controller.startImport(exporter, config, callback);
+                Controller.resumeImport(exporter, config, callback);
             });
         };
 
@@ -216,7 +216,7 @@ var fs = require('fs-extra'),
         Controller._importer.init(exporter, config || Controller.config(), callback);
     };
 
-    Controller.resumeImport = function(config, callback) {
+    Controller.resumeImport = function(exporter, config, callback) {
         Controller._requireImporter(callback);
 
         if (_.isFunction(config)) {
