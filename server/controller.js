@@ -1055,7 +1055,11 @@ var fs = require('fs-extra'),
                                         async.parallel([
                                             function(cb) {
                                                 if (rconf.topicsTitle && topic._imported_title) {
-                                                    db.setObjectField('topic:' + topic.tid, 'title', Controller.convert(topic._imported_title), cb);
+                                                    var convertedTitle = Controller.convert(topic._imported_title);
+                                                    db.setObjectField('topic:' + topic.tid, 'title', convertedTitle, function(err) {
+                                                    	if (err) return cb(err);
+                                                    	db.setObjectField('topic:' + topic.tid, 'slug', utils.slugify(convertedTitle), cb);
+                                                    });
                                                 } else {
                                                     cb();
                                                 }
