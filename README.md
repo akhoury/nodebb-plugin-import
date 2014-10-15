@@ -26,6 +26,8 @@ then run nodebb
 ```
 ./nodebb start
 ```
+__DISABLE ALL OTHER PLUGINS__
+
 Activate it, then visit
 [http://localhost:4567/admin/plugins/import](http://localhost:4567/admin/plugins/import)
 (or whatever URL your instance lives on)
