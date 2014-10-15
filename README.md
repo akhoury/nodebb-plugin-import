@@ -26,7 +26,7 @@ then run nodebb
 ```
 ./nodebb start
 ```
-__DISABLE ALL OTHER PLUGINS__
+__DISABLE ALL OTHER PLUGINS__ especially any DB indexer and Markdown
 
 Activate it, then visit
 [http://localhost:4567/admin/plugins/import](http://localhost:4567/admin/plugins/import)
