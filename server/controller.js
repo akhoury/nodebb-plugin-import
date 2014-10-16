@@ -1058,7 +1058,7 @@ var fs = require('fs-extra'),
                                                     var convertedTitle = Controller.convert(topic._imported_title);
                                                     db.setObjectField('topic:' + topic.tid, 'title', convertedTitle, function(err) {
                                                     	if (err) return cb(err);
-                                                    	db.setObjectField('topic:' + topic.tid, 'slug', utils.slugify(convertedTitle), cb);
+                                                    	db.setObjectField('topic:' + topic.tid, 'slug', topic.tid + '/' + utils.slugify(convertedTitle), cb);
                                                     });
                                                 } else {
                                                     cb();
