@@ -461,7 +461,7 @@ var async = require('async'),
                                             };
                                             var keptPicture = false;
                                             if (user._picture) {
-                                                fields.gravatarpicture = user._picture;
+                                                fields.uploadedpicture = user._picture;
                                                 fields.picture = user._picture;
                                                 keptPicture = true;
                                             }
