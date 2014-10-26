@@ -607,8 +607,6 @@ var async = require('async'),
 
                                 disabled: category._disabled || 0,
 
-                                parentCid: category._parent || category._parentCid || undefined,
-
                                 link: category._link || 0,
 
                                 // roulette, that too,
@@ -624,30 +622,45 @@ var async = require('async'),
                                     return done();
                                 }
 
-                                var fields = {
-                                    _imported_cid: _cid,
-                                    _imported_name: category._name || '',
-                                    _imported_slug: category._slug || '',
-                                    _imported_description: category._description || '',
-                                    _imported_link: category._link || ''
-                                };
+                                var parentCid = category._parent || category._parentCid || undefined;
+                                var onParentCid = function(err, _parentCategory) {
 
-                                var onFields = function(err) {
-                                    if (err) {
-                                        Importer.warn(err);
+                                    var fields = {
+                                        _imported_cid: _cid,
+                                        _imported_name: category._name || '',
+                                        _imported_slug: category._slug || '',
+                                        _imported_description: category._description || '',
+                                        _imported_link: category._link || ''
+                                    };
+
+                                    if (!err && _parentCategory) {
+                                        fields.parentCid = parentCid;
                                     }
 
-                                    Importer.progress(count, total);
+                                    var onFields = function(err) {
+                                        if (err) {
+                                            Importer.warn(err);
+                                        }
 
-                                    category.imported = true;
-                                    imported++;
-                                    category = nodeExtend(true, {}, category, categoryReturn);
-                                    categories[_cid] = category;
+                                        Importer.progress(count, total);
 
-                                    Data.setCategoryImported(_cid, categoryReturn.cid, category, done);
+                                        category.imported = true;
+                                        imported++;
+                                        category = nodeExtend(true, {}, category, categoryReturn);
+                                        categories[_cid] = category;
+
+                                        Data.setCategoryImported(_cid, categoryReturn.cid, category, done);
+                                    };
+
+                                    db.setObject('category:' + categoryReturn.cid, fields, onFields);
+
                                 };
 
-                                db.setObject('category:' + categoryReturn.cid, fields, onFields);
+                                if (parentCid) {
+                                    Data.getImportedCategory(parentCid, onParentCid);
+                                } else {
+                                    onParentCid();
+                                }
                             };
 
                             Categories.create(categoryData, onCreate);
