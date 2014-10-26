@@ -62,8 +62,20 @@ var fs = require('fs-extra'),
         return Controller._importer.isDirty();
     };
 
-    Controller.clean = function() {
-        // call clean functions for both importers and exporters
+    Controller.complete = function(callback) {
+        fs.writeFileSync(LAST_IMPORT_TIMESTAMP_FILE, +new Date(), {encoding: 'utf8'});
+        fs.remove(DIRTY_FILE, function(err) {
+            Controller.state({
+                now: 'idle',
+                event: 'importer.complete'
+            });
+            if (typeof callback === 'function') {
+                callback();
+            }
+            if (Controller._exporter) {
+                Controller._exporter.teardown(noop);
+            }
+        });
     };
 
     Controller.start = function(config, callback) {
@@ -175,14 +187,7 @@ var fs = require('fs-extra'),
         });
 
         Controller._importer.once('importer.complete', function() {
-            fs.writeFileSync(LAST_IMPORT_TIMESTAMP_FILE, +new Date(), {encoding: 'utf8'});
-            Controller.state({
-                now: 'idle',
-                event: 'importer.complete'
-            });
-            fs.remove(DIRTY_FILE, function(err) {
-                callback();
-            });
+            Controller.complete(callback);
         });
 
         Controller._importer.once('importer.error', function() {
