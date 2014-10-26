@@ -645,7 +645,7 @@ var async = require('async'),
 
                                         category.imported = true;
                                         imported++;
-                                        category = nodeExtend(true, {}, category, categoryReturn);
+                                        category = nodeExtend(true, {}, category, categoryReturn, fields);
                                         categories[_cid] = category;
 
                                         Data.setCategoryImported(_cid, categoryReturn.cid, category, done);
@@ -666,7 +666,7 @@ var async = require('async'),
                             Categories.create(categoryData, onCreate);
                         });
                     };
-                    async.eachLimit(categoriesArr, IMPORT_BATCH_SIZE, onEach, nextExportBatch);
+                    async.eachLimit(categoriesArr, 1, onEach, nextExportBatch);
                 },
                 {
                     // options
