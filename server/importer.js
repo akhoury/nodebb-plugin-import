@@ -622,8 +622,7 @@ var async = require('async'),
                                     return done();
                                 }
 
-                                var parentCid = category._parent || category._parentCid || undefined;
-                                var onParentCid = function(err, _parentCategory) {
+                                var onParentCid = function(err, parentCategory) {
 
                                     var fields = {
                                         _imported_cid: _cid,
@@ -633,8 +632,8 @@ var async = require('async'),
                                         _imported_link: category._link || ''
                                     };
 
-                                    if (!err && _parentCategory) {
-                                        fields.parentCid = parentCid;
+                                    if (!err && parentCategory) {
+                                        fields.parentCid = parentCategory.cid;
                                     }
 
                                     var onFields = function(err) {
@@ -656,8 +655,9 @@ var async = require('async'),
 
                                 };
 
-                                if (parentCid) {
-                                    Data.getImportedCategory(parentCid, onParentCid);
+                                var _parentCid = category._parent || category._parentCid || undefined;
+                                if (_parentCid) {
+                                    Data.getImportedCategory(_parentCid, onParentCid);
                                 } else {
                                     onParentCid();
                                 }
