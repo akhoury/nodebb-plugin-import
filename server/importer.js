@@ -765,10 +765,6 @@ var async = require('async'),
                                                 timestamp: timestamp,
                                                 lastposttime: timestamp,
 
-                                                // todo: not sure if I need these two
-                                                teaser_timestamp: relativeTime,
-                                                relativeTime: relativeTime,
-
                                                 _imported_tid: _tid,
                                                 _imported_uid: topic._uid || '',
                                                 _imported_cid: topic._cid,
