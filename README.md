@@ -28,17 +28,6 @@ then run nodebb
 ```
 __DISABLE ALL OTHER PLUGINS__ especially any DB indexer and Markdown
 
-<<<<<<< HEAD
-### Currently supports NodeBB 0.4.x as if this commit [206acab1bfab4be0f9073f7f885b773c5942ead2](https://github.com/NodeBB/NodeBB/commit/206acab1bfab4be0f9073f7f885b773c5942ead2)
-
-### will release a compatible version with 0.5.0 as soon as it's released
-```
-# so
-git clone https://github.com/designcreateplay/NodeBB.git
-git checkout 206acab1bfab4be0f9073f7f885b773c5942ead2
-
-# If you want a higher revision, import to this one then just checkout master (or another stable higher 0.x.x+ release)
-=======
 Activate it, then visit
 [http://localhost:4567/admin/plugins/import](http://localhost:4567/admin/plugins/import)
 (or whatever URL your instance lives on)
@@ -46,21 +35,17 @@ Activate it, then visit
 ### Source forums support:
 
 Keep in mind that some Exporters may not be compatible or updated will all versions. File an issue when it's not.
->>>>>>> upstream/master
 
 * [Works](https://github.com/akhoury/nodebb-plugin-import/issues?q=label%3AExporter+is%3Aclosed)
 * [In Progress, Needs testing or blocked (I need db dumps)](https://github.com/akhoury/nodebb-plugin-import/labels/Exporter)
 
 
-<<<<<<< HEAD
-=======
 
 ### Can't find the exporter you need?
 File an issue, request it. We usually would want a DB Dump and some time to write one out.
 
 Or even better, write your own, see [write-my-own-exporter](./write-my-own-exporter.md)
 
->>>>>>> upstream/master
 ### Future versions support
 I will try to keep supporting future NodeBB versions, since it's still very young and I'm a fan,
 but you need to submit an issue with all the details (NodeBB version, issue etc..), and I will help as fast as I can, or a pull request if you find an issue or a missing feature
