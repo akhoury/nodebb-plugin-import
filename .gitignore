@@ -14,4 +14,9 @@ results
 npm-debug.log
 node_modules
 .idea
-storage/*
+.tmp
+config.json
+server/tmp/*
+server/logs/*.log
+public/tmp/*.csv
+public/tmp/*.json

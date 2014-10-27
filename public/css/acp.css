@@ -1,0 +1,77 @@
+.import-overflow-hidden {
+    overflow: hidden;
+}
+.import-hand {
+    cursor: hand;
+    cursor: pointer;
+}
+.import-hand[data-target=".import-config"],
+.import-hand[data-target=".import-tools"] {
+    font-size: 20px;
+}
+.import-hand[data-target=".import-config"]:hover,
+.import-hand[data-target=".import-tools"]:hover {
+    color: rgb(107, 107, 107);
+}
+.import-config,
+.import-config-wrapper {
+    background: #E2E4F6;
+}
+
+.import-tools,
+.import-tools-wrapper {
+    background: #DCF7C8;
+}
+.import-config-wrapper,
+.import-tools-wrapper {
+    border: 1px solid gray;
+    padding: 5px;
+}
+.import-config,
+.import-tools {
+    max-height: 600px;
+    overflow: auto;
+}
+.import-logs {
+    width: 100%;
+    padding: 5px;
+    background: #f2ffbe;
+    min-width: 750px;
+    height: 500px;
+    border: 1px dashed black;
+    overflow: auto;
+}
+.import-logs-line {
+    font-size: 12px;
+    padding: 1px;
+    margin: 0;
+}
+.import-toolbar {
+    margin: 10px 0;
+}
+.import-wrapper code {
+    color: white;
+    background: gray;
+    border: 1px solid white;
+}
+.import-download-btn {
+    margin-left: 5px;
+}
+.import-log-success {
+    color: #00910b;
+}
+.import-log-info {
+    color: #000091;
+}
+.import-log-warn {
+    color: #977000;
+}
+.import-log-error {
+    color: #970002;
+}
+#content-convert-parse-before,
+#content-convert-parse-after {
+    width: 100%;
+    color: white;
+    background-color: black;
+}

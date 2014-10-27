@@ -1,43 +1,48 @@
 
 {
-	"name": "nodebb-plugin-import",
-	"version": "0.1.63",
-	"description": "Import your structured set of forum data to nodebb",
-	"main": "./lib/import.js",
-	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/akhoury/nodebb-plugin-import"
-	},
-	"keywords": [
-		"nodebb",
-		"plugin",
-		"migrate",
-		"convert",
-		"import"
-	],
-	"author": {
-		"name": "akhoury",
-		"email": "bentael@gmail.com"
-	},
-	"license": "MIT",
-	"bugs": {
-		"url": "https://github.com/akhoury/nodebb-plugin-import/issues"
-	},
-	"dependencies": {
-		"underscore": "~1.5.2",
-		"jquery": "~2.1.0",
-		"jsdom": "~0.8.11",
-		"fs-extra": "~0.8.1",
-		"async": "~0.2.9",
-		"optimist": "~0.6.0",
-		"exec-sync": "~0.1.6",
-		"marked": "~0.1.6",
-		"tiny-logger": "~0.0.x",
-		"html-md-optional_window": "git://github.com/akhoury/html-md-optional_window.git#master",
-		"node-persist": "git://github.com/akhoury/node-persist.git#master",
-        "bbcode-to-markdown": "0.0.1"
-	}
+    "name": "nodebb-plugin-import",
+    "version": "0.2.10",
+    "description": "Import your forum data to nodebb",
+    "main": "./server/importer.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/akhoury/nodebb-plugin-import"
+    },
+    "keywords": [
+        "nodebb",
+        "plugin",
+        "migrate",
+        "convert",
+        "import",
+        "ubb",
+        "phpbb",
+        "vb",
+        "vbulletin",
+        "ipb",
+        "ipboard",
+        "smf"
+    ],
+    "author": {
+        "name": "akhoury",
+        "email": "bentael@gmail.com"
+    },
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/akhoury/nodebb-plugin-import/issues"
+    },
+    "dependencies": {
+        "fs-extra": "~0.11.0",
+        "async": "~0.9.0",
+        "node.extend": "~1.0.10",
+        "eventemitter2": "~0.4.14",
+        "npm": "^1.4.6",
+        "underscore": "~1.5.2",
+        "jsdom-nogyp": "~0.8.3",
+        "html-md-optional_window": "~3.0.2",
+        "bbcode-to-markdown": "~0.0.8",
+        "html-entities": "1.0.10"
+    }
 }
