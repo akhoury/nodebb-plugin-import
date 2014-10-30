@@ -8,7 +8,7 @@
 		{"hook": "filter:admin.header.build", "method": "hooks.filters.menu"},
 		{"hook": "static:app.load", "method": "hooks.statics.load"}
 	],
-	"compatibility": "0.5.x",
+	"compatibility": "0.5.2",
     "faIcon": "fa-magic",
     "staticDirs": {
         "js": "public/js",
