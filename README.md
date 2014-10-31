@@ -3,12 +3,7 @@ nodebb-plugin-import
 Import your old forum data to nodebb | a one time use plugin
 
 ### Works with NodeBB v0.5.2
-```
-# If you want a higher revision, import to this one then just checkout master (or another stable higher 0.x.x+ release)
-# and use the lovely ./nodebb upgrade
-./nodebb upgrade
-
-```
+If you want a higher revision, import to the supported one, then just follow the upgrade procedure here https://docs.nodebb.org/en/latest/upgrading/index.html
 
 ## Screenshots
 
@@ -82,7 +77,7 @@ aof-rewrite-incremental-fsync yes
 
 ### Mongo Note
 
-see [Redis Note](https://github.com/akhoury/nodebb-plugin-import#redis-note), and try to mimic that in Mongo settings, I am not familiar with Mongo, so I wouldn't take my word for it.
+You should not need to do the same thing for redis, since Mongo immediately persists to disk.
 
 ### Markdown Note
 
