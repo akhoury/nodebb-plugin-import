@@ -193,10 +193,10 @@ var db = module.parent.require('../../../src/database.js'),
     Data.getImported = function(setKey, objPrefix, _id, callback) {
         Data.isImported(setKey, _id, function(err, result) {
             if (err || !result) {
-                return callback(null, null);
+                return callback(null, undefined);
             }
             db.getObject(objPrefix + _id, function(err, obj) {
-                if (err) {
+                if (err || !obj) {
                     return callback(null, null);
                 }
                 callback(null, obj);
@@ -224,6 +224,7 @@ var db = module.parent.require('../../../src/database.js'),
     Data.setImported = function(setKey, objPrefix, _id, id, data, callback) {
         delete data._typeCast;
         delete data.parse;
+        delete data._key; // for mongo
         return db.setObject(objPrefix + _id, data, function(err) {
             if (err) {
                 return callback(err);

@@ -413,7 +413,7 @@ var async = require('async'),
                             var _uid = user._uid;
                             recoverImporterUser(_uid, function(err, _user) {
                                 if (_user) {
-                                    Importer.warn('[count:' + count + '] skipping user: ' + user._username + ':' + user._uid + ', already imported');
+                                    // Importer.warn('[count:' + count + '] skipping user: ' + user._username + ':' + user._uid + ', already imported');
                                     Importer.progress(count, total);
                                     return done();
                                 }
@@ -591,7 +591,7 @@ var async = require('async'),
 
                         recoverImportedCategory(_cid, function(err, _category) {
                             if (_category) {
-                                Importer.warn('skipping category:_cid: ' + _cid + ', already imported');
+                                // Importer.warn('skipping category:_cid: ' + _cid + ', already imported');
                                 Importer.progress(count, total);
                                 return done();
                             }
@@ -704,7 +704,7 @@ var async = require('async'),
                         var _tid = topic._tid;
                         recoverImportedTopic(_tid, function(err, _topic) {
                             if (_topic) {
-                                Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ', already imported');
+                                // Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ', already imported');
                                 Importer.progress(count, total);
                                 return done();
                             }
@@ -860,7 +860,7 @@ var async = require('async'),
 
                         recoverImportedPost(_pid, function(err, _post) {
                             if (_post) {
-                                Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ', already imported');
+                                // Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ', already imported');
                                 Importer.progress(count, total);
                                 return done();
                             }
@@ -887,7 +887,7 @@ var async = require('async'),
                                 var user = results[1] || {};
 
                                 if (!topic) {
-                                    Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ' imported: ' + !!topic);
+                                    Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ' imported: ' + topic);
                                     done();
                                 } else {
 
