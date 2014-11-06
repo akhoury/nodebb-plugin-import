@@ -752,7 +752,7 @@ var async = require('async'),
                                             var relativeTime = new Date(timestamp).toISOString();
 
                                             var topicFields = {
-                                                viewcount: topic._viewcount || 0,
+                                                viewcount: topic._viewcount || topic._viewscount || 0,
 
                                                 // assume that this topic not locked for now, but will iterate back again at the end and lock it back after finishing the importPosts()
                                                 // locked: normalizedTopic._locked ? 1 : 0,
