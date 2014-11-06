@@ -1,7 +1,15 @@
 
-var db = module.parent.require('../../../src/database.js'),
-    async = require('async'),
+var nconf = require('nconf'),
+    primaryDBName = nconf.get('database');
 
+var db;
+if (primaryDBName) {
+    db = module.parent.require('../../../src/database.js');
+} else {
+    db = require('./db');
+}
+
+var async = require('async'),
     utils = require('../public/js/utils.js'),
     Meta = require('../../../src/meta.js'),
     User = require('../../../src/user.js'),
@@ -13,6 +21,14 @@ var db = module.parent.require('../../../src/database.js'),
 
 
 (function(Data) {
+
+    Data.init = function(callback) {
+        if (primaryDBName) {
+            callback();
+        } else {
+            db.init(callback);
+        }
+    };
 
     Data.count = function(setKey, callback) {
         db.sortedSetCard(setKey, callback);

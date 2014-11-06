@@ -62,21 +62,21 @@ var
 
                     require('./routes').setup(app, middleware, controllers, Plugin);
 
-					fs.ensureDir(path.join(__dirname, '/tmp'), function(err) {
-						Plugin.controller = require('./controller');
-						var handler = function(a, b, c) {
-							sockets.server.sockets.emit.apply(sockets.server.sockets, arguments);
-						};
-						Plugin.controller.on('controller.*', handler);
-						Plugin.controller.on('importer.*', handler);
-						Plugin.controller.on('exporter.*', handler);
-						Plugin.controller.on('convert.*', handler);
-						Plugin.controller.on('redirectionTemplates.*', handler);
+                    fs.ensureDir(path.join(__dirname, '/tmp'), function(err) {
+                        Plugin.controller = require('./controller');
+                        var handler = function(a, b, c) {
+                            sockets.server.sockets.emit.apply(sockets.server.sockets, arguments);
+                        };
+                        Plugin.controller.on('controller.*', handler);
+                        Plugin.controller.on('importer.*', handler);
+                        Plugin.controller.on('exporter.*', handler);
+                        Plugin.controller.on('convert.*', handler);
+                        Plugin.controller.on('redirectionTemplates.*', handler);
 
-						if (typeof callback === 'function') {
-							callback.apply(this, arguments);
-						}
-					});
+                        if (typeof callback === 'function') {
+                            callback.apply(this, arguments);
+                        }
+                    });
                 });
             }
         },

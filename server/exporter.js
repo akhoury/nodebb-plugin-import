@@ -5,8 +5,8 @@ var async = require('async'),
     COUNT_BATCH_SIZE = 25000,
     DEFAULT_EXPORT_BATCH_SIZE = 25000,
 
-    // http://dev.mysql.com/doc/refman/5.5/en/select.html
-    // mysql is terrible
+// http://dev.mysql.com/doc/refman/5.5/en/select.html
+// mysql is terrible
     MAX_MYSQL_INT = 18446744073709551615,
 
     noop = function() {},
@@ -61,7 +61,7 @@ var async = require('async'),
                 var opt = {force: true};
                 if (config.exporter.skipInstall) {
                     opt.skipInstall = true;
-					opt.force = false;
+                    opt.force = false;
                 }
                 Exporter.install(config.exporter.module, opt, next);
             },
@@ -103,15 +103,15 @@ var async = require('async'),
         }
         var count = 0;
         Exporter.exportUsers(function(err, map, arr, nextBatch) {
-            count += arr.length;
-            nextBatch();
-        },
-        {
-            batch: COUNT_BATCH_SIZE
-        },
-        function(err) {
-            cb(err, count);
-        });
+                count += arr.length;
+                nextBatch();
+            },
+            {
+                batch: COUNT_BATCH_SIZE
+            },
+            function(err) {
+                cb(err, count);
+            });
     };
     Exporter.countCategories = function(cb) {
         if (Exporter._exporter.countCategories) {
@@ -119,15 +119,15 @@ var async = require('async'),
         }
         var count = 0;
         Exporter.exportCategories(function(err, map, arr, nextBatch) {
-            count += arr.length;
-            nextBatch();
-        },
-        {
-            batch: COUNT_BATCH_SIZE
-        },
-        function(err) {
-            cb(err, count);
-        });
+                count += arr.length;
+                nextBatch();
+            },
+            {
+                batch: COUNT_BATCH_SIZE
+            },
+            function(err) {
+                cb(err, count);
+            });
     };
     Exporter.countTopics = function(cb) {
         if (Exporter._exporter.countTopics) {
@@ -318,8 +318,8 @@ var async = require('async'),
 
                     if (! Exporter.supportsPagination(exporter)) {
                         Exporter.emit('exporter.warn', {warn: module + ' does not support Pagination, '
-                            + 'it will work, but if you run into memory issues, you might want to contact the developer of it or add support your self. '
-                            + 'See https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md'
+                        + 'it will work, but if you run into memory issues, you might want to contact the developer of it or add support your self. '
+                        + 'See https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md'
                         });
                     }
 
@@ -339,13 +339,13 @@ var async = require('async'),
         return exporter
             && _.isFunction(exporter.setup)
             && (
-                Exporter.supportsPagination(exporter) ||
-                (
-                    _.isFunction(exporter.getUsers)
-                    && _.isFunction(exporter.getCategories)
-                    && _.isFunction(exporter.getTopics)
-                    && _.isFunction(exporter.getPosts)
-                )
+            Exporter.supportsPagination(exporter) ||
+            (
+            _.isFunction(exporter.getUsers)
+            && _.isFunction(exporter.getCategories)
+            && _.isFunction(exporter.getTopics)
+            && _.isFunction(exporter.getPosts)
+            )
             )
             && _.isFunction(exporter.teardown)
     };

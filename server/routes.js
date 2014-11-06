@@ -1,10 +1,10 @@
 module.exports =  {
-	setup: function(app, middleware, controllers, Plugin) {
-		var prefix = '/admin/plugins/' + Plugin.json.nbbId,
-			apiPrefix = '/api' + prefix;
+    setup: function(app, middleware, controllers, Plugin) {
+        var prefix = '/admin/plugins/' + Plugin.json.nbbId,
+            apiPrefix = '/api' + prefix;
 
-		app.get(prefix, middleware.applyCSRF, middleware.admin.buildHeader, Plugin.render);
-		app.get(apiPrefix, middleware.applyCSRF, Plugin.render);
+        app.get(prefix, middleware.applyCSRF, middleware.admin.buildHeader, Plugin.render);
+        app.get(apiPrefix, middleware.applyCSRF, Plugin.render);
 
         app.get(apiPrefix + '/state', Plugin.api.get.state);
 

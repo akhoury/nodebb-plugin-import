@@ -1,7 +1,6 @@
-
 {
     "name": "nodebb-plugin-import",
-    "version": "0.2.11",
+    "version": "0.2.13",
     "description": "Import your forum data to nodebb",
     "main": "./server/importer.js",
     "scripts": {
@@ -21,6 +20,7 @@
         "phpbb",
         "vb",
         "vbulletin",
+        "network54",
         "ipb",
         "ipboard",
         "smf"

@@ -82,10 +82,10 @@ var fs = require('fs-extra'),
         Controller.config(config);
         config = Controller.config();
 
-		var state = Controller.state();
-		if (state.now !== 'idle' && state.now !== 'errored') {
-			return Controller.emit('importer.warn', {message: 'Busy, cannot import now', state: state});
-		}
+        var state = Controller.state();
+        if (state.now !== 'idle' && state.now !== 'errored') {
+            return Controller.emit('importer.warn', {message: 'Busy, cannot import now', state: state});
+        }
 
         var start = function() {
             Controller.requireExporter(config, function(err, exporter) {
@@ -110,10 +110,10 @@ var fs = require('fs-extra'),
         Controller.config(config);
         config = Controller.config();
 
-		var state = Controller.state();
-		if (state.now !== 'idle' && state.now !== 'errored') {
-			return Controller.emit('importer.warn', {message: 'Busy, cannot import now', state: state});
-		}
+        var state = Controller.state();
+        if (state.now !== 'idle' && state.now !== 'errored') {
+            return Controller.emit('importer.warn', {message: 'Busy, cannot import now', state: state});
+        }
 
         var resume = function() {
             Controller.requireExporter(config, function(err, exporter) {
@@ -155,10 +155,10 @@ var fs = require('fs-extra'),
             callback(null, exporter);
         });
 
-		Controller.state({
-			now: 'busy',
-			event: 'exporter.require'
-		});
+        Controller.state({
+            now: 'busy',
+            event: 'exporter.require'
+        });
 
         exporter.init(Controller.config());
 
@@ -480,14 +480,14 @@ var fs = require('fs-extra'),
                 Data.eachUser(function (user) {
                     if (user && user._imported_uid) {
                         content += '{'
-                            + '"index":' + index + ','
-                            + '"email":"' + user.email + '",'
-                            + '"username":"' + user.username + '",'
-                            + '"pwd":' + (user._imported_pwd ? '"' + user._imported_pwd + '"' : null) + ','
-                            + '"_uid":' + user._imported_uid + ','
-                            + '"uid":' + user.uid + ','
-                            + '"joindate":' + user.joindate
-                            + '},\n';
+                        + '"index":' + index + ','
+                        + '"email":"' + user.email + '",'
+                        + '"username":"' + user.username + '",'
+                        + '"pwd":' + (user._imported_pwd ? '"' + user._imported_pwd + '"' : null) + ','
+                        + '"_uid":' + user._imported_uid + ','
+                        + '"uid":' + user.uid + ','
+                        + '"joindate":' + user.joindate
+                        + '},\n';
                     }
                     Controller.progress(index++, total);
                 }, function(err) {
@@ -569,10 +569,11 @@ var fs = require('fs-extra'),
                             var index = 0;
                             Data.eachUser(function(user) {
                                 if (user && user._imported_uid) {
-                                    // map some aliases
+                                    // aliases
                                     user._uid = user._imported_uid;
                                     user._username = user._imported_username;
                                     user._slug = user._imported_slug;
+                                    user._path = user._imported_path;
                                     user._userslug = user._imported_slug;
 
                                     var oldPath = Controller.redirectTemplates.users.oldPath(user);
@@ -599,11 +600,13 @@ var fs = require('fs-extra'),
                             Data.eachCategory(
                                 function (category) {
                                     if (category && category._imported_cid) {
-                                        // map some aliases
+
+                                        // aliases
                                         category._cid = category._imported_cid;
                                         category._slug = category._imported_slug;
                                         category._name = category._imported_name;
-                                        category._link = category._imported_link;
+                                        category._path = category._imported_path;
+                                        category._description = category._imported_description;
 
                                         var oldPath = Controller.redirectTemplates.categories.oldPath(category);
                                         var newPath = Controller.redirectTemplates.categories.newPath(category);
@@ -633,11 +636,20 @@ var fs = require('fs-extra'),
                                     _mainPids[topic.mainPid] = 1;
 
                                     if (topic && topic._imported_tid) {
-                                        // map some aliases
+                                        // aliases
                                         topic._uid = topic._imported_uid;
                                         topic._tid = topic._imported_tid;
                                         topic._cid = topic._imported_cid;
                                         topic._slug = topic._imported_slug;
+                                        topic._path = topic._imported_path;
+                                        topic._title = topic._imported_title;
+                                        topic._content = topic._imported_content;
+                                        topic._guest = topic._imported_guest;
+                                        topic._ip = topic._imported_ip;
+                                        topic._user_slug = topic._imported_user_slug;
+                                        topic._user_path = topic._imported_user_path;
+                                        topic._category_path = topic._imported_category_path;
+                                        topic._category_slug = topic._imported_category_slug;
 
                                         var oldPath = Controller.redirectTemplates.topics.oldPath(topic);
                                         var newPath = Controller.redirectTemplates.topics.newPath(topic);
@@ -664,10 +676,22 @@ var fs = require('fs-extra'),
                             Data.eachPost(
                                 function(post) {
                                     if (post && post._imported_pid && !_mainPids[post.pid] ) {
-                                        // map some aliases
+                                        // aliases
                                         post._pid = post._imported_pid;
                                         post._uid = post._imported_uid;
                                         post._tid = post._imported_tid;
+                                        post._toPid = post._imported_toPid;
+                                        post._content = post._imported_content;
+                                        post._cid = post._imported_cid;
+                                        post._ip = post._imported_ip;
+                                        post._guest = post._imported_guest;
+                                        post._path = post._imported_path;
+                                        post._user_slug = post._imported_user_slug;
+                                        post._user_path = post._imported_user_path;
+                                        post._topic_path = post._imported_topic_path;
+                                        post._topic_slug = post._imported_topic_slug;
+                                        post._category_path = post._imported_category_path;
+                                        post._category_slug = post._imported_category_slug;
 
                                         var oldPath = Controller.redirectTemplates.posts.oldPath(post);
                                         var newPath = Controller.redirectTemplates.posts.newPath(post);
@@ -768,6 +792,9 @@ var fs = require('fs-extra'),
                                             db.deleteObjectField('user:' + user.uid, '_imported_slug', cb);
                                         },
                                         function(cb) {
+                                            db.deleteObjectField('user:' + user.uid, '_imported_path', cb);
+                                        },
+                                        function(cb) {
                                             db.deleteObjectField('user:' + user.uid, '_imported_signature', cb);
                                         }
                                     ], nxt);
@@ -809,7 +836,7 @@ var fs = require('fs-extra'),
                                             db.deleteObjectField('category:' + category.cid, '_imported_slug', cb);
                                         },
                                         function(cb) {
-                                            db.deleteObjectField('category:' + category.cid, '_imported_link', cb);
+                                            db.deleteObjectField('category:' + category.cid, '_imported_path', cb);
                                         }
                                     ], nxt);
                                 } else {
@@ -855,6 +882,24 @@ var fs = require('fs-extra'),
                                         },
                                         function(cb) {
                                             db.deleteObjectField('topic:' + topic.tid, '_imported_content', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_ip', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_guest', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_user_slug', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_user_path', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_category_path', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('topic:' + topic.tid, '_imported_category_slug', cb);
                                         }
                                     ], nxt);
                                 } else {
@@ -890,6 +935,39 @@ var fs = require('fs-extra'),
                                         },
                                         function(cb) {
                                             db.deleteObjectField('post:' + post.pid, '_imported_uid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_content', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_cid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_ip', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_guest', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_toPid', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_user_slug', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_user_path', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_topic_slug', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_category_path', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_category_slug', cb);
+                                        },
+                                        function(cb) {
+                                            db.deleteObjectField('post:' + post.pid, '_imported_path', cb);
                                         },
                                         function(cb) {
                                             db.deleteObjectField('post:' + post.pid, '_imported_content', cb);
@@ -1062,8 +1140,8 @@ var fs = require('fs-extra'),
                                                 if (rconf.topicsTitle && topic._imported_title) {
                                                     var convertedTitle = Controller.convert(topic._imported_title);
                                                     db.setObjectField('topic:' + topic.tid, 'title', convertedTitle, function(err) {
-                                                    	if (err) return cb(err);
-                                                    	db.setObjectField('topic:' + topic.tid, 'slug', topic.tid + '/' + utils.slugify(convertedTitle), cb);
+                                                        if (err) return cb(err);
+                                                        db.setObjectField('topic:' + topic.tid, 'slug', topic.tid + '/' + utils.slugify(convertedTitle), cb);
                                                     });
                                                 } else {
                                                     cb();
