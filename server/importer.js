@@ -201,7 +201,9 @@ var async = require('async'),
 
         series.push(Importer.relockUnlockedTopics);
         series.push(Importer.fixTopicTimestamps);
+        series.push(Importer.fixPostsToPids);
         series.push(Importer.restoreConfig);
+        series.push(Importer.disallowGuestsOnAllCategories);
         series.push(Importer.teardown);
 
         async.series(series, callback);
