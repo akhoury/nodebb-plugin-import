@@ -9,6 +9,7 @@ var async = require('async'),
     Data = require('./data.js'),
 
     Groups = require('../../../src/groups.js'),
+    privileges = require('../../../src/privileges.js'),
     Meta = require('../../../src/meta.js'),
     User = require('../../../src/user.js'),
     Topics = require('../../../src/topics.js'),
@@ -156,16 +157,16 @@ var async = require('async'),
             Importer.flushData,
             Importer.backupConfig,
             Importer.setTmpConfig,
-            Importer.importUsers,
             Importer.importCategories,
-            //Importer.allowGuestsOnAllCategories,
+            Importer.allowGuestsOnAllCategories,
+            Importer.importUsers,
             Importer.importTopics,
             Importer.importPosts,
             Importer.fixPostsToPids,
             Importer.relockUnlockedTopics,
             Importer.fixTopicTimestamps,
             Importer.restoreConfig,
-            //Importer.disallowGuestsOnAllCategories,
+            Importer.disallowGuestsOnAllCategories,
             Importer.teardown
         ], callback);
     };
@@ -692,6 +693,18 @@ var async = require('async'),
     Importer.allowGuestsOnAllCategories = function(done) {
         Data.eachCategory(function(category, next) {
                 async.parallel([
+                    function(nxt) {
+                        Groups.join('cid:' + category.cid + ':privileges:groups:topics:create', 'registered-users', nxt);
+                    },
+                    function(nxt) {
+                        Groups.join('cid:' + category.cid + ':privileges:groups:topics:reply', 'registered-users', nxt);
+                    },
+                    function(nxt) {
+                        Groups.join('cid:' + category.cid + ':privileges:groups:find', 'registered-users', nxt);
+                    },
+                    function(nxt) {
+                        Groups.join('cid:' + category.cid + ':privileges:groups:read', 'registered-users', nxt);
+                    },
                     function(nxt) {
                         Groups.join('cid:' + category.cid + ':privileges:groups:topics:create', 'guests', nxt);
                     },

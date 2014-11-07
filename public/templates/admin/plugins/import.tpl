@@ -456,12 +456,18 @@
             </p>
         </div>
     </div>
+
 </div>
 </form>
 
 <input id="csrf_token" type="hidden" value="{csrf}" data-generatedby="nodebb-plugin-import" />
 
 <div class="import-state-container">
+    <p class="help-block">
+        <strong>NOTE:</strong> If for some reason the process gets interrupted or crashes, i.e. Segmentation Fault, just restart NodeBB,
+        wait till it's ready, refresh this page, Open the Pre-Import settings, scroll down to find a button to resume.
+        In <i>most</i> cases you should be able to resume where you left off.
+     </p>
     <h4>
         State:
         <span class="controller-state-now">Idle</span><i class="fa controller-state-icon"></i>,
