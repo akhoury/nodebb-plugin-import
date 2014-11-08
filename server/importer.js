@@ -4,6 +4,7 @@ var async = require('async'),
     nodeExtend = require('node.extend'),
     fs = require('fs-extra'),
     path = require('path'),
+    nconf = require('nconf'),
 
     utils = require('../public/js/utils.js'),
     Data = require('./data.js'),
@@ -12,6 +13,7 @@ var async = require('async'),
     privileges = require('../../../src/privileges.js'),
     Meta = require('../../../src/meta.js'),
     User = require('../../../src/user.js'),
+    File = require('../../../src/file.js'),
     Topics = require('../../../src/topics.js'),
     Posts = require('../../../src/posts.js'),
     Categories = require('../../../src/categories.js'),
@@ -178,15 +180,16 @@ var async = require('async'),
         Importer.isDirty();
 
         var series = [];
+        if (! alreadyImportedAllCategories) {
+            series.push(Importer.importCategories);
+            series.push(Importer.allowGuestsOnAllCategories);
+        } else {
+            Importer.warn('alreadyImportedAllCategories=true, skipping importCategories Phase');
+        }
         if (! alreadyImportedAllUsers) {
             series.push(Importer.importUsers);
         } else {
             Importer.warn('alreadyImportedAllUsers=true, skipping importUsers Phase');
-        }
-        if (! alreadyImportedAllCategories) {
-            series.push(Importer.importCategories);
-        } else {
-            Importer.warn('alreadyImportedAllCategories=true, skipping importCategories Phase');
         }
         if (! alreadyImportedAllTopics) {
             series.push(Importer.importTopics);
@@ -395,12 +398,21 @@ var async = require('async'),
         return callback(null, null);
     };
 
+    var writeBlob = function(filepath, blob, callback) {
+        fs.writeFile(filepath, new Buffer(blob, 'binary').toString('binary'), 'binary', function (err) {
+            callback();
+        });
+    };
+
     Importer.importUsers = function(next) {
         Importer._lastPercentage = 0;
         Importer.phase('usersImportStart');
         Importer.progress(0, 1);
         var count = 0,
             imported = 0,
+            picturesTmpPath = path.join(__dirname, '/tmp/pictures'),
+            folder = '_imported_profiles',
+            picturesPublicPath = path.join(nconf.get('base_dir'), nconf.get('upload_path'), '_imported_profiles'),
             config = Importer.config(),
             oldOwnerNotFound = config.adminTakeOwnership.enable,
             startTime = +new Date(),
@@ -411,6 +423,8 @@ var async = require('async'),
                 function() { /* undefined, no password */ };
 
         fs.writeFileSync(DIRTY_USERS_FILE, +new Date(), {encoding: 'utf8'});
+        fs.ensureDirSync(picturesTmpPath);
+        fs.ensureDirSync(picturesPublicPath);
 
         Importer.exporter.countUsers(function(err, total) {
             Importer.success('Importing ' + total + ' users.');
@@ -468,12 +482,8 @@ var async = require('async'),
                                                 _imported_slug: user._slug || user._userslug || '',
                                                 _imported_signature: user._signature
                                             };
+
                                             var keptPicture = false;
-                                            if (user._picture) {
-                                                fields.uploadedpicture = user._picture;
-                                                fields.picture = user._picture;
-                                                keptPicture = true;
-                                            }
                                             var onUserFields = function(err, result) {
                                                 if (err) {
                                                     return done(err);
@@ -493,8 +503,38 @@ var async = require('async'),
                                                     onEmailConfirmed();
                                                 }
                                             };
-                                            User.setUserFields(uid, fields, onUserFields);
+
+                                            if (user._pictureBlob) {
+                                                var filename = user._pictureFilename ? '_' + uid + '_' + user._pictureFilename : uid + '.png';
+                                                var tmpPath = path.join(picturesTmpPath, filename);
+                                                writeBlob(tmpPath, user._pictureBlob, function(err) {
+                                                    if (err) {
+                                                        Importer.warn(tmpPath, err);
+                                                        User.setUserFields(uid, fields, onUserFields);
+                                                    } else {
+                                                        File.saveFileToLocal(filename, folder, tmpPath, function(err, ret) {
+                                                            if (!err) {
+                                                                fields.uploadedpicture = ret.url;
+                                                                fields.picture = ret.url;
+                                                                keptPicture = true;
+                                                            } else {
+                                                                Importer.warn(filename, err);
+                                                            }
+                                                            User.setUserFields(uid, fields, onUserFields);
+                                                        });
+                                                    }
+                                                });
+                                            } else {
+                                                if (user._picture) {
+                                                    fields.uploadedpicture = user._picture;
+                                                    fields.picture = user._picture;
+                                                    keptPicture = true;
+                                                }
+
+                                                User.setUserFields(uid, fields, onUserFields);
+                                            }
                                         };
+
                                         if (('' + user._level).toLowerCase() == 'moderator') {
                                             Importer.makeModeratorOnAllCategories(uid, onLevel);
                                             Importer.warn(userData.username + ' just became a moderator on all categories');
@@ -543,7 +583,9 @@ var async = require('async'),
                     }
                     Importer.success('Importing ' + imported + '/' + total + ' users took: ' + ((+new Date() - startTime) / 1000).toFixed(2) + ' seconds');
                     var nxt = function () {
-                        fs.remove(DIRTY_USERS_FILE, next);
+                        fs.remove(picturesTmpPath, function() {
+                            fs.remove(DIRTY_USERS_FILE, next);
+                        });
                     };
                     if (config.autoConfirmEmails && Importer.dbkeys) {
                         async.parallel([

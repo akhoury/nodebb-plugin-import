@@ -86,7 +86,16 @@ Each record should look like this:
 
         "_picture": "http://images.com/derp.png", // OPTIONAL, defaults to ''. Note that, if there is an '_piçture' on the 'normalized' object, the 'imported' objected will be augmented with a key imported.keptPicture = true, so you can iterate later and check if the images 200 or 404s
 
+        "_pictureBlob": "...BINARY BLOB...", // OPTIONAL, defaults to null
+        "_pictureFilename": "123.png", // OPTIONAL, only applicable if using _pictureBlob, defaults to ''
+
+        "_path": "/myoldforum/user/123", // OPTIONAL, the old path to reach this user's page, defaults to ''
+
+        "_slug": "old-user-slug", // OPTIONAL
+
         "_website": "u45.com", // OPTIONAL, defaults to ''
+
+        "_fullname": "this is dawg", // OPTIONAL, defaults to ''
 
         "_banned": 0, // OPTIONAL, defaults to 0
 
@@ -97,7 +106,10 @@ Each record should look like this:
         "_profileviews": 1, // OPTIONAL, defaults to 0
 
         "_birthday": "01/01/1977", // OPTIONAL, [FORMAT: mm/dd/yyyy], defaults to ''
+
         "_showemail": 0, // OPTIONAL, defaults to 0
+
+        "_lastposttime": 1386475817370, // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
 
         "_level": "administrator" // OPTIONAL, [OPTIONS: 'administrator' or 'moderator'], defaults to '', also note that a moderator will become a NodeBB Moderator on ALL categories at the moment.
 
@@ -124,7 +136,7 @@ Each record should look like this:
 {
         // notice how all the old variables start with an _
         // if any of the required variables fails, the category and all of its topics/posts will be skipped
-        "_cid": 1, // REQUIRED
+        "_cid": 2, // REQUIRED
 
         "_name": "Category 1", // REQUIRED
 
@@ -132,7 +144,13 @@ Each record should look like this:
 
         "_order": 1 // OPTIONAL, defauls to its index + 1
 
-        "_skip": 0, // OPTIONAL, if you want to intetionally skip that record
+        "_path": "/myoldforum/category/123", // OPTIONAL, the old path to reach this category's page, defaults to ''
+
+        "_slug": "old-category-slug", // OPTIONAL defaults to ''
+
+        "_parentCid": 1, // OPTIONAL, parent category _cid defaults to null
+
+        "_skip": 0, // OPTIONAL, if you want to intentionally skip that record
 }
 ```
 
@@ -161,7 +179,9 @@ Each record should look like this:
 
         "_tid": 1, // REQUIRED, THE OLD TOPIC ID
 
-        "_uid": 1, // OPTIONAL, THE OLD USER ID, Nodebb will create the topics for user 'guest'
+        "_uid": 1, // OPTIONAL, THE OLD USER ID, Nodebb will create the topics for user 'Guest' if not provided
+
+        "_guest": "Some dude" // OPTIONAL, if you dont have _uid, you can pass a guest name to be used in future features, defaults to null
 
         "_cid": 1, // REQUIRED, THE OLD CATEGORY ID
 
@@ -180,6 +200,10 @@ Each record should look like this:
         "_deleted": 0, // OPTIONAL, defaults to 0
 
         "_pinned": 1 // OPTIONAL, defaults to 0
+
+        "_path": "/myoldforum/topic/123", // OPTIONAL, the old path to reach this topic's page, defaults to ''
+
+        "_slug": "old-topic-slug" // OPTIONAL, defaults to ''
 }
 ```
 
@@ -207,7 +231,9 @@ Each record should look like this:
 
         "_tid": 1234, // REQUIRED, OLD TOPIC ID
 
-        "_uid": 202, // REQUIRED, OLD USER ID
+        "_uid": 202, // OPTIONAL, OLD USER ID, NodeBB will create under the "Guest" username
+
+        "_guest": "Some dude" // OPTIONAL, if you don't have _uid, you can pass a guest name to be used in future features, defaults to null
 
         "_content": "Post content ba dum tss", // REQUIRED
 
@@ -216,6 +242,10 @@ Each record should look like this:
         "_votes": 0, // OPTIONAL, defaults to 0, can be negative
 
         "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
+
+        "_path": "/myoldforum/topic/123#post56789", // OPTIONAL, the old path to reach this post's page and maybe deep link, defaults to ''
+
+        "_slug": "old-post-slug" // OPTIONAL, defaults to ''
 
 }
 ```
@@ -269,7 +299,7 @@ YourModule.testrun = function(config, callback) {
             }
         ], function(err, results) {
             if(err) throw err;
-            
+
             // or whatever else
             fs.writeFile('./tmp.json', JSON.stringify(results, undefined, 2), callback);
         });
