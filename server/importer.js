@@ -436,6 +436,7 @@ var async = require('async'),
                                 if (_user) {
                                     // Importer.warn('[count:' + count + '] skipping user: ' + user._username + ':' + user._uid + ', already imported');
                                     Importer.progress(count, total);
+                                    imported++;
                                     return done();
                                 }
                                 var u = Importer.makeValidNbbUsername(user._username || '', user._alternativeUsername || '');
@@ -461,7 +462,7 @@ var async = require('async'),
                                         var onLevel = function() {
                                             var fields = {
                                                 // preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
-                                                signature: utils.truncateStr(user._signature || '', 252),
+                                                signature: utils.truncate(user._signature || '', 252),
                                                 website: user._website || '',
                                                 banned: user._banned ? 1 : 0,
                                                 location: user._location || '',
@@ -642,7 +643,8 @@ var async = require('async'),
 
                         recoverImportedCategory(_cid, function(err, _category) {
                             if (_category) {
-                                Importer.warn('skipping category:_cid: ' + _cid + ', already imported');
+                                // Importer.warn('skipping category:_cid: ' + _cid + ', already imported');
+                                imported++;
                                 Importer.progress(count, total);
                                 return done();
                             }
@@ -815,6 +817,7 @@ var async = require('async'),
                             if (_topic) {
                                 // Importer.warn('[count:' + count + '] skipping topic:_tid: ' + _tid + ', already imported');
                                 Importer.progress(count, total);
+                                imported++;
                                 return done();
                             }
 
@@ -924,10 +927,14 @@ var async = require('async'),
                                             }
                                         }
                                     };
+
+                                    topic._content = (topic._content || '').trim() ? topic._content : '[[blank-post-content-placeholder]]';
+                                    topic._title = utils.slugify(topic._title) ? topic._title[0].toUpperCase() + topic._title.substr(1) : utils.truncate(topic._content, 100);
+
                                     Topics.post({
                                         uid: !config.adminTakeOwnership.enable ? user.uid : parseInt(config.adminTakeOwnership._uid, 10) === parseInt(topic._uid, 10) ? LOGGEDIN_UID : user.uid,
-                                        title: topic._title || '',
-                                        content: topic._content || '',
+                                        title: topic._title,
+                                        content: topic._content,
                                         cid: category.cid,
                                         thumb: topic._thumb
                                     }, onPost);
@@ -978,6 +985,7 @@ var async = require('async'),
                             if (_post) {
                                 // Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ', already imported');
                                 Importer.progress(count, total);
+                                imported++;
                                 return done();
                             }
 
@@ -1056,10 +1064,11 @@ var async = require('async'),
                                         }
                                     };
 
+                                    post._content = (post._content || '').trim() ? post._content : '[[blank-post-content-placeholder]]';
                                     Posts.create({
                                         uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
                                         tid: topic.tid,
-                                        content: post._content || '',
+                                        content: post._content,
                                         timestamp: post._timestamp || startTime
                                     }, onCreate);
                                 }

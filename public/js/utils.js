@@ -184,11 +184,12 @@
         return fn;
     };
 
-    utils.truncateStr = utils.truncateStr || function(str, len) {
+    utils.truncate = utils.truncate || function(str, len) {
         if (typeof str != 'string') return str;
         len = utils.isNumber(len) && len > 3 ? len : 20;
         return str.length <= len ? str : str.substr(0, len - 3) + '...';
     };
+    utils.truncateStr = utils.truncateStr || utils.truncate;
 
     utils.isNumber = utils.isNumber || function(n) {
         return !isNaN(parseFloat(n)) && isFinite(n);
