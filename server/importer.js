@@ -872,7 +872,7 @@ var async = require('async'),
 
                                                 deleted: topic._deleted ? 1 : 0,
 
-                                                // if pinned, we should set the db.sortedSetAdd('categories:' + cid + ':tid', Math.pow(2, 53), tid);
+                                                // if pinned, we should set the db.sortedSetAdd('cid:' + cid + ':tids', Math.pow(2, 53), tid);
                                                 pinned: topic._pinned ? 1 : 0,
                                                 timestamp: timestamp,
                                                 lastposttime: timestamp,
@@ -921,9 +921,9 @@ var async = require('async'),
 
                                             // pinned = 1 not enough to float the topic to the top in it's category
                                             if (topicFields.pinned) {
-                                                db.sortedSetAdd('categories:' + category.cid + ':tid', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
+                                                db.sortedSetAdd('cid:' + category.cid + ':tids', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
                                             }  else {
-                                                db.sortedSetAdd('categories:' + category.cid + ':tid', timestamp, returnTopic.topicData.tid, onPinned);
+                                                db.sortedSetAdd('cid:' + category.cid + ':tids', timestamp, returnTopic.topicData.tid, onPinned);
                                             }
                                         }
                                     };
@@ -1163,7 +1163,7 @@ var async = require('async'),
                                 return done(err);
                             }
 
-                            db.sortedSetAdd('categories:' + results.cid + ':tid', results.lastPostTimestamp, topic.tid, done);
+                            db.sortedSetAdd('cid:' + results.cid + ':tids', results.lastPostTimestamp, topic.tid, done);
                         });
                     });
                 },
