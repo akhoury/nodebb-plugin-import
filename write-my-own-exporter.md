@@ -185,8 +185,8 @@ Each record should look like this:
 
         "_cid": 1, // REQUIRED, THE OLD CATEGORY ID
 
-        "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null 
-        
+        "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
+
         "_title": "this is topic 1 Title", // OPTIONAL, defaults to "Untitled :id"
 
         "_content": "This is the first content in this topic 1", // REQUIRED
@@ -198,6 +198,8 @@ Each record should look like this:
         "_viewcount": 10, // OPTIONAL, defaults to 0
 
         "_locked": 0, // OPTIONAL, defaults to 0, during migration, ALL topics will be unlocked then locked back up at the end
+
+        "_tags": ["tag1", "tag2", "tag3"], // OPTIONAL, an array of tags, or a comma separated string would work too, defaults to null
 
         "_deleted": 0, // OPTIONAL, defaults to 0
 
@@ -237,7 +239,7 @@ Each record should look like this:
 
         "_guest": "Some dude" // OPTIONAL, if you don't have _uid, you can pass a guest name to be used in future features, defaults to null
 
-        "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null 
+        "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
         "_content": "Post content ba dum tss", // REQUIRED
 
         "_reputation": 0, // OPTIONAL, defaults to 0
