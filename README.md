@@ -7,9 +7,10 @@ If you want a higher revision, import to the supported one, then just follow the
 
 ## Screenshots
 
-![Imgur](http://i.imgur.com/LbeijOH.png)
-![Imgur](http://i.imgur.com/zWW1mHP.png)
-![Imgur](http://i.imgur.com/n1ukngx.png)
+![Imgur](http://i.imgur.com/rx1Ub5M.png)
+![Imgur](http://i.imgur.com/bng3KFp.png)
+![Imgur](http://i.imgur.com/aaWLORi.png)
+![Imgur](http://i.imgur.com/01FUw0z.png)
 
 ## Usage
 
