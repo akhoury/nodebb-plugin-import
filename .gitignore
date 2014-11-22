@@ -17,6 +17,7 @@ node_modules
 .idea
 .tmp
 config.json
+*.DS_Store
 server/tmp/*
 server/logs/*.log
 public/tmp/*.csv

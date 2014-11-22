@@ -1,4 +1,4 @@
-<link href="/plugins/nodebb-plugin-import/css/acp.css" rel="stylesheet" />
+<link href="../../plugins/nodebb-plugin-import/css/acp.css" rel="stylesheet" />
 
 <div class="import-wrapper">
 <h1>
@@ -460,8 +460,6 @@
 </div>
 </form>
 
-<input id="csrf_token" type="hidden" value="{csrf}" data-generatedby="nodebb-plugin-import" />
-
 <div class="import-state-container">
     <p class="help-block">
         <strong>NOTE:</strong> If for some reason the process gets interrupted or crashes, i.e. Segmentation Fault, just restart NodeBB,
@@ -495,5 +493,5 @@
 </p>
 </div>
 
-<script src="/plugins/nodebb-plugin-import/js/utils.js"></script>
-<script src="/plugins/nodebb-plugin-import/js/acp.js"></script>
+<script src="../../plugins/nodebb-plugin-import/js/utils.js"></script>
+<script src="../../plugins/nodebb-plugin-import/js/acp.js"></script>

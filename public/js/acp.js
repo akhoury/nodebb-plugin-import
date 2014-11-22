@@ -5,7 +5,7 @@
         var plugin = plugins.import = plugins.import || {};
 
         plugin.name = 'import';
-        plugin.apiHost = '/api/admin/plugins/' + 'import';
+        plugin.apiHost = RELATIVE_PATH + '/api/admin/plugins/' + 'import';
 
         var STORAGE_KEY = 'nodebb-plugin-' + plugin.name + ':exporters';
         var STORAGE_TTL = 2 * 24 * 60 * 60 * 1000; // 2 days
@@ -272,7 +272,7 @@
                 cache: false
             });
         };
-       
+
 
         var getState = plugin.getState = function() {
             return $.get(plugin.apiHost + '/state');
