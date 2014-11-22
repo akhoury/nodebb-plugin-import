@@ -460,6 +460,8 @@
 </div>
 </form>
 
+<input id="csrf_token" type="hidden" value="{csrf}" data-generatedby="nodebb-plugin-import" />
+
 <div class="import-state-container">
     <p class="help-block">
         <strong>NOTE:</strong> If for some reason the process gets interrupted or crashes, i.e. Segmentation Fault, just restart NodeBB,

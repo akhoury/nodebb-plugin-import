@@ -39,7 +39,7 @@ var
 	};
 
 	Plugin.render = function(req, res, next) {
-		res.render('admin/plugins/' + Plugin.json.nbbId, {json: Plugin.json || {}, config: Plugin.config || {}});
+		res.render('admin/plugins/' + Plugin.json.nbbId, {json: Plugin.json || {}, config: Plugin.config || {}, csrf: req.csrfToken()});
 	};
 
 	Plugin.hooks = {
