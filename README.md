@@ -5,7 +5,7 @@ Import your old forum data to nodebb | a one time use plugin
 ### Works with NodeBB v0.5.5
 If you want a higher revision, import to the supported one, then just follow the upgrade procedure here https://docs.nodebb.org/en/latest/upgrading/index.html
 
-### read this till NodeBB v0.6.0 comes out
+### Read this issue thread till NodeBB v0.6.0 comes out
 https://github.com/akhoury/nodebb-plugin-import/issues/90#issuecomment-64929108
 
 ## Screenshots
