@@ -657,7 +657,7 @@ var async = require('async'),
 									description: category._description || 'no description available',
 
 									// you can fix the order later, nbb/admin
-									order: category._order || count + 1,
+									order: category._order || (count + 1),
 
 									disabled: category._disabled || 0,
 
@@ -908,20 +908,9 @@ var async = require('async'),
 														}
 
 														var onPostFields = function(){
-
-															var goOn = function() {
-																topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
-																topics[_tid] = topic;
-																Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, done);
-															};
-															if (topic._tags) {
-																if (!Array.isArray(topic._tags)) {
-																	topic._tags = topic._tags.split(',');
-																}
-																Topics.createTags(topic._tags, returnTopic.topicData.tid, returnTopic.topicData.timestamp, goOn);
-															} else {
-																goOn();
-															}
+															topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
+															topics[_tid] = topic;
+															Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, done);
 														};
 
 														Posts.setPostFields(returnTopic.postData.pid, postFields, onPostFields);
@@ -942,12 +931,17 @@ var async = require('async'),
 										topic._content = (topic._content || '').trim() ? topic._content : '[[blank-post-content-placeholder]]';
 										topic._title = utils.slugify(topic._title) ? topic._title[0].toUpperCase() + topic._title.substr(1) : utils.truncate(topic._content, 100);
 
+										if (topic._tags && !Array.isArray(topic._tags)) {
+											topic._tags = ('' + topic._tags).split(',');
+										}
+
 										Topics.post({
 											uid: !config.adminTakeOwnership.enable ? user.uid : parseInt(config.adminTakeOwnership._uid, 10) === parseInt(topic._uid, 10) ? LOGGEDIN_UID : user.uid,
 											title: topic._title,
 											content: topic._content,
 											cid: category.cid,
-											thumb: topic._thumb
+											thumb: topic._thumb,
+											tags: topic._tags
 										}, onPost);
 									}
 								});
@@ -1022,7 +1016,7 @@ var async = require('async'),
 									var user = results[1] || {uid: '0'};
 
 									if (!topic) {
-										Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ' imported: ' + topic);
+										Importer.warn('[count: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' imported: ' + topic);
 										done();
 									} else {
 
