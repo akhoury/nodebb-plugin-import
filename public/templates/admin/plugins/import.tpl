@@ -31,6 +31,12 @@
 
                 <label for="exporter-tablePrefix">Table prefix (if applicable)</label>
                 <input type="text" class="form-control" name="exporter-tablePrefix" id="exporter-tablePrefix" placeholder="ubbt_">
+
+				<label for="exporter-custom">Exporter specific configs (JSON) (if applicable)</label>
+				<p class="help-block">
+					Some exporters support custom config, check each's readme first. But one is thing is for sure, is that you need to pass a valid JSON here
+				</p>
+				<input type="text" class="form-control" name="exporter-custom" id="exporter-custom" placeholder='{"galleryShortcodes": "toURLs"}'>
             </div>
         </div>
 

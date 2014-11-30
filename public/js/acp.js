@@ -503,7 +503,8 @@
 				dbport: $('#exporter-dbport').val(),
 				tablePrefix: $('#exporter-tablePrefix').val(),
 				module: $('#exporter-module-input').val() || $('#exporter-module').val(),
-				skipInstall:  $('#exporter-module-skip-install').is(':checked')
+				skipInstall:  $('#exporter-module-skip-install').is(':checked'),
+				custom: $('#exporter-custom').val()
 			};
 
 			var importer = {
