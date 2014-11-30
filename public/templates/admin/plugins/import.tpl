@@ -32,9 +32,9 @@
                 <label for="exporter-tablePrefix">Table prefix (if applicable)</label>
                 <input type="text" class="form-control" name="exporter-tablePrefix" id="exporter-tablePrefix" placeholder="ubbt_">
 
-				<label for="exporter-custom">Exporter specific configs (JSON) (if applicable)</label>
+				<label for="exporter-custom">Exporter specific configs (if applicable)</label>
 				<p class="help-block">
-					Some exporters support custom config, check each's readme first. But one is thing is for sure, is that you need to pass a valid JSON here
+					Some exporters support custom config, check each's readme first. Most require that you pass a valid JSON here. i.e. the -wordpress exporter
 				</p>
 				<input type="text" class="form-control" name="exporter-custom" id="exporter-custom" placeholder='{"galleryShortcodes": "toURLs"}'>
             </div>
@@ -83,7 +83,7 @@
         <div class="form-group">
             <h2>Importer Configs</h2>
 
-            <div class="form-group hidden">
+            <div class="form-group">
                 <div class="checkbox">
                     <label for="importer-passwordgen-enabled">
                         <input
@@ -95,7 +95,12 @@
                                 name="importer-passwordgen-enabled">
                         Auto Password Generation
                     </label>
-                    <p class="help-block">Auto Generate passwords for users, if no passwords are provided. If checked, this will hit performance, if unchecked, all passwords are NULL so all users will need to reset their passwords before login in. The latter is the recommended behavior</p>
+                    <p class="help-block">
+                    	Auto Generate passwords for users, if no passwords are provided.
+                    	If checked, this will hit performance, if unchecked, all passwords are NULL so all users will need to reset their passwords before login in.
+                    	The latter is the recommended behavior, but if you still want to auto generate the password, you can.
+                    	Then after the import is done, use the Post-Import tools to download a CSV file of all of users with their passwords to email it to them
+                    </p>
                 </div>
             </div>
 
@@ -336,6 +341,8 @@
         either an <a href="http://wiki.nginx.org/HttpMapModule" target="_blank">NGINX MapModule</a> or this lite <a href="https://github.com/akhoury/RedirectBB" target="_blank">"redirector"</a> that I wrote for this purpose.
         <br />
         Note the templating syntax, it uses the <a href="http://underscorejs.org/#template" target="_blank">Underscore.js's template</a>
+        <br/>
+        DO NOT TOUCH THE "* new path" FIELDS IF YOU DO NOT KNOW WHAT YOU'RE DOING
     </p>
     <div class="redirection-templates-configs">
         <label for="redirection-templates-users-oldpath">Users old path</label>

@@ -509,7 +509,7 @@
 
 			var importer = {
 				passwordGen: {
-					enabled: $('#importer-passwordGen-enabled').is(':checked'),
+					enabled: $('#importer-passwordgen-enabled').is(':checked'),
 					chars: $('#importer-passwordgen-chars').val(),
 					len: parseInt($('#importer-passwordgen-len').val(), 10)
 				},
