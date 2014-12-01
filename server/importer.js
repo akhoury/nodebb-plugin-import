@@ -165,11 +165,12 @@ var async = require('async'),
 			Importer.importUsers,
 			Importer.importTopics,
 			Importer.importPosts,
+			Importer.fixCategoriesParents,
 			Importer.fixPostsToPids,
 			Importer.relockUnlockedTopics,
 			Importer.fixTopicTimestamps,
 			Importer.restoreConfig,
-			Importer.disallowGuestsOnAllCategories,
+			Importer.disallowGuestsWriteOnAllCategories,
 			Importer.teardown
 		], callback);
 	};
@@ -203,11 +204,12 @@ var async = require('async'),
 			Importer.warn('alreadyImportedAllPosts=true, skipping importPosts Phase');
 		}
 
+		series.push(Importer.fixCategoriesParents);
 		series.push(Importer.relockUnlockedTopics);
 		series.push(Importer.fixTopicTimestamps);
 		series.push(Importer.fixPostsToPids);
 		series.push(Importer.restoreConfig);
-		series.push(Importer.disallowGuestsOnAllCategories);
+		series.push(Importer.disallowGuestsWriteOnAllCategories);
 		series.push(Importer.teardown);
 
 		async.series(series, callback);
@@ -468,7 +470,7 @@ var async = require('async'),
 												var onLevel = function() {
 													var fields = {
 														// preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
-														signature: utils.truncate(user._signature || '', 252),
+														signature: user._signature || '',
 														website: user._website || '',
 														banned: user._banned ? 1 : 0,
 														location: user._location || '',
@@ -479,6 +481,7 @@ var async = require('async'),
 														birthday: user._birthday || '',
 														showemail: user._showemail ? 1 : 0,
 														lastposttime: user._lastposttime || 0,
+														lastonline: user._lastonline || undefined,
 
 														// this is a migration script, no one is online
 														status: 'offline',
@@ -663,6 +666,9 @@ var async = require('async'),
 									name: category._name || ('Category ' + (count + 1)),
 									description: category._description || 'no description available',
 
+									// force all categories Parent to be 0, then after the import is done, we can iterate again and fix them.
+									parentCid: 0,
+
 									// you can fix the order later, nbb/admin
 									order: category._order || (count + 1),
 
@@ -683,45 +689,31 @@ var async = require('async'),
 										return done();
 									}
 
-									var onParentCid = function(err, parentCategory) {
-
-										var fields = {
-											_imported_cid: _cid,
-											_imported_path: category._path || '',
-											_imported_name: category._name || '',
-											_imported_slug: category._slug || '',
-											_imported_description: category._description || ''
-										};
-
-										if (!err && parentCategory) {
-											fields.parentCid = parentCategory.cid;
+									var onFields = function(err) {
+										if (err) {
+											Importer.warn(err);
 										}
 
-										var onFields = function(err) {
-											if (err) {
-												Importer.warn(err);
-											}
+										Importer.progress(count, total);
 
-											Importer.progress(count, total);
+										category.imported = true;
+										imported++;
+										category = nodeExtend(true, {}, category, categoryReturn, fields);
+										categories[_cid] = category;
 
-											category.imported = true;
-											imported++;
-											category = nodeExtend(true, {}, category, categoryReturn, fields);
-											categories[_cid] = category;
-
-											Data.setCategoryImported(_cid, categoryReturn.cid, category, done);
-										};
-
-										db.setObject('category:' + categoryReturn.cid, fields, onFields);
-
+										Data.setCategoryImported(_cid, categoryReturn.cid, category, done);
 									};
 
-									var _parentCid = category._parent || category._parentCid || undefined;
-									if (_parentCid) {
-										Data.getImportedCategory(_parentCid, onParentCid);
-									} else {
-										onParentCid();
-									}
+									var fields = {
+										_imported_cid: _cid,
+										_imported_path: category._path || '',
+										_imported_name: category._name || '',
+										_imported_slug: category._slug || '',
+										_imported_parentCid: category._parent || category._parentCid || '',
+										_imported_description: category._description || ''
+									};
+
+									db.setObject('category:' + categoryReturn.cid, fields, onFields);
 								};
 
 								Categories.create(categoryData, onCreate);
@@ -779,15 +771,9 @@ var async = require('async'),
 				});
 	};
 
-	Importer.disallowGuestsOnAllCategories = function(done) {
+	Importer.disallowGuestsWriteOnAllCategories = function(done) {
 		Data.eachCategory(function(category, next) {
 					async.parallel([
-						function(nxt) {
-							Groups.leave('cid:' + category.cid + ':privileges:groups:topics:create', 'guests', nxt);
-						},
-						function(nxt) {
-							Groups.leave('cid:' + category.cid + ':privileges:groups:topics:reply', 'guests', nxt);
-						},
 						function(nxt) {
 							Groups.leave('cid:' + category.cid + ':privileges:groups:find', 'guests', nxt);
 						},
@@ -1190,9 +1176,7 @@ var async = require('async'),
 	};
 
 	Importer.fixPostsToPids = function(next) {
-
 		var count = 0;
-
 		Importer.phase('fixPostsToPidsStart');
 		Importer.progress(0, 1);
 
@@ -1216,6 +1200,37 @@ var async = require('async'),
 						Importer.phase('fixPostsToPidsDone');
 						next();
 					});
+		});
+	};
+
+
+	Importer.fixCategoriesParents = function(next) {
+		var count = 0;
+		Importer.phase('fixCategoriesParentsStart');
+		Importer.progress(0, 1);
+		Data.countCategories(function(err, total) {
+			Data.eachCategory(function (category, done) {
+					Importer.progress(count++, total);
+					if (category && category._imported_parentCid) {
+						Data.getImportedCategory(category._imported_parentCid, function (err, parentCategory) {
+							if (!err && parentCategory) {
+								db.setObject('category:' + category.cid, {parentCid: parentCategory.cid}, done);
+							} else {
+								done();
+							}
+						});
+					} else {
+						done();
+					}
+				},
+				{async: true, eachLimit: 10},
+				function() {
+					if (err) throw err;
+					Importer.progress(1, 1);
+					Importer.phase('fixCategoriesParentsDone');
+					next();
+				}
+			);
 		});
 	};
 
