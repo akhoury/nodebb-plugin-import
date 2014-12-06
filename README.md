@@ -60,7 +60,7 @@ Once the importer is done, 3 Files will be available for you to download *(depen
 ### Redis Note
 __you may not need to do that__: I didn't when I migrated over 350k records, I had a decent machine. (Ubuntu 12.04, 8GB Memory, 4 Cores, 80GB SSD Disk)
 
-Since the importer will be hitting the database constantely, with almost 0 interval, I would add these config to the bottom of your redis.conf file, to disable some stuff and make redis more responsive, but less safe, then after the migration is complete, you must, __before__ you kill your redis server, ```redis-cli bgsave``` to actually write the data to disk, then remove these extra configs and restart your redis server.
+Since the importer will be hitting the database constantely, with almost 0 interval, I would add these config to the bottom of your redis.conf file, to disable some stuff and make redis more responsive, but less safe, then after the migration is complete, you must, __before__ you kill your redis server, ```redis-cli save``` to synchronously write the data to disk, then remove these extra configs and restart your redis server.
 If you're a redis guru, you don't need my help, but take a look at it anyway and let me know where I went wrong :)
 ```
 # NODEBB-PLUGIN-IMPORT TEMPORARY SETTINGS
