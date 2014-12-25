@@ -55,7 +55,7 @@ Don't forget to check the "Skip the module install" checkbox in the "Select an E
 ### YourModule.getPaginatedUsers(start, limit, callback)
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the users, filter them at will, then call the `callback(err, map)` wih the following argurments
+* `callback`  Query the users, filter them at will, then call the `callback(err, map)` wih the following arguments
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -120,12 +120,43 @@ Each record should look like this:
 }
 ```
 
+### YourModule.getMessages(callback) [deprecated]
+
+### YourModule.getPaginatedMessages(start, limit, callback)
+* `start` of the query row
+* `limit` of the query results
+* `callback`  Query the users, filter them at will, then call the `callback(err, map)` wih the following arguments
+
+```
+  - err: if truthy the export process will throw the error and stop
+  - map: a hashmap of all the users ready to import
+```
+In the `map`, the `keys` are the users `_mid` (or the old message Id).
+
+Each record should look like this:
+```javascript
+{
+       // notice how all the old variables start with an _
+      // if any of the required variables fails, the user will be skipped
+
+        "_mid": 45, // REQUIRED
+
+        "_fromuid": 10, // REQUIRED
+
+        "_touid": 20, // REQUIRED
+
+        "_content": "Hello there!", // REQUIRED
+
+        "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+}
+```
+
 ### YourModule.getCategories(callback) [deprecated]
 
 ### YourModule.getPaginatedCategories(start, limit, callback)
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the categories, filter them at will, then call the `callback(err, map)` wih the following argurments
+* `callback`  Query the categories, filter them at will, then call the `callback(err, map)` wih the following arguments
 
 Note: Categories are sometimes known as __forums__ in some forums software
 
@@ -165,7 +196,7 @@ Each record should look like this:
 ### YourModule.getPaginatedTopics(start, limit, callback)
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the topics, filter them at will, then call the `callback(err, map)` wih the following argurments
+* `callback`  Query the topics, filter them at will, then call the `callback(err, map)` wih the following arguments
 
 Note: Topics are sometimes known as __threads__ in some forums software
 
@@ -221,7 +252,7 @@ Each record should look like this:
 ### YourModule.getPaginatedPosts(start, limit, callback)
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the topics, filter them at will, then call the `callback(err, map)` wih the following argurments
+* `callback`  Query the topics, filter them at will, then call the `callback(err, map)` wih the following arguments
 
 ```
   - err: if truthy the export process will throw the error and stop
