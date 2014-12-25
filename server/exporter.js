@@ -86,14 +86,16 @@ var async = require('async'),
 			Exporter.countUsers,
 			Exporter.countCategories,
 			Exporter.countTopics,
-			Exporter.countPosts
+			Exporter.countPosts,
+			Exporter.countMessages
 		], function(err, results) {
 			if (err) return cb(err);
 			cb({
 				users: results[0],
 				categories: results[1],
 				topics: results[2],
-				posts: results[3]
+				posts: results[3],
+				messages: results[4]
 			});
 		});
 	};
@@ -113,6 +115,24 @@ var async = require('async'),
 					cb(err, count);
 				});
 	};
+
+	Exporter.countMessages = function(cb) {
+		if (Exporter._exporter.countMessages) {
+			return Exporter._exporter.countMessages(cb);
+		}
+		var count = 0;
+		Exporter.exportMessages(function(err, map, arr, nextBatch) {
+					count += arr.length;
+					nextBatch();
+				},
+				{
+					batch: COUNT_BATCH_SIZE
+				},
+				function(err) {
+					cb(err, count);
+				});
+	};
+
 	Exporter.countCategories = function(cb) {
 		if (Exporter._exporter.countCategories) {
 			return Exporter._exporter.countCategories(cb);
@@ -161,6 +181,7 @@ var async = require('async'),
 					cb(err, count);
 				});
 	};
+
 	var onUsers = function(err, arg1, arg2, cb) {
 		if (err) return cb(err);
 		if (_.isObject(arg1)) {
@@ -181,6 +202,31 @@ var async = require('async'),
 		}
 		Exporter._exporter.getPaginatedUsers(start, end, function(err, arg1, arg2) {
 			onUsers(err, arg1, arg2, cb);
+		});
+	};
+	var onMessages = function(err, arg1, arg2, cb) {
+		if (err) return cb(err);
+		if (_.isObject(arg1)) {
+			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+		}
+		if (_.isArray(arg1)) {
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid'), arg1);
+		}
+	};
+	Exporter.getMessages = function(cb) {
+		if (!Exporter._exporter.getMessages) {
+			return onMessages(null, {}, [], cb);
+		}
+		Exporter._exporter.getMessages(function(err, arg1, arg2) {
+			onMessages(err, arg1, arg2, cb);
+		});
+	};
+	Exporter.getPaginatedMessages = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedMessages) {
+			return Exporter.getMessages(cb);
+		}
+		Exporter._exporter.getPaginatedMessages(start, end, function(err, arg1, arg2) {
+			onMessages(err, arg1, arg2, cb);
 		});
 	};
 
@@ -359,6 +405,9 @@ var async = require('async'),
 						case 'users':
 							return _.isFunction(exporter.getPaginatedUsers);
 							break;
+						case 'messages':
+							return _.isFunction(exporter.getPaginatedMessages);
+							break;
 						case 'categories':
 							return _.isFunction(exporter.getPaginatedCategories);
 							break;
@@ -379,6 +428,10 @@ var async = require('async'),
 
 	Exporter.exportUsers = function(process, options, callback) {
 		return Exporter.exportType('users', process, options, callback);
+	};
+
+	Exporter.exportMessages = function(process, options, callback) {
+		return Exporter.exportType('messages', process, options, callback);
 	};
 
 	Exporter.exportCategories = function(process, options, callback) {

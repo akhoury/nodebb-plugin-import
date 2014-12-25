@@ -1,5 +1,5 @@
 (function(scope) {
-	require(['settings'], function(Settings) {
+	require(['settings', 'csrf'], function(Settings, csrf) {
 
 		scope.plugins = scope.plugins || {};
 		var plugin = plugins.import = plugins.import || {};
@@ -190,6 +190,10 @@
 						});
 					});
 				}
+			},
+
+			findExporters: function(e) {
+				return plugin.findExporters(e);
 			}
 		};
 
@@ -213,7 +217,7 @@
 			return $.ajax({
 				type: 'post',
 				data: {
-					_csrf: $('#csrf_token').val(),
+					_csrf: csrf.get(),
 					content: content,
 					config: gatherConfig()
 				},
@@ -228,7 +232,7 @@
 				$.ajax({
 					type: 'post',
 					data: {
-						_csrf: $('#csrf_token').val(),
+						_csrf: csrf.get(),
 						config: config
 					},
 					url: plugin.apiHost + '/start',
@@ -246,7 +250,7 @@
 				$.ajax({
 					type: 'post',
 					data: {
-						_csrf: $('#csrf_token').val(),
+						_csrf: csrf.get(),
 						config: config
 					},
 					url: plugin.apiHost + '/resume',
@@ -265,7 +269,7 @@
 			return $.ajax({
 				type: 'post',
 				data: {
-					_csrf: $('#csrf_token').val(),
+					_csrf: csrf.get(),
 					config: gatherConfig(true)
 				},
 				url: plugin.apiHost + '/config',
@@ -312,8 +316,11 @@
 			}
 		};
 
-		var findExporters = plugin.findExporters = function() {
-			var spinner = $form.find('.exporter-module-spinner').addClass('fa-spin').removeClass('hidden');
+		var findExporters = plugin.findExporters = function(e) {
+
+			var btn = $form.find('.exporter-module-refresh').addClass('hidden').hide();
+			var spinner = $form.find('.exporter-module-spinner').addClass('fa-spin').removeClass('hidden').show();
+
 			var done = function(exporters) {
 				var options = [$('<option />').attr({
 					'value': '',
@@ -338,7 +345,14 @@
 			var data = getLocalStorage();
 			if (data && data.exporters) {
 				done(data.exporters);
-				spinner.removeClass('fa-spin').addClass('hidden');
+				btn.removeClass('hidden').show();
+				spinner.removeClass('fa-spin').addClass('hidden').hide();
+				app.alert({
+					title: '[[global:alert.info]]',
+					message: 'Exporters list Loaded from localStorage to avoid an expensive API call to NPM',
+					type: 'info',
+					timeout: timeout ? timeout : 5000
+				});
 			} else {
 				$.get(plugin.apiHost + '/exporters')
 						.done(function(exporters) {
@@ -347,10 +361,11 @@
 							done(data.exporters);
 						}).
 						fail(function() {
-							app.alertError('Could not detect exporters via the npm registry, please enter one manually');
+							app.alertError('Could not detect exporters via the npm registry, loading only the pre-defined ones from package.json');
 						}).
 						always(function() {
-							spinner.removeClass('fa-spin').addClass('hidden');
+							btn.removeClass('hidden').show();
+							spinner.removeClass('fa-spin').addClass('hidden').hide();
 						});
 			}
 		};
@@ -683,7 +698,6 @@
 				postImportToolsAvailable();
 			});
 
-			findExporters();
 			postImportToolsAvailable();
 			checkDirty();
 

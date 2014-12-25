@@ -24,7 +24,11 @@ This section is up here because it's very important for you to read it, so let's
 * `pid` --> new post id
 
 ## Required
-You need node module that has the following interface.
+You need a node module that has the following interface.
+
+## During development
+
+Don't forget to check the "Skip the module install" checkbox in the "Select an Exporter" section, so the -import plugin won't delete your changes.
 
 ### YourModule.setup(config, callback)
 * `config`: a JS object that will be passed to `setup()` and it contains the following:

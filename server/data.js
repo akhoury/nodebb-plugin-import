@@ -1,6 +1,6 @@
 
-var nconf = require('nconf'),
-		primaryDBName = nconf.get('database');
+var nconf = require('nconf');
+var primaryDBName = nconf.get('database');
 
 var db;
 if (primaryDBName) {
@@ -22,6 +22,7 @@ var async = require('async'),
 
 (function(Data) {
 
+
 	Data.init = function(callback) {
 		if (primaryDBName) {
 			callback();
@@ -38,6 +39,15 @@ var async = require('async'),
 		Data.count('users:joindate', callback);
 	};
 
+	Data.countMessages = function(callback) {
+		Data.keys('message:*', function(err, keys) {
+			if (err) {
+				callback(err);
+			}
+			callback(err, keys.length)
+		});
+	};
+
 	Data.countCategories = function(callback) {
 		Data.count('categories:cid', callback);
 	};
@@ -52,6 +62,16 @@ var async = require('async'),
 
 	Data.eachUser = function(iterator, options, callback) {
 		return Data.each('users:joindate', 'user:', iterator, options, callback);
+	};
+
+	Data.eachMessage = function(iterator, options, callback) {
+		options = options || {};
+		Data.keys('message:*', function(err, keys) {
+			if (err) {
+				return callback(err);
+			}
+			async.mapLimit(keys, options.batch || DEFAULT_BATCH_SIZE, iterator, callback);
+		});
 	};
 
 	Data.eachCategory = function(iterator, options, callback) {
@@ -225,6 +245,10 @@ var async = require('async'),
 		return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
 	};
 
+	Data.getImportedMessage = function(_mid, callback) {
+		return Data.getImported('_imported:_messages', '_imported_message:', _mid, callback);
+	};
+
 	Data.getImportedCategory = function(_cid, callback) {
 		return Data.getImported('_imported:_categories', '_imported_category:', _cid, callback);
 	};
@@ -253,6 +277,10 @@ var async = require('async'),
 		return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
 	};
 
+	Data.setMessageImported = function(_mid, mid, message, callback) {
+		return Data.setImported('_imported:_messages', '_imported_message:', _mid, mid, message, callback);
+	};
+
 	Data.setCategoryImported = function(_cid, cid, category, callback) {
 		return Data.setImported('_imported:_categories', '_imported_category:', _cid, cid, category, callback);
 	};
@@ -267,6 +295,10 @@ var async = require('async'),
 
 	Data.isUserImported = function(_uid, callback) {
 		return Data.isImported('_imported:_users', _uid, callback);
+	};
+
+	Data.isMessageImported = function(_mid, callback) {
+		return Data.isImported('_imported:_messages', _mid, callback);
 	};
 
 	Data.isCategoryImported = function(_cid, callback) {
@@ -285,6 +317,10 @@ var async = require('async'),
 		Data.count('_imported:_users', callback);
 	};
 
+	Data.countImportedMessages = function(callback) {
+		Data.count('_imported:_messages', callback);
+	};
+
 	Data.countImportedCategories = function(callback) {
 		Data.count('_imported:_categories', callback);
 	};
@@ -301,6 +337,10 @@ var async = require('async'),
 		return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
 	};
 
+	Data.eachImportedMessage = function(iterator, options, callback) {
+		return Data.each('_imported:_messages', '_imported_message:', iterator, options, callback);
+	};
+
 	Data.eachImportedCategory = function(iterator, options, callback) {
 		return Data.each('_imported:_categories', '_imported_category:', iterator, options, callback);
 	};
@@ -312,5 +352,46 @@ var async = require('async'),
 	Data.eachImportedPost = function(iterator, options, callback) {
 		return Data.each('_imported:_posts', '_imported_post:', iterator, options, callback);
 	};
+
+	Data.keys = (function() {
+		return db.helpers.redis ? // if redis
+				function(key, callback) {
+					return db.client.keys(key, callback);
+				}
+			// if mongo
+				: db.helpers.mongo ?
+				function(key, callback) {
+					db.client.collection('objects').find( { _key: { $regex: key.replace(/\*/, '.*') } }, function(err, result) {
+						if (err) {
+							return callback(err);
+						}
+						result.toArray(function(err, arr) {
+							if (err) {
+								return callback(err);
+							}
+							callback(null, !err && arr && arr[0] ?
+									Object.keys(arr[0]).map(function(v) {
+										return key.replace(/\*/, v).replace(/\uff0E/g, '.');
+									}) : []);
+						});
+
+					});
+				}
+			// if leveldb
+				: db.helpers.level ?
+			// https://github.com/rvagg/node-levelup/issues/285
+			// todo: not tested :(
+				function(key, callback) {
+					var stream = db.client.createKeyStream({gte: key.replace(/\*/, '!'), lte: key.replace(/\*/, '~')});
+					var keys = [];
+					stream.on('data', function(key) {
+						keys.push(key);
+					});
+					stream.on('end', function() {
+						callback(null, keys);
+					})
+				}
+				: null;
+	})();
 
 })(module.exports);

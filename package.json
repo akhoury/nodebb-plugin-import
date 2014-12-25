@@ -1,6 +1,6 @@
 {
     "name": "nodebb-plugin-import",
-    "version": "0.2.21",
+    "version": "0.3.0",
     "description": "Import your forum data to nodebb",
     "main": "./server/importer.js",
     "scripts": {
@@ -45,7 +45,18 @@
         "bbcode-to-markdown": "~0.0.8",
         "html-entities": "1.0.10"
     },
+	"optionalDependencies": {
+		"nodebb-plugin-import-wefrag": "*",
+		"nodebb-plugin-import-vbulletin": "*",
+		"nodebb-plugin-import-phpbb": "*",
+		"nodebb-plugin-import-ipboard": "*",
+		"nodebb-plugin-import-mybb": "*",
+		"nodebb-plugin-import-ubb": "*",
+		"nodebb-plugin-import-smf": "*",
+		"nodebb-plugin-import-wordpress": "*",
+		"nodebb-plugin-import-punbb": "*"
+	},
     "nbbpm": {
-        "compatibility": "^0.5.0"
+        "compatibility": "^0.6.0"
     }
 }

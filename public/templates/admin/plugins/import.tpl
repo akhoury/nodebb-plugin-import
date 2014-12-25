@@ -45,7 +45,10 @@
         <div class="form-group">
             <h4>Select an Exporter</h4>
 
-            <label for="exporter-module">Select one of the few detected on npmjs's registry</label><i class="fa fa-spinner exporter-module-spinner"></i>
+            <label for="exporter-module">Select one of the hardcoded ones, or click to refresh from NPM's registry
+            	<i data-on="click" data-action="findExporters" id="exporter-module-refresh" class="exporter-module-spinner import-hand fa fa-refresh"></i>
+            	<i class="fa fa-spinner exporter-module-spinner hidden"></i>
+            </label>
             <select
 				data-on="change"
 				data-action="matchVal"
@@ -53,7 +56,15 @@
             	class="form-control"
             	id="exporter-module"
             	name="exporter-module">
+            	<!-- BEGIN exporters -->
+					<option class="exporter-module-option" value="{exporters.name}">{exporters.name}</option>
+            	<!-- END exporters -->
           	</select>
+
+          	<p class="help-block">
+          		The reason I don't fetch from NPM by default is that, this API call using (<code>npm.commands.search()</code>) is very slow, consumes a lot of memory, and crashes the process sometimes.
+          		To add yours to the hardcoded list, submit a pull request editing the <code>optionalDependencies</code> block in <a href="https://github.com/akhoury/nodebb-plugin-import/blob/master/package.json" target="_blank">package.json</a>
+          	</p>
 
             <label for="exporter-module-input">Or just enter the module's name or url you want to install</label>
             <p class="help-block">
@@ -472,8 +483,6 @@
 
 </div>
 </form>
-
-<input id="csrf_token" type="hidden" value="{csrf}" data-generatedby="nodebb-plugin-import" />
 
 <div class="import-state-container">
     <p class="help-block">

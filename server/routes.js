@@ -1,31 +1,34 @@
 module.exports =  {
-	setup: function(app, middleware, controllers, Plugin) {
-		var prefix = '/admin/plugins/' + Plugin.json.nbbId,
-				apiPrefix = '/api' + prefix;
+	setup: function(params, Plugin) {
+		var router = params.router;
+		var middleware = params.middleware;
 
-		app.get(prefix, middleware.applyCSRF, middleware.admin.buildHeader, Plugin.render);
-		app.get(apiPrefix, middleware.applyCSRF, Plugin.render);
+		var prefix = '/admin/plugins/' + Plugin.json.nbbId;
+		var apiPrefix = '/api' + prefix;
 
-		app.get(apiPrefix + '/state', Plugin.api.get.state);
+		router.get(prefix, middleware.applyCSRF, middleware.admin.buildHeader, Plugin.render);
+		router.get(apiPrefix, middleware.applyCSRF, Plugin.render);
 
-		app.get(apiPrefix + '/postImportTools', Plugin.api.get.postImportTools);
-		app.get(apiPrefix + '/deleteExtraFields', middleware.admin.isAdmin, Plugin.api.get.deleteExtraFields);
-		app.get(apiPrefix + '/isDirty', Plugin.api.get.isDirty);
+		router.get(apiPrefix + '/state', Plugin.api.get.state);
 
-		app.get(apiPrefix + '/exporters', Plugin.api.get.exporters);
+		router.get(apiPrefix + '/postImportTools', Plugin.api.get.postImportTools);
+		router.get(apiPrefix + '/deleteExtraFields', middleware.admin.isAdmin, Plugin.api.get.deleteExtraFields);
+		router.get(apiPrefix + '/isDirty', Plugin.api.get.isDirty);
 
-		app.get(apiPrefix + '/download/users.csv', middleware.admin.isAdmin, Plugin.api.get.usersCsv);
-		app.get(apiPrefix + '/download/users.json', middleware.admin.isAdmin, Plugin.api.get.usersJson);
-		app.get(apiPrefix + '/download/redirect.json', Plugin.api.get.redirectJson);
+		router.get(apiPrefix + '/exporters', Plugin.api.get.exporters);
 
-		app.post(apiPrefix + '/start', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.start);
-		app.post(apiPrefix + '/resume', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.resume);
-		app.post(apiPrefix + '/config', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.config);
-		app.get(apiPrefix + '/config', Plugin.api.get.config);
+		router.get(apiPrefix + '/download/users.csv', middleware.admin.isAdmin, Plugin.api.get.usersCsv);
+		router.get(apiPrefix + '/download/users.json', middleware.admin.isAdmin, Plugin.api.get.usersJson);
+		router.get(apiPrefix + '/download/redirect.json', Plugin.api.get.redirectJson);
 
-		app.get(apiPrefix + '/convert/all', middleware.admin.isAdmin, Plugin.api.get.convert);
-		app.post(apiPrefix + '/convert/content', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.convert);
+		router.post(apiPrefix + '/start', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.start);
+		router.post(apiPrefix + '/resume', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.resume);
+		router.post(apiPrefix + '/config', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.config);
+		router.get(apiPrefix + '/config', Plugin.api.get.config);
 
-		app.get(apiPrefix + '/data', middleware.admin.isAdmin, Plugin.api.get.data);
+		router.get(apiPrefix + '/convert/all', middleware.admin.isAdmin, Plugin.api.get.convert);
+		router.post(apiPrefix + '/convert/content', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.convert);
+
+		router.get(apiPrefix + '/data', middleware.admin.isAdmin, Plugin.api.get.data);
 	}
 };

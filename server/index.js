@@ -1,5 +1,7 @@
 var
+		pkg = require('../package.json'),
 		fs = require('fs-extra'),
+		_ = require('underscore'),
 		path = require('path'),
 		Data = require('./data.js'),
 		winston = module.parent.require('winston'),
@@ -39,7 +41,16 @@ var
 	};
 
 	Plugin.render = function(req, res, next) {
-		res.render('admin/plugins/' + Plugin.json.nbbId, {json: Plugin.json || {}, config: Plugin.config || {}, csrf: req.csrfToken()});
+		res.render(
+				'admin/plugins/' + Plugin.json.nbbId,
+				{
+					json: Plugin.json || {},
+					config: Plugin.config || {},
+					pkg: pkg,
+					// clean this when https://github.com/psychobunny/templates.js/issues/19 is resolved
+					exporters: Object.keys(pkg.optionalDependencies).map(function(k) { return {name: k}; }),
+				}
+		);
 	};
 
 	Plugin.hooks = {
@@ -54,13 +65,13 @@ var
 			}
 		},
 		statics: {
-			load: function(app, middleware, controllers, callback) {
+			load: function(params, callback) {
 				Plugin.settings(function(err) {
 					if (err) {
 						throw err;
 					}
 
-					require('./routes').setup(app, middleware, controllers, Plugin);
+					require('./routes').setup(params, Plugin);
 
 					fs.ensureDir(path.join(__dirname, '/tmp'), function(err) {
 						Plugin.controller = require('./controller');
