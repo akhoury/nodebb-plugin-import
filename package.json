@@ -54,7 +54,8 @@
 		"nodebb-plugin-import-ubb": "*",
 		"nodebb-plugin-import-smf": "*",
 		"nodebb-plugin-import-wordpress": "*",
-		"nodebb-plugin-import-punbb": "*"
+		"nodebb-plugin-import-punbb": "*",
+		"nodebb-plugin-import-esotalk": "*"
 	},
     "nbbpm": {
         "compatibility": "^0.6.0"
