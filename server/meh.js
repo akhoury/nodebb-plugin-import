@@ -50,13 +50,16 @@ exporter.once('exporter.ready', function() {
 
 exporter.init({
     exporter: {
-        module: 'nodebb-plugin-import-jforum',
+        module: 'nodebb-plugin-import-wordpress',
         host: 'localhost',
         user: 'user',
         password: 'password',
         port: 3306,
-        database: 'jforum',
-        tablePrefix: 'jforum_',
-        skipInstall: true
+        database: 'wp4_tiny',
+        tablePrefix: 'wp_',
+        skipInstall: true,
+		custom: {
+			bbpress: true
+		}
     }
 });

@@ -1,6 +1,6 @@
 {
     "name": "nodebb-plugin-import",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Import your forum data to nodebb",
     "main": "./server/importer.js",
     "scripts": {
@@ -20,6 +20,9 @@
         "phpbb",
         "vb",
         "vbulletin",
+        "wordpress",
+        "bbpress",
+        "jforum",
         "network54",
         "ipb",
         "ipboard",
@@ -54,6 +57,7 @@
 		"nodebb-plugin-import-ubb": "*",
 		"nodebb-plugin-import-smf": "*",
 		"nodebb-plugin-import-wordpress": "*",
+		"nodebb-plugin-import-jforum": "*",
 		"nodebb-plugin-import-punbb": "*",
 		"nodebb-plugin-import-esotalk": "*"
 	},

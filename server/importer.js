@@ -367,9 +367,9 @@ var async = require('async'),
 	Importer.phasePercentage = 0;
 
 	Importer.progress = function(count, total, interval) {
-		interval = interval || 1;
+		interval = interval || 0.01;
 		var percentage = count / total * 100;
-		if (percentage === 0 || percentage >= 100 || (percentage - Importer.phasePercentage > interval)) {
+		if (percentage === 0 || percentage >= 100 || (percentage - Importer.phasePercentage >= interval)) {
 			Importer.phasePercentage = percentage;
 			Importer.emit('importer.progress', {count: count, total: total, percentage: percentage});
 		}
@@ -805,11 +805,12 @@ var async = require('async'),
 
 									// force all categories Parent to be 0, then after the import is done, we can iterate again and fix them.
 									parentCid: 0,
+									// same deal with disabled
+									disabled: 0,
 
 									// you can fix the order later, nbb/admin
 									order: category._order || (count + 1),
 
-									disabled: category._disabled || 0,
 
 									link: category._link || 0,
 
@@ -847,6 +848,7 @@ var async = require('async'),
 										_imported_name: category._name || '',
 										_imported_slug: category._slug || '',
 										_imported_parentCid: category._parent || category._parentCid || '',
+										_imported_disabled: category._disabled || 0,
 										_imported_description: category._description || ''
 									};
 
@@ -1242,7 +1244,7 @@ var async = require('async'),
 		Data.countImportedTopics(function(err, total) {
 			Data.eachImportedTopic(function(topic, done) {
 						Importer.progress(count++, total);
-						if (!topic || !topic._locked) {
+						if (!topic || !parseInt(topic._locked, 10)) {
 							return done();
 						}
 						db.setObjectField('topic:' + topic.tid, 'locked', '1', function(err) {
@@ -1348,14 +1350,31 @@ var async = require('async'),
 		Data.countCategories(function(err, total) {
 			Data.eachCategory(function (category, done) {
 						Importer.progress(count++, total);
-						if (category && category._imported_parentCid) {
-							Data.getImportedCategory(category._imported_parentCid, function (err, parentCategory) {
-								if (!err && parentCategory) {
-									db.setObject('category:' + category.cid, {parentCid: parentCategory.cid}, done);
+						if (category) {
+							var hash = {};
+							if (parseInt(category._imported_disabled, 10)) {
+								hash['disabled'] = 1;
+							}
+							if (category._imported_parentCid) {
+								Data.getImportedCategory(category._imported_parentCid, function (err, parentCategory) {
+									if (!err && parentCategory) {
+										hash['parentCid'] = parentCategory.cid;
+										db.setObject('category:' + category.cid, hash, done);
+									} else {
+										if (hash.disabled) {
+											db.setObject('category:' + category.cid, hash, done);
+										} else {
+											done();
+										}
+									}
+								});
+							} else {
+								if (hash.disabled) {
+									db.setObject('category:' + category.cid, hash, done);
 								} else {
 									done();
 								}
-							});
+							}
 						} else {
 							done();
 						}
