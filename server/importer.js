@@ -380,14 +380,14 @@ var async = require('async'),
 		Importer.emit('importer.phase', {phase: phase, data: data});
 	};
 
-	var recoverImporterUser = function(_uid, callback) {
+	var recoverImportedUser = function(_uid, callback) {
 		if (! flushed && (alreadyImportedAllUsers || areUsersDirty)) {
 			return Data.getImportedUser(_uid, callback);
 		}
 		return callback(null, null);
 	};
 
-	var recoverImporterMessage = function(_uid, callback) {
+	var recoverImportedMessage = function(_mid, callback) {
 		if (! flushed && (alreadyImportedAllMessages || areMessagesDirty)) {
 			return Data.getImportedMessage(_mid, callback);
 		}
@@ -444,7 +444,7 @@ var async = require('async'),
 						async.eachLimit(usersArr, IMPORT_BATCH_SIZE, function(user, done) {
 									count++;
 									var _uid = user._uid;
-									recoverImporterUser(_uid, function(err, _user) {
+									recoverImportedUser(_uid, function(err, _user) {
 										if (_user) {
 											// Importer.warn('[process-count-at:' + count + '] skipping user: ' + user._username + ':' + user._uid + ', already imported');
 											Importer.progress(count, total);
@@ -669,7 +669,7 @@ var async = require('async'),
 							count++;
 							var _mid = message._mid;
 
-							recoverImporterMessage(_mid, function(err, _message) {
+							recoverImportedMessage(_mid, function(err, _message) {
 								if (_message) {
 									Importer.progress(count, total);
 									imported++;
