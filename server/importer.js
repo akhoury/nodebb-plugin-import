@@ -60,7 +60,7 @@ var async = require('async'),
 				len: 13
 			},
 			categoriesTextColors: ['#FFFFFF'],
-			categoriesBgColors: ['#ab1290','#004c66','#0059b2'],
+			categoriesBgColors: ['#AB4642', '#DC9656', '#F7CA88', '#A1B56C', '#86C1B9', '#7CAFC2', '#BA8BAF', '#A16946'],
 			categoriesIcons: ['fa-comment'],
 			autoConfirmEmails: true,
 			userReputationMultiplier: 1,
