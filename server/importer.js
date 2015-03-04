@@ -186,7 +186,7 @@ var async = require('async'),
 	Importer.isDirty = function(done) {
 
 		areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
-		areMessagesDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
+		areMessagesDirty = !! fs.existsSync(DIRTY_MESSAGES_FILE);
 		areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
 		areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
 		arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
