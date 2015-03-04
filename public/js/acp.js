@@ -591,6 +591,7 @@
 					},
 					convertReconds: {
 						usersSignatures: $wrapper.find('#content-convert-users-signatures').is(':checked'),
+						messages: $wrapper.find('#content-convert-messages').is(':checked'),
 						categoriesNames: $wrapper.find('#content-convert-categories-names').is(':checked'),
 						categoriesDescriptions: $wrapper.find('#content-convert-categories-descriptions').is(':checked'),
 						topicsTitle: $wrapper.find('#content-convert-topics-titles').is(':checked'),
