@@ -159,7 +159,10 @@ var async = require('async'),
 		}
 		if (! alreadyImportedAllMessages) {
 			series.push(Importer.importMessages);
+		} else {
+			Importer.warn('alreadyImportedAllMessages=true, skipping importMessages Phase');
 		}
+
 		if (! alreadyImportedAllTopics) {
 			series.push(Importer.importTopics);
 		} else {
@@ -193,31 +196,37 @@ var async = require('async'),
 
 		isAnythingDirty = areUsersDirty || areCategoriesDirty || areTopicsDirty || arePostsDirty || areMessagesDirty;
 
-		// order matters
-		if (areUsersDirty) {
+		// order in start() and resume() matters and must be in sync
+		if (areCategoriesDirty) {
+			alreadyImportedAllCategories = false;
 			alreadyImportedAllUsers = false;
 			alreadyImportedAllMessages = false;
-			alreadyImportedAllCategories = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
-		} else if (areCategoriesDirty) {
+		} else if (areUsersDirty) {
+			alreadyImportedAllCategories = true;
+			alreadyImportedAllUsers = false;
+			alreadyImportedAllMessages = false;
+			alreadyImportedAllTopics = false;
+			alreadyImportedAllPosts = false;
+		} else if (areMessagesDirty) {
+			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
-			alreadyImportedAllCategories = false;
+			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (areTopicsDirty) {
-			alreadyImportedAllUsers = true;
 			alreadyImportedAllCategories = true;
+			alreadyImportedAllUsers = true;
+			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (arePostsDirty) {
-			alreadyImportedAllUsers = true;
 			alreadyImportedAllCategories = true;
+			alreadyImportedAllUsers = true;
+			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = true;
 			alreadyImportedAllPosts = false;
-		}
-		if (areMessagesDirty) {
-			alreadyImportedAllMessages = false;
 		}
 
 		return _.isFunction(done) ? done(null, isAnythingDirty) : isAnythingDirty;
