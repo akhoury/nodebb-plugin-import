@@ -2,15 +2,22 @@ nodebb-plugin-import
 =========
 Import your old forum data to nodebb | a one time use plugin
 
-### Works with NodeBB v0.6.x (last tested against [37235557bba1a582dfd845aea13d4ca22ffcc746](https://github.com/NodeBB/NodeBB/tree/37235557bba1a582dfd845aea13d4ca22ffcc746))
-If you want a higher revision, import to the supported one, then just follow the upgrade procedure here https://docs.nodebb.org/en/latest/upgrading/index.html
-
 ## Screenshots
 
 ![Imgur](http://i.imgur.com/rx1Ub5M.png)
 ![Imgur](http://i.imgur.com/bng3KFp.png)
 ![Imgur](http://i.imgur.com/aaWLORi.png)
 ![Imgur](http://i.imgur.com/01FUw0z.png)
+
+### Works with NodeBB v0.6.x (last tested against [37235557bba1a582dfd845aea13d4ca22ffcc746](https://github.com/NodeBB/NodeBB/tree/37235557bba1a582dfd845aea13d4ca22ffcc746))
+```
+git clone https://github.com/NodeBB/NodeBB.git 
+cd NodeBB
+git checkout 37235557bba1a582dfd845aea13d4ca22ffcc746
+npm install
+```
+
+If you want a higher revision, import to the supported one, then just follow the upgrade procedure here https://docs.nodebb.org/en/latest/upgrading/index.html
 
 ## Usage
 
