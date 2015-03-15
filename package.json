@@ -1,6 +1,6 @@
 {
     "name": "nodebb-plugin-import",
-    "version": "0.3.7",
+    "version": "0.3.8",
     "description": "Import your forum data to nodebb",
     "main": "./server/importer.js",
     "scripts": {
@@ -46,7 +46,7 @@
         "underscore": "~1.5.2",
         "jsdom-nogyp": "~0.8.3",
         "html-md-optional_window": "~3.0.2",
-        "bbcode-to-markdown": "~0.0.10",
+        "bbcode-to-markdown": "*",
         "html-entities": "1.0.10"
     },
 	"optionalDependencies": {
