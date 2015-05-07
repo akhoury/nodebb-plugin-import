@@ -504,6 +504,7 @@ var async = require('async'),
 														birthday: user._birthday || '',
 														showemail: user._showemail ? 1 : 0,
 														lastposttime: user._lastposttime || 0,
+														postcount: user._postcount || 0,
 
 														// this is a migration script, no one is online
 														status: 'offline',
