@@ -621,12 +621,16 @@
 							if (on && typeof actions[action] === 'function') {
 								checkbox.trigger(on);
 							}
+						} else if (val && typeof val === 'object') {
+							var input = $wrapper.find('#' + id);
+							input.val(JSON.stringify(val));
 						}
 					});
 				} else {
-					console.log('[settings] Unable to load settings for hash: ', hash);
+					console.log('[settings] Unable to load settings for hash: ', data);
 				}
 			};
+
 
 			if (data) {
 				onValues(err, data);
