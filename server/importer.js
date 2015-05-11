@@ -30,12 +30,14 @@ var async = require('async'),
 
 		BACKUP_CONFIG_FILE = path.join(__dirname, '/tmp/importer.nbb.backedConfig.json'),
 
+		DIRTY_GROUPS_FILE = path.join(__dirname, '/tmp/importer.dirty.groups'),
 		DIRTY_USERS_FILE = path.join(__dirname, '/tmp/importer.dirty.users'),
 		DIRTY_MESSAGES_FILE = path.join(__dirname, '/tmp/importer.dirty.messages'),
 		DIRTY_CATEGORIES_FILE = path.join(__dirname, '/tmp/importer.dirty.categories'),
 		DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
 		DIRTY_POSTS_FILE = path.join(__dirname, '/tmp/importer.dirty.posts'),
 
+		areGroupsDirty,
 		areUsersDirty,
 		areMessagesDirty,
 		areCategoriesDirty,
@@ -44,6 +46,7 @@ var async = require('async'),
 
 		isAnythingDirty,
 
+		alreadyImportedAllGroups = false,
 		alreadyImportedAllUsers = false,
 		alreadyImportedAllMessages = false,
 		alreadyImportedAllCategories = false,
@@ -123,6 +126,7 @@ var async = require('async'),
 			Importer.flushData,
 			Importer.backupConfig,
 			Importer.setTmpConfig,
+			Importer.importGroups,
 			Importer.importCategories,
 			Importer.allowGuestsOnAllCategories,
 			Importer.importUsers,
@@ -146,6 +150,12 @@ var async = require('async'),
 		Importer.isDirty();
 
 		var series = [];
+		if (! alreadyImportedAllGroups) {
+			series.push(Importer.importGroups);
+		} else {
+			Importer.warn('alreadyImportedAllGroups=true, skipping importGroups Phase');
+		}
+
 		if (! alreadyImportedAllCategories) {
 			series.push(Importer.importCategories);
 			series.push(Importer.allowGuestsOnAllCategories);
@@ -188,40 +198,55 @@ var async = require('async'),
 	// todo: really? wtf is this logic
 	Importer.isDirty = function(done) {
 
+		areGroupsDirty = !! fs.existsSync(DIRTY_GROUPS_FILE);
 		areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
 		areMessagesDirty = !! fs.existsSync(DIRTY_MESSAGES_FILE);
 		areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
 		areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
 		arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
 
+		console.log("DIRTY_POSTS_FILE: " + DIRTY_POSTS_FILE + ", arePostsDirty: " + arePostsDirty);
+
 		isAnythingDirty = areUsersDirty || areCategoriesDirty || areTopicsDirty || arePostsDirty || areMessagesDirty;
 
 		// order in start() and resume() matters and must be in sync
-		if (areCategoriesDirty) {
+		if (areGroupsDirty) {
+			alreadyImportedAllGroups = false;
+			alreadyImportedAllCategories = false;
+			alreadyImportedAllUsers = false;
+			alreadyImportedAllMessages = false;
+			alreadyImportedAllTopics = false;
+			alreadyImportedAllPosts = false;
+		} else if (areCategoriesDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = false;
 			alreadyImportedAllUsers = false;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (areUsersDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = false;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (areMessagesDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (areTopicsDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
 			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (arePostsDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
 			alreadyImportedAllMessages = true;
@@ -389,6 +414,12 @@ var async = require('async'),
 		Importer.emit('importer.phase', {phase: phase, data: data});
 	};
 
+	var recoverImportedGroup = function(_gid, callback) {
+		if (! flushed && (alreadyImportedAllGroups || areGroupsDirty)) {
+			return Data.getImportedGroup(_gid, callback);
+		}
+		return callback(null, null);
+	};
 	var recoverImportedUser = function(_uid, callback) {
 		if (! flushed && (alreadyImportedAllUsers || areUsersDirty)) {
 			return Data.getImportedUser(_uid, callback);
@@ -483,6 +514,8 @@ var async = require('async'),
 										}
 										Importer.log('[process-count-at: ' + count + '] saving user:_uid: ' + _uid);
 										var onCreate = function(err, uid) {
+											console.log(uid);
+
 											if (err) {
 												Importer.warn('[process-count-at: ' + count + '] skipping username: "' + user._username + '" ' + err);
 												Importer.progress(count, total);
@@ -882,6 +915,94 @@ var async = require('async'),
 						Importer.progress(1, 1);
 						Importer.phase('categoriesImportDone');
 						fs.remove(DIRTY_CATEGORIES_FILE, next);
+					});
+		});
+	};
+
+	Importer.importGroups = function(next) {
+		Importer.phase('groupsImportStart');
+		Importer.progress(0, 1);
+
+		Importer._lastPercentage = 0;
+
+		var count = 0,
+				imported = 0,
+				startTime = +new Date(),
+				config = Importer.config();
+
+		fs.writeFileSync(DIRTY_GROUPS_FILE, +new Date(), {encoding: 'utf8'});
+
+		Importer.exporter.countGroups(function(err, total) {
+			Importer.success('Importing ' + total + ' groups.');
+			Importer.exporter.exportGroups(
+					function(err, groups, groupsArr, nextExportBatch) {
+						var onEach = function(group, done) {
+							count++;
+							var _gid = group._gid;
+
+							recoverImportedGroup(_gid, function(err, _group) {
+								if (_group) {
+									imported++;
+									Importer.progress(count, total);
+									return done();
+								}
+
+								Importer.log('[process-count-at:' + count + '] saving group:_gid: ' + _gid);
+
+								var groupData = {
+									name: group._name || ('Group ' + (count + 1)),
+									description: group._description || 'no description available'
+								};
+
+								var onCreate = function(err, groupReturn) {
+									if (err) {
+										Importer.warn('skipping group:_gid: ' + _gid + ' : ' + err);
+										Importer.progress(count, total);
+										return done();
+									}
+
+									var onFields = function(err) {
+										if (err) {
+											Importer.warn(err);
+										}
+
+										Importer.progress(count, total);
+
+										group.imported = true;
+										imported++;
+										group = nodeExtend(true, {}, group, groupReturn, fields);
+										groups[_gid] = group;
+
+										Data.setGroupImported(_gid, groupReturn.gid, group, done);
+									};
+
+									var fields = {
+										_imported_gid: _cid,
+										_imported_path: group._path || '',
+										_imported_name: group._name || '',
+										_imported_slug: group._slug || '',
+										_imported_description: group._description || ''
+									};
+
+									db.setObject('group:' + groupReturn.cid, fields, onFields);
+								};
+
+								Groups.create(groupData, onCreate);
+							});
+						};
+						async.eachLimit(groupsArr, 1, onEach, nextExportBatch);
+					},
+					{
+						// options
+					},
+					function(err) {
+						if (err) {
+							throw err;
+						}
+						Importer.success('Importing ' + imported + '/' + total + ' groups took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.progress(1, 1);
+						Importer.phase('groupsImportDone');
+						fs.remove(DIRTY_GROUPS_FILE, next);
 					});
 		});
 	};
