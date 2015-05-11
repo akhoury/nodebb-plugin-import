@@ -37,7 +37,7 @@ var async = require('async'),
 	};
 
 	Data.countGroups = function(callback) {
-		Data.count('groups:gid', callback);
+		Data.count('groups:createtime', callback);
 	};
 
 	Data.countUsers = function(callback) {
@@ -80,7 +80,7 @@ var async = require('async'),
 	};
 
 	Data.eachGroup = function(iterator, options, callback) {
-		return Data.each('groups:gid', 'group:', iterator, options, callback);
+		return Data.each('groups:createtime', 'group:', iterator, options, callback);
 	};
 
 	Data.eachCategory = function(iterator, options, callback) {
@@ -202,7 +202,7 @@ var async = require('async'),
 	};
 
 	Data.processGroupsSet = function(process, options, callback) {
-		return Data.processSet('groups:gid', 'group:', process, options, callback);
+		return Data.processSet('groups:createtime', 'group:', process, options, callback);
 	};
 
 	Data.processCategoriesSet = function(process, options, callback) {
@@ -222,7 +222,7 @@ var async = require('async'),
 	};
 
 	Data.processGroupsGidsSet = function(process, options, callback) {
-		return Data.processIdsSet('groups:gid', process, options, callback);
+		return Data.processIdsSet('groups:createtime', process, options, callback);
 	};
 
 	Data.processCategoriesCidsSet = function(process, options, callback) {
@@ -294,8 +294,8 @@ var async = require('async'),
 		});
 	};
 
-	Data.setGroupImported = function(_gid, gid, group, callback) {
-		return Data.setImported('_imported:_groups', '_imported_group:', _gid, gid, group, callback);
+	Data.setGroupImported = function(_gid, gidOrGname, group, callback) {
+		return Data.setImported('_imported:_groups', '_imported_group:', _gid, gidOrGname, group, callback);
 	};
 
 	Data.setUserImported = function(_uid, uid, user, callback) {

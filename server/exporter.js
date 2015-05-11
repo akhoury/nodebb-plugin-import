@@ -84,6 +84,7 @@ var async = require('async'),
 	Exporter.countAll = function(cb) {
 		async.series([
 			Exporter.countUsers,
+			Exporter.countGroups,
 			Exporter.countCategories,
 			Exporter.countTopics,
 			Exporter.countPosts,
@@ -92,10 +93,11 @@ var async = require('async'),
 			if (err) return cb(err);
 			cb({
 				users: results[0],
-				categories: results[1],
-				topics: results[2],
-				posts: results[3],
-				messages: results[4]
+				groups: results[1],
+				categories: results[2],
+				topics: results[3],
+				posts: results[4],
+				messages: results[5]
 			});
 		});
 	};

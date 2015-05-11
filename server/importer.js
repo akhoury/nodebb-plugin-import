@@ -91,6 +91,14 @@ var async = require('async'),
 
 (function(Importer) {
 
+	var coolDownFn = function (timeout) {
+		return function (next) {
+			timeout = timeout || 5000;
+			Importer.log('cooling down for ' + timeout/1000 + ' seconds');
+			setTimeout(next, timeout);
+		};
+	};
+
 	Importer._dispatcher = new EventEmitter2({
 		wildcard: true
 	});
@@ -127,6 +135,7 @@ var async = require('async'),
 			Importer.backupConfig,
 			Importer.setTmpConfig,
 			Importer.importGroups,
+			coolDownFn(5000),
 			Importer.importCategories,
 			Importer.allowGuestsOnAllCategories,
 			Importer.importUsers,
@@ -936,6 +945,7 @@ var async = require('async'),
 			Importer.success('Importing ' + total + ' groups.');
 			Importer.exporter.exportGroups(
 					function(err, groups, groupsArr, nextExportBatch) {
+
 						var onEach = function(group, done) {
 							count++;
 							var _gid = group._gid;
@@ -966,25 +976,40 @@ var async = require('async'),
 											Importer.warn(err);
 										}
 
-										Importer.progress(count, total);
+										var onTime = function () {
 
-										group.imported = true;
-										imported++;
-										group = nodeExtend(true, {}, group, groupReturn, fields);
-										groups[_gid] = group;
+											Importer.progress(count, total);
 
-										Data.setGroupImported(_gid, groupReturn.gid, group, done);
+											group.imported = true;
+											imported++;
+											group = nodeExtend(true, {}, group, groupReturn, fields);
+											groups[_gid] = group;
+
+											Data.setGroupImported(_gid, groupReturn.name, group, done);
+										};
+
+										if (group._createtime || group._timestamp) {
+											db.sortedSetAdd('groups:createtime', group._createtime || group._timestamp, groupReturn.name, function() {
+												onTime();
+											});
+										} else {
+											onTime();
+										}
 									};
 
 									var fields = {
-										_imported_gid: _cid,
+										_imported_gid: _gid,
 										_imported_path: group._path || '',
 										_imported_name: group._name || '',
 										_imported_slug: group._slug || '',
 										_imported_description: group._description || ''
 									};
 
-									db.setObject('group:' + groupReturn.cid, fields, onFields);
+									if (group._createtime || group._timestamp) {
+										fields.createtime = group._createtime || group._timestamp;
+									}
+
+									db.setObject('group:' + groupReturn.name, fields, onFields);
 								};
 
 								Groups.create(groupData, onCreate);
