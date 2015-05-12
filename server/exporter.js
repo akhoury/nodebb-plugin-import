@@ -121,10 +121,8 @@ var async = require('async'),
 	};
 	Exporter.countGroups = function(cb) {
 		if (Exporter._exporter.countGroups) {
-			console.log("Found a native countGroups");
 			return Exporter._exporter.countGroups(cb);
 		}
-		console.log("no native countGroups");
 		var count = 0;
 		Exporter.exportGroups(function(err, map, arr, nextBatch) {
 					count += arr.length;
@@ -214,6 +212,9 @@ var async = require('async'),
 		}
 	};
 	Exporter.getGroups = function(cb) {
+		if (!Exporter._exporter.getGroups) {
+			return onGroups(null, {}, [], cb);
+		}
 		Exporter._exporter.getGroups(function(err, arg1, arg2) {
 			onGroups(err, arg1, arg2, cb);
 		});
