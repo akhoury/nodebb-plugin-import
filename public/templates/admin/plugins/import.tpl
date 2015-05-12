@@ -305,6 +305,11 @@
             </label>
         </div>
         <div class="checkbox">
+            <label for="content-convert-groups">
+                <input checked type="checkbox" id="content-convert-groups" name="content-convert-groups"> Groups descriptions
+            </label>
+        </div>
+        <div class="checkbox">
             <label for="content-convert-categories-names">
                 <input checked type="checkbox" id="content-convert-categories-names" name="content-convert-categories-names"> Categories names
             </label>
