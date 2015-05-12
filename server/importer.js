@@ -108,6 +108,7 @@ var async = require('async'),
 				if (err) {
 					return callback(err);
 				}
+				Importer.log(uid, 'joined group:', groupName);
 				callback(null, ret);
 			});
 		});
@@ -227,8 +228,6 @@ var async = require('async'),
 		areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
 		areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
 		arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
-
-		console.log("DIRTY_POSTS_FILE: " + DIRTY_POSTS_FILE + ", arePostsDirty: " + arePostsDirty);
 
 		isAnythingDirty = areUsersDirty || areCategoriesDirty || areTopicsDirty || arePostsDirty || areMessagesDirty;
 
@@ -437,12 +436,13 @@ var async = require('async'),
 		Importer.emit('importer.phase', {phase: phase, data: data});
 	};
 
-	var recoverImportedGroup = function(_gid, callback) {
-		if (! flushed && (alreadyImportedAllGroups || areGroupsDirty)) {
+	var recoverImportedGroup = function(_gid, callback, force) {
+		if (force || (! flushed && (alreadyImportedAllGroups || areGroupsDirty))) {
 			return Data.getImportedGroup(_gid, callback);
 		}
 		return callback(null, null);
 	};
+
 	var recoverImportedUser = function(_uid, callback) {
 		if (! flushed && (alreadyImportedAllUsers || areUsersDirty)) {
 			return Data.getImportedUser(_uid, callback);
@@ -537,15 +537,13 @@ var async = require('async'),
 										}
 										Importer.log('[process-count-at: ' + count + '] saving user:_uid: ' + _uid);
 										var onCreate = function(err, uid) {
-											console.log(uid);
 
 											if (err) {
 												Importer.warn('[process-count-at: ' + count + '] skipping username: "' + user._username + '" ' + err);
 												Importer.progress(count, total);
 												done();
 											} else {
-												user.imported = true;
-												imported++;
+
 												var onLevel = function() {
 
 													var onGroups = function () {
@@ -586,6 +584,10 @@ var async = require('async'),
 															if (err) {
 																return done(err);
 															}
+
+															user.imported = true;
+															imported++;
+
 															fields.uid = uid;
 															user = nodeExtend(true, {}, user, fields);
 															user.keptPicture = keptPicture;
@@ -633,7 +635,6 @@ var async = require('async'),
 														}
 													};
 
-
 													if (user._groups && user._groups.length) {
 														async.eachLimit(user._groups, 5, function(_gid, next) {
 															recoverImportedGroup(_gid, function(err, _group) {
@@ -645,7 +646,7 @@ var async = require('async'),
 																} else {
 																	next();
 																}
-															});
+															}, true);
 														}, function() {
 															onGroups();
 														});
