@@ -1101,7 +1101,7 @@ var fs = require('fs-extra'),
 	Controller.convertAll = function(callback) {
 		callback = _.isFunction(callback) ? callback : noop;
 
-		var rconf = Controller.config().contentConvert.convertReconds;
+		var rconf = Controller.config().contentConvert.convertRecords;
 
 		var _mainPids = {};
 
