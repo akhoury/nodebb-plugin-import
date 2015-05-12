@@ -159,6 +159,7 @@ var async = require('async'),
 			Importer.importPosts,
 			Importer.fixCategoriesParents,
 			Importer.fixPostsToPids,
+			Importer.fixGroupsOwners,
 			Importer.relockUnlockedTopics,
 			Importer.fixTopicTimestamps,
 			Importer.restoreConfig,
@@ -212,6 +213,7 @@ var async = require('async'),
 		series.push(Importer.relockUnlockedTopics);
 		series.push(Importer.fixTopicTimestamps);
 		series.push(Importer.fixPostsToPids);
+		series.push(Importer.fixGroupsOwners);
 		series.push(Importer.restoreConfig);
 		series.push(Importer.disallowGuestsWriteOnAllCategories);
 		series.push(Importer.teardown);
@@ -1042,8 +1044,9 @@ var async = require('async'),
 
 									var fields = {
 										_imported_gid: _gid,
+										_imported_name: group._name,
+										_imported_ownerUid: group._ownerUid || '',
 										_imported_path: group._path || '',
-										_imported_name: group._name || '',
 										_imported_slug: group._slug || '',
 										_imported_description: group._description || ''
 									};
@@ -1537,6 +1540,36 @@ var async = require('async'),
 						if (err) throw err;
 						Importer.progress(1, 1);
 						Importer.phase('fixPostsToPidsDone');
+						next();
+					});
+		});
+	};
+
+	Importer.fixGroupsOwners = function(next) {
+		var count = 0;
+		Importer.phase('fixGroupsOwnersStart');
+		Importer.progress(0, 1);
+
+		Data.countGroups(function(err, total) {
+			Data.eachGroup(function(group, done) {
+						Importer.progress(count++, total);
+						if (!group || !group._imported_ownerUid) {
+							return done();
+						}
+						Data.getImportedUser(group._imported_ownerUid, function(err, user) {
+							if (err || !user) {
+								return done();
+							}
+							db.setAdd('group:' + group.name + ':owners', user.uid, function() {
+								done();
+							});
+						});
+					},
+					{async: true, eachLimit: IMPORT_BATCH_SIZE},
+					function(err) {
+						if (err) throw err;
+						Importer.progress(1, 1);
+						Importer.phase('fixGroupsOwnersDone');
 						next();
 					});
 		});

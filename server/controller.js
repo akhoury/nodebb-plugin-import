@@ -851,6 +851,51 @@ var fs = require('fs-extra'),
 					});
 				},
 				function(done) {
+					Controller.phase('deleteExtraFieldsGroupsStart');
+					Controller.progress(0, 0);
+					Data.countGroups(function(err, total) {
+						var index = 0;
+						Data.eachGroup(
+								function(group, next) {
+									var nxt = function(err) {
+										Controller.progress(index++, total);
+										next(err);
+									};
+
+									if (group && group._imported_name) {
+										async.parallel([
+											function(cb) {
+												db.deleteObjectField('group:' + group.name, '_imported_gid', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('group:' + group.name, '_imported_name', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('group:' + group.name, '_imported_description', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('group:' + group.name, '_imported_ownerUid', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('group:' + group.name, '_imported_path', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('group:' + group.name, '_imported_slug', cb);
+											}
+										], nxt);
+									} else {
+										nxt();
+									}
+								},
+								{async: true, eachLimit: DELETE_BATCH_LIMIT},
+								function(err) {
+									Controller.progress(1, 1);
+									Controller.phase('deleteExtraFieldsGroupsDone');
+									done(err);
+								});
+					});
+				},
+				function(done) {
 					Controller.phase('deleteExtraFieldsCategoriesStart');
 					Controller.progress(0, 0);
 					Data.countCategories(function(err, total) {
@@ -1140,6 +1185,39 @@ var fs = require('fs-extra'),
 									function(err) {
 										Controller.progress(1, 1);
 										Controller.phase('convertMessagesDone');
+										done(err);
+									});
+						});
+					} else {
+						done();
+					}
+				},
+				function(done) {
+					if (rconf.groups) {
+						Controller.phase('convertGroupsStart');
+						Controller.progress(0, 0);
+						Data.countGroups(function(err, total) {
+							var index = 0;
+							Data.eachGroup(
+									function(group, next) {
+										var nxt = function(err) {
+											Controller.progress(index++, total);
+											next(err);
+										};
+										if (group && group._imported_name && group._imported_description) {
+											db.setObjectField('group:' + group.name,
+													'description',
+													Controller.convert(group._imported_description),
+													nxt
+											);
+										} else {
+											nxt();
+										}
+									},
+									{async: true, eachLimit: CONVERT_BATCH_LIMIT},
+									function(err) {
+										Controller.progress(1, 1);
+										Controller.phase('convertGroupsDone');
 										done(err);
 									});
 						});
