@@ -438,8 +438,8 @@ var async = require('async'),
 		Importer.emit('importer.phase', {phase: phase, data: data});
 	};
 
-	var recoverImportedGroup = function(_gid, callback, force) {
-		if (force || (! flushed && (alreadyImportedAllGroups || areGroupsDirty))) {
+	var recoverImportedGroup = function(_gid, callback) {
+		if (! flushed && (alreadyImportedAllGroups || areGroupsDirty)) {
 			return Data.getImportedGroup(_gid, callback);
 		}
 		return callback(null, null);
@@ -639,7 +639,7 @@ var async = require('async'),
 
 													if (user._groups && user._groups.length) {
 														async.eachLimit(user._groups, 5, function(_gid, next) {
-															recoverImportedGroup(_gid, function(err, _group) {
+															Data.getImportedGroup(_gid, function(err, _group) {
 																if (_group && _group.name) {
 																	groupsJoin(_group._name, uid, user._joindate || startTime, function() {
 																		Importer.warn(userData.username + ' joined ' + _group._name);
@@ -648,7 +648,7 @@ var async = require('async'),
 																} else {
 																	next();
 																}
-															}, true);
+															});
 														}, function() {
 															onGroups();
 														});
