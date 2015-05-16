@@ -589,9 +589,10 @@
 						enabled: $wrapper.find('#content-convert-use-parse-after').is(':checked'),
 						js: $wrapper.find('#content-convert-parse-after').val()
 					},
-					convertReconds: {
+					convertRecords: {
 						usersSignatures: $wrapper.find('#content-convert-users-signatures').is(':checked'),
 						messages: $wrapper.find('#content-convert-messages').is(':checked'),
+						groups: $wrapper.find('#content-convert-groups').is(':checked'),
 						categoriesNames: $wrapper.find('#content-convert-categories-names').is(':checked'),
 						categoriesDescriptions: $wrapper.find('#content-convert-categories-descriptions').is(':checked'),
 						topicsTitle: $wrapper.find('#content-convert-topics-titles').is(':checked'),

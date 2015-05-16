@@ -30,12 +30,14 @@ var async = require('async'),
 
 		BACKUP_CONFIG_FILE = path.join(__dirname, '/tmp/importer.nbb.backedConfig.json'),
 
+		DIRTY_GROUPS_FILE = path.join(__dirname, '/tmp/importer.dirty.groups'),
 		DIRTY_USERS_FILE = path.join(__dirname, '/tmp/importer.dirty.users'),
 		DIRTY_MESSAGES_FILE = path.join(__dirname, '/tmp/importer.dirty.messages'),
 		DIRTY_CATEGORIES_FILE = path.join(__dirname, '/tmp/importer.dirty.categories'),
 		DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
 		DIRTY_POSTS_FILE = path.join(__dirname, '/tmp/importer.dirty.posts'),
 
+		areGroupsDirty,
 		areUsersDirty,
 		areMessagesDirty,
 		areCategoriesDirty,
@@ -44,6 +46,7 @@ var async = require('async'),
 
 		isAnythingDirty,
 
+		alreadyImportedAllGroups = false,
 		alreadyImportedAllUsers = false,
 		alreadyImportedAllMessages = false,
 		alreadyImportedAllCategories = false,
@@ -88,6 +91,29 @@ var async = require('async'),
 
 (function(Importer) {
 
+	var coolDownFn = function (timeout) {
+		return function (next) {
+			timeout = timeout || 5000;
+			Importer.log('cooling down for ' + timeout/1000 + ' seconds');
+			setTimeout(next, timeout);
+		};
+	};
+
+	var groupsJoin = function (groupName, uid, timestamp, callback) {
+		Groups.join(groupName, uid, function(err, ret) {
+			if (err) {
+				return callback(err);
+			}
+			db.sortedSetAdd('group:' + groupName + ':members', timestamp, uid, function (err) {
+				if (err) {
+					return callback(err);
+				}
+				Importer.log(uid, 'joined group:', groupName);
+				callback(null, ret);
+			});
+		});
+	};
+
 	Importer._dispatcher = new EventEmitter2({
 		wildcard: true
 	});
@@ -123,6 +149,8 @@ var async = require('async'),
 			Importer.flushData,
 			Importer.backupConfig,
 			Importer.setTmpConfig,
+			Importer.importGroups,
+			coolDownFn(5000),
 			Importer.importCategories,
 			Importer.allowGuestsOnAllCategories,
 			Importer.importUsers,
@@ -131,6 +159,7 @@ var async = require('async'),
 			Importer.importPosts,
 			Importer.fixCategoriesParents,
 			Importer.fixPostsToPids,
+			Importer.fixGroupsOwners,
 			Importer.relockUnlockedTopics,
 			Importer.fixTopicTimestamps,
 			Importer.restoreConfig,
@@ -146,6 +175,12 @@ var async = require('async'),
 		Importer.isDirty();
 
 		var series = [];
+		if (! alreadyImportedAllGroups) {
+			series.push(Importer.importGroups);
+		} else {
+			Importer.warn('alreadyImportedAllGroups=true, skipping importGroups Phase');
+		}
+
 		if (! alreadyImportedAllCategories) {
 			series.push(Importer.importCategories);
 			series.push(Importer.allowGuestsOnAllCategories);
@@ -178,6 +213,7 @@ var async = require('async'),
 		series.push(Importer.relockUnlockedTopics);
 		series.push(Importer.fixTopicTimestamps);
 		series.push(Importer.fixPostsToPids);
+		series.push(Importer.fixGroupsOwners);
 		series.push(Importer.restoreConfig);
 		series.push(Importer.disallowGuestsWriteOnAllCategories);
 		series.push(Importer.teardown);
@@ -188,6 +224,7 @@ var async = require('async'),
 	// todo: really? wtf is this logic
 	Importer.isDirty = function(done) {
 
+		areGroupsDirty = !! fs.existsSync(DIRTY_GROUPS_FILE);
 		areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
 		areMessagesDirty = !! fs.existsSync(DIRTY_MESSAGES_FILE);
 		areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
@@ -197,31 +234,43 @@ var async = require('async'),
 		isAnythingDirty = areUsersDirty || areCategoriesDirty || areTopicsDirty || arePostsDirty || areMessagesDirty;
 
 		// order in start() and resume() matters and must be in sync
-		if (areCategoriesDirty) {
+		if (areGroupsDirty) {
+			alreadyImportedAllGroups = false;
+			alreadyImportedAllCategories = false;
+			alreadyImportedAllUsers = false;
+			alreadyImportedAllMessages = false;
+			alreadyImportedAllTopics = false;
+			alreadyImportedAllPosts = false;
+		} else if (areCategoriesDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = false;
 			alreadyImportedAllUsers = false;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (areUsersDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = false;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (areMessagesDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (areTopicsDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
 			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 		} else if (arePostsDirty) {
+			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
 			alreadyImportedAllMessages = true;
@@ -389,6 +438,13 @@ var async = require('async'),
 		Importer.emit('importer.phase', {phase: phase, data: data});
 	};
 
+	var recoverImportedGroup = function(_gid, callback) {
+		if (! flushed && (alreadyImportedAllGroups || areGroupsDirty)) {
+			return Data.getImportedGroup(_gid, callback);
+		}
+		return callback(null, null);
+	};
+
 	var recoverImportedUser = function(_uid, callback) {
 		if (! flushed && (alreadyImportedAllUsers || areUsersDirty)) {
 			return Data.getImportedUser(_uid, callback);
@@ -483,111 +539,142 @@ var async = require('async'),
 										}
 										Importer.log('[process-count-at: ' + count + '] saving user:_uid: ' + _uid);
 										var onCreate = function(err, uid) {
+
 											if (err) {
 												Importer.warn('[process-count-at: ' + count + '] skipping username: "' + user._username + '" ' + err);
 												Importer.progress(count, total);
 												done();
 											} else {
-												user.imported = true;
-												imported++;
+
 												var onLevel = function() {
-													var fields = {
-														// preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
-														signature: user._signature || '',
-														website: user._website || '',
-														banned: user._banned ? 1 : 0,
-														location: user._location || '',
-														joindate: user._joindate || startTime,
-														reputation: (user._reputation || 0) * config.userReputationMultiplier,
-														profileviews: user._profileViews || 0,
-														fullname: user._fullname || '',
-														birthday: user._birthday || '',
-														showemail: user._showemail ? 1 : 0,
-														lastposttime: user._lastposttime || 0,
-														postcount: user._postcount || 0,
 
-														// this is a migration script, no one is online
-														status: 'offline',
+													var onGroups = function () {
 
-														_imported_path: user._path || '',
-														_imported_uid: _uid,
-														_imported_username: user._username || '',
-														_imported_password: user._password || '',
-														_imported_hashed_password: user._hashed_password || '',
-														_imported_tmp_autogenerated_password: generatedPassword || '',
-														_imported_slug: user._slug || user._userslug || '',
-														_imported_signature: user._signature
-													};
+														var fields = {
+															// preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
+															signature: user._signature || '',
+															website: user._website || '',
+															banned: user._banned ? 1 : 0,
+															location: user._location || '',
+															joindate: user._joindate || startTime,
+															reputation: (user._reputation || 0) * config.userReputationMultiplier,
+															profileviews: user._profileViews || 0,
+															fullname: user._fullname || '',
+															birthday: user._birthday || '',
+															showemail: user._showemail ? 1 : 0,
+															lastposttime: user._lastposttime || 0,
+															postcount: user._postcount || 0,
 
-													if (user._lastonline) {
-														fields.lastonline = user._lastonline;
-													}
+															// this is a migration script, no one is online
+															status: 'offline',
 
-													var keptPicture = false;
-													var onUserFields = function(err, result) {
-														if (err) {
-															return done(err);
-														}
-														fields.uid = uid;
-														user = nodeExtend(true, {}, user, fields);
-														user.keptPicture = keptPicture;
-														user.userslug = u.userslug;
-														users[_uid] = user;
-														Importer.progress(count, total);
-														var onEmailConfirmed = function() {
-															Data.setUserImported(_uid, uid, user, done);
+															_imported_path: user._path || '',
+															_imported_uid: _uid,
+															_imported_username: user._username || '',
+															_imported_password: user._password || '',
+															_imported_hashed_password: user._hashed_password || '',
+															_imported_tmp_autogenerated_password: generatedPassword || '',
+															_imported_slug: user._slug || user._userslug || '',
+															_imported_signature: user._signature
 														};
-														if (config.autoConfirmEmails) {
-															db.setObjectField('email:confirmed', user.email, '1', onEmailConfirmed);
+
+														if (user._lastonline) {
+															fields.lastonline = user._lastonline;
+														}
+
+														var keptPicture = false;
+														var onUserFields = function(err, result) {
+															if (err) {
+																return done(err);
+															}
+
+															user.imported = true;
+															imported++;
+
+															fields.uid = uid;
+															user = nodeExtend(true, {}, user, fields);
+															user.keptPicture = keptPicture;
+															user.userslug = u.userslug;
+															users[_uid] = user;
+															Importer.progress(count, total);
+															var onEmailConfirmed = function() {
+																Data.setUserImported(_uid, uid, user, done);
+															};
+															if (config.autoConfirmEmails) {
+																db.setObjectField('email:confirmed', user.email, '1', onEmailConfirmed);
+															} else {
+																onEmailConfirmed();
+															}
+														};
+
+														if (user._pictureBlob) {
+															var filename = user._pictureFilename ? '_' + uid + '_' + user._pictureFilename : uid + '.png';
+															var tmpPath = path.join(picturesTmpPath, filename);
+															writeBlob(tmpPath, user._pictureBlob, function(err) {
+																if (err) {
+																	Importer.warn(tmpPath, err);
+																	User.setUserFields(uid, fields, onUserFields);
+																} else {
+																	File.saveFileToLocal(filename, folder, tmpPath, function(err, ret) {
+																		if (!err) {
+																			fields.uploadedpicture = ret.url;
+																			fields.picture = ret.url;
+																			keptPicture = true;
+																		} else {
+																			Importer.warn(filename, err);
+																		}
+																		User.setUserFields(uid, fields, onUserFields);
+																	});
+																}
+															});
 														} else {
-															onEmailConfirmed();
+															if (user._picture) {
+																fields.uploadedpicture = user._picture;
+																fields.picture = user._picture;
+																keptPicture = true;
+															}
+
+															User.setUserFields(uid, fields, onUserFields);
 														}
 													};
 
-													if (user._pictureBlob) {
-														var filename = user._pictureFilename ? '_' + uid + '_' + user._pictureFilename : uid + '.png';
-														var tmpPath = path.join(picturesTmpPath, filename);
-														writeBlob(tmpPath, user._pictureBlob, function(err) {
-															if (err) {
-																Importer.warn(tmpPath, err);
-																User.setUserFields(uid, fields, onUserFields);
-															} else {
-																File.saveFileToLocal(filename, folder, tmpPath, function(err, ret) {
-																	if (!err) {
-																		fields.uploadedpicture = ret.url;
-																		fields.picture = ret.url;
-																		keptPicture = true;
-																	} else {
-																		Importer.warn(filename, err);
-																	}
-																	User.setUserFields(uid, fields, onUserFields);
-																});
-															}
+													if (user._groups && user._groups.length) {
+														async.eachLimit(user._groups, 5, function(_gid, next) {
+															Data.getImportedGroup(_gid, function(err, _group) {
+																if (_group && _group.name) {
+																	groupsJoin(_group._name, uid, user._joindate || startTime, function() {
+																		Importer.warn(userData.username + ' joined ' + _group._name);
+																		next();
+																	});
+																} else {
+																	next();
+																}
+															});
+														}, function() {
+															onGroups();
 														});
 													} else {
-														if (user._picture) {
-															fields.uploadedpicture = user._picture;
-															fields.picture = user._picture;
-															keptPicture = true;
-														}
-
-														User.setUserFields(uid, fields, onUserFields);
+														onGroups();
 													}
 												};
 
 												if (('' + user._level).toLowerCase() == 'moderator') {
-													Importer.makeModeratorOnAllCategories(uid, onLevel);
-													Importer.warn(userData.username + ' just became a moderator on all categories');
+													Importer.makeModeratorOnAllCategories(uid, user._joindate || startTime, function () {
+														Importer.warn(userData.username + ' just became a moderator on all categories');
+														onLevel();
+													});
 												} else if (('' + user._level).toLowerCase() == 'administrator') {
-													Groups.join('administrators', uid, function(){
+													groupsJoin('administrators', uid, user._joindate || startTime, function(){
 														Importer.warn(userData.username + ' became an Administrator');
 														onLevel();
 													});
 												} else {
 													onLevel();
 												}
+
 											}
 										};
+
 										if (oldOwnerNotFound
 												&& parseInt(user._uid, 10) === parseInt(config.adminTakeOwnership._uid, 10)
 												|| (user._username || '').toLowerCase() === config.adminTakeOwnership._username.toLowerCase()
@@ -883,6 +970,111 @@ var async = require('async'),
 						Importer.progress(1, 1);
 						Importer.phase('categoriesImportDone');
 						fs.remove(DIRTY_CATEGORIES_FILE, next);
+					});
+		});
+	};
+
+	Importer.importGroups = function(next) {
+		Importer.phase('groupsImportStart');
+		Importer.progress(0, 1);
+
+		Importer._lastPercentage = 0;
+
+		var count = 0,
+				imported = 0,
+				startTime = +new Date(),
+				config = Importer.config();
+
+		fs.writeFileSync(DIRTY_GROUPS_FILE, +new Date(), {encoding: 'utf8'});
+
+		Importer.exporter.countGroups(function(err, total) {
+			Importer.success('Importing ' + total + ' groups.');
+			Importer.exporter.exportGroups(
+					function(err, groups, groupsArr, nextExportBatch) {
+
+						var onEach = function(group, done) {
+							count++;
+							var _gid = group._gid;
+
+							recoverImportedGroup(_gid, function(err, _group) {
+								if (_group) {
+									imported++;
+									Importer.progress(count, total);
+									return done();
+								}
+
+								Importer.log('[process-count-at:' + count + '] saving group:_gid: ' + _gid);
+
+								var groupData = {
+									name: group._name || ('Group ' + (count + 1)),
+									description: group._description || 'no description available'
+								};
+
+								var onCreate = function(err, groupReturn) {
+									if (err) {
+										Importer.warn('skipping group:_gid: ' + _gid + ' : ' + err);
+										Importer.progress(count, total);
+										return done();
+									}
+
+									var onFields = function(err) {
+										if (err) {
+											Importer.warn(err);
+										}
+
+										var onTime = function () {
+
+											Importer.progress(count, total);
+
+											group.imported = true;
+											imported++;
+											group = nodeExtend(true, {}, group, groupReturn, fields);
+											groups[_gid] = group;
+
+											Data.setGroupImported(_gid, groupReturn.name, group, done);
+										};
+
+										if (group._createtime || group._timestamp) {
+											db.sortedSetAdd('groups:createtime', group._createtime || group._timestamp, groupReturn.name, function() {
+												onTime();
+											});
+										} else {
+											onTime();
+										}
+									};
+
+									var fields = {
+										_imported_gid: _gid,
+										_imported_name: group._name,
+										_imported_ownerUid: group._ownerUid || '',
+										_imported_path: group._path || '',
+										_imported_slug: group._slug || '',
+										_imported_description: group._description || ''
+									};
+
+									if (group._createtime || group._timestamp) {
+										fields.createtime = group._createtime || group._timestamp;
+									}
+
+									db.setObject('group:' + groupReturn.name, fields, onFields);
+								};
+
+								Groups.create(groupData, onCreate);
+							});
+						};
+						async.eachLimit(groupsArr, 1, onEach, nextExportBatch);
+					},
+					{
+						// options
+					},
+					function(err) {
+						if (err) {
+							throw err;
+						}
+						Importer.success('Importing ' + imported + '/' + total + ' groups took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.progress(1, 1);
+						Importer.phase('groupsImportDone');
+						fs.remove(DIRTY_GROUPS_FILE, next);
 					});
 		});
 	};
@@ -1354,6 +1546,36 @@ var async = require('async'),
 		});
 	};
 
+	Importer.fixGroupsOwners = function(next) {
+		var count = 0;
+		Importer.phase('fixGroupsOwnersStart');
+		Importer.progress(0, 1);
+
+		Data.countGroups(function(err, total) {
+			Data.eachGroup(function(group, done) {
+						Importer.progress(count++, total);
+						if (!group || !group._imported_ownerUid) {
+							return done();
+						}
+						Data.getImportedUser(group._imported_ownerUid, function(err, user) {
+							if (err || !user) {
+								return done();
+							}
+							db.setAdd('group:' + group.name + ':owners', user.uid, function() {
+								done();
+							});
+						});
+					},
+					{async: true, eachLimit: IMPORT_BATCH_SIZE},
+					function(err) {
+						if (err) throw err;
+						Importer.progress(1, 1);
+						Importer.phase('fixGroupsOwnersDone');
+						next();
+					});
+		});
+	};
+
 
 	Importer.fixCategoriesParents = function(next) {
 		var count = 0;
@@ -1473,9 +1695,9 @@ var async = require('async'),
 	};
 
 	// aka forums
-	Importer.makeModeratorOnAllCategories = function(uid, done) {
+	Importer.makeModeratorOnAllCategories = function(uid, timestamp, done) {
 		Data.eachCategory(function(category, next) {
-					Groups.join('group:cid:' + category.cid + ':privileges:mods:members', uid, function(err) {
+					groupsJoin('group:cid:' + category.cid + ':privileges:mods:members', uid, timestamp, function(err) {
 						next();
 					});
 				},

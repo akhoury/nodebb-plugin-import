@@ -13,6 +13,7 @@ var async = require('async'),
 		utils = require('../public/js/utils.js'),
 		Meta = require('../../../src/meta.js'),
 		User = require('../../../src/user.js'),
+		Groups = require('../../../src/groups.js'),
 		Topics = require('../../../src/topics.js'),
 		Posts = require('../../../src/posts.js'),
 		Categories = require('../../../src/categories.js'),
@@ -33,6 +34,10 @@ var async = require('async'),
 
 	Data.count = function(setKey, callback) {
 		db.sortedSetCard(setKey, callback);
+	};
+
+	Data.countGroups = function(callback) {
+		Data.count('groups:createtime', callback);
 	};
 
 	Data.countUsers = function(callback) {
@@ -72,6 +77,10 @@ var async = require('async'),
 			}
 			async.mapLimit(keys, options.batch || DEFAULT_BATCH_SIZE, iterator, callback);
 		});
+	};
+
+	Data.eachGroup = function(iterator, options, callback) {
+		return Data.each('groups:createtime', 'group:', iterator, options, callback);
 	};
 
 	Data.eachCategory = function(iterator, options, callback) {
@@ -192,6 +201,10 @@ var async = require('async'),
 		return Data.processSet('users:joindate', 'user:', process, options, callback);
 	};
 
+	Data.processGroupsSet = function(process, options, callback) {
+		return Data.processSet('groups:createtime', 'group:', process, options, callback);
+	};
+
 	Data.processCategoriesSet = function(process, options, callback) {
 		return Data.processSet('categories:cid', 'category:', process, options, callback);
 	};
@@ -206,6 +219,10 @@ var async = require('async'),
 
 	Data.processUsersUidsSet = function(process, options, callback) {
 		return Data.processIdsSet('users:joindate', process, options, callback);
+	};
+
+	Data.processGroupsGidsSet = function(process, options, callback) {
+		return Data.processIdsSet('groups:createtime', process, options, callback);
 	};
 
 	Data.processCategoriesCidsSet = function(process, options, callback) {
@@ -241,6 +258,10 @@ var async = require('async'),
 
 	};
 
+	Data.getImportedGroup = function(_gid, callback) {
+		return Data.getImported('_imported:_groups', '_imported_group:', _gid, callback);
+	};
+
 	Data.getImportedUser = function(_uid, callback) {
 		return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
 	};
@@ -273,6 +294,10 @@ var async = require('async'),
 		});
 	};
 
+	Data.setGroupImported = function(_gid, gidOrGname, group, callback) {
+		return Data.setImported('_imported:_groups', '_imported_group:', _gid, gidOrGname, group, callback);
+	};
+
 	Data.setUserImported = function(_uid, uid, user, callback) {
 		return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
 	};
@@ -291,6 +316,10 @@ var async = require('async'),
 
 	Data.setPostImported = function(_pid, pid, post, callback) {
 		return Data.setImported('_imported:_posts', '_imported_post:', _pid, pid, post, callback);
+	};
+
+	Data.isGroupImported = function(_gid, callback) {
+		return Data.isImported('_imported:_groups', _gid, callback);
 	};
 
 	Data.isUserImported = function(_uid, callback) {
@@ -313,6 +342,10 @@ var async = require('async'),
 		return Data.isImported('_imported:_posts', _pid, callback);
 	};
 
+	Data.countImportedGroups = function(callback) {
+		Data.count('_imported:_groups', callback);
+	};
+
 	Data.countImportedUsers = function(callback) {
 		Data.count('_imported:_users', callback);
 	};
@@ -331,6 +364,10 @@ var async = require('async'),
 
 	Data.countImportedPosts = function(callback) {
 		Data.count('_imported:_posts', callback);
+	};
+
+	Data.eachImportedGroup = function(iterator, options, callback) {
+		return Data.each('_imported:_groups', '_imported_group:', iterator, options, callback);
 	};
 
 	Data.eachImportedUser = function(iterator, options, callback) {

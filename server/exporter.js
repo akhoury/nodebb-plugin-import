@@ -2,8 +2,8 @@ var async = require('async'),
 		_ = require('underscore'),
 		EventEmitter2 = require('eventemitter2').EventEmitter2,
 
-		COUNT_BATCH_SIZE = 25000,
-		DEFAULT_EXPORT_BATCH_SIZE = 25000,
+		COUNT_BATCH_SIZE = 500000,
+		DEFAULT_EXPORT_BATCH_SIZE = 500000,
 
 // http://dev.mysql.com/doc/refman/5.5/en/select.html
 // mysql is terrible
@@ -84,6 +84,7 @@ var async = require('async'),
 	Exporter.countAll = function(cb) {
 		async.series([
 			Exporter.countUsers,
+			Exporter.countGroups,
 			Exporter.countCategories,
 			Exporter.countTopics,
 			Exporter.countPosts,
@@ -92,19 +93,38 @@ var async = require('async'),
 			if (err) return cb(err);
 			cb({
 				users: results[0],
-				categories: results[1],
-				topics: results[2],
-				posts: results[3],
-				messages: results[4]
+				groups: results[1],
+				categories: results[2],
+				topics: results[3],
+				posts: results[4],
+				messages: results[5]
 			});
 		});
 	};
 	Exporter.countUsers = function(cb) {
 		if (Exporter._exporter.countUsers) {
+			console.log("Found a native countUsers");
 			return Exporter._exporter.countUsers(cb);
 		}
+		console.log("no native countUsers");
 		var count = 0;
 		Exporter.exportUsers(function(err, map, arr, nextBatch) {
+					count += arr.length;
+					nextBatch();
+				},
+				{
+					batch: COUNT_BATCH_SIZE
+				},
+				function(err) {
+					cb(err, count);
+				});
+	};
+	Exporter.countGroups = function(cb) {
+		if (Exporter._exporter.countGroups) {
+			return Exporter._exporter.countGroups(cb);
+		}
+		var count = 0;
+		Exporter.exportGroups(function(err, map, arr, nextBatch) {
 					count += arr.length;
 					nextBatch();
 				},
@@ -180,6 +200,32 @@ var async = require('async'),
 				function(err) {
 					cb(err, count);
 				});
+	};
+
+	var onGroups = function(err, arg1, arg2, cb) {
+		if (err) return cb(err);
+		if (_.isObject(arg1)) {
+			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+		}
+		if (_.isArray(arg1)) {
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_gid'), arg1);
+		}
+	};
+	Exporter.getGroups = function(cb) {
+		if (!Exporter._exporter.getGroups) {
+			return onGroups(null, {}, [], cb);
+		}
+		Exporter._exporter.getGroups(function(err, arg1, arg2) {
+			onGroups(err, arg1, arg2, cb);
+		});
+	};
+	Exporter.getPaginatedGroups = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedGroups) {
+			return Exporter.getGroups(cb);
+		}
+		Exporter._exporter.getPaginatedGroups(start, end, function(err, arg1, arg2) {
+			onUsers(err, arg1, arg2, cb);
+		});
 	};
 
 	var onUsers = function(err, arg1, arg2, cb) {
@@ -424,6 +470,10 @@ var async = require('async'),
 									&& _.isFunction(exporter.getPaginatedPosts);
 					}
 				})(type);
+	};
+
+	Exporter.exportGroups = function(process, options, callback) {
+		return Exporter.exportType('groups', process, options, callback);
 	};
 
 	Exporter.exportUsers = function(process, options, callback) {
