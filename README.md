@@ -9,11 +9,11 @@ Import your old forum data to nodebb | a one time use plugin
 ![Imgur](http://i.imgur.com/aaWLORi.png)
 ![Imgur](http://i.imgur.com/01FUw0z.png)
 
-### Works with NodeBB v0.6.x (last tested against [37235557bba1a582dfd845aea13d4ca22ffcc746](https://github.com/NodeBB/NodeBB/tree/37235557bba1a582dfd845aea13d4ca22ffcc746))
+### Works with NodeBB v0.7.0-dev (last tested against [224e3dc2632b2819ea2927abbd533d76f7286a0d](https://github.com/NodeBB/NodeBB/tree/224e3dc2632b2819ea2927abbd533d76f7286a0d))
 ```
 git clone https://github.com/NodeBB/NodeBB.git 
 cd NodeBB
-git checkout 37235557bba1a582dfd845aea13d4ca22ffcc746
+git checkout 224e3dc2632b2819ea2927abbd533d76f7286a0d
 npm install
 ```
 
