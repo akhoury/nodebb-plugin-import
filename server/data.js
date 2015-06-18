@@ -282,6 +282,10 @@ var async = require('async'),
 		return Data.getImported('_imported:_posts', '_imported_post:', _pid, callback);
 	};
 
+	Data.getImportedFavourite = function(_fid, callback) {
+		return Data.getImported('_imported:_favourites', '_imported_favourite:', _fid, callback);
+	};
+
 	Data.setImported = function(setKey, objPrefix, _id, id, data, callback) {
 		delete data._typeCast;
 		delete data.parse;
@@ -318,6 +322,10 @@ var async = require('async'),
 		return Data.setImported('_imported:_posts', '_imported_post:', _pid, pid, post, callback);
 	};
 
+	Data.setFavouriteImported = function(_fid, fid, fav, callback){
+		return Data.setImported('_imported:_favourites', 'imported_favorite:', _fid, fid, fav, callback);
+	}
+
 	Data.isGroupImported = function(_gid, callback) {
 		return Data.isImported('_imported:_groups', _gid, callback);
 	};
@@ -340,6 +348,10 @@ var async = require('async'),
 
 	Data.isPostImported = function(_pid, callback) {
 		return Data.isImported('_imported:_posts', _pid, callback);
+	};
+
+	Data.isFavouriteImported = function(_fid, callback) {
+		return Data.isImported('_imported:_favourites', _fid, callback);
 	};
 
 	Data.countImportedGroups = function(callback) {
@@ -366,6 +378,10 @@ var async = require('async'),
 		Data.count('_imported:_posts', callback);
 	};
 
+	Data.countImportedFavourites = function(callback) {
+		Data.count('_imported:_favourites', callback);
+	};
+
 	Data.eachImportedGroup = function(iterator, options, callback) {
 		return Data.each('_imported:_groups', '_imported_group:', iterator, options, callback);
 	};
@@ -388,6 +404,10 @@ var async = require('async'),
 
 	Data.eachImportedPost = function(iterator, options, callback) {
 		return Data.each('_imported:_posts', '_imported_post:', iterator, options, callback);
+	};
+
+	Data.eachImportedFavourite = function(iterator, options, callback) {
+		return Data.each('_imported:_favourites', '_imported_favourite:', iterator, options, callback);
 	};
 
 	Data.keys = (function() {
