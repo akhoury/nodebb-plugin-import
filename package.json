@@ -1,6 +1,6 @@
 {
     "name": "nodebb-plugin-import",
-    "version": "0.3.10",
+    "version": "0.3.11",
     "description": "Import your forum data to nodebb",
     "main": "./server/importer.js",
     "scripts": {
@@ -61,7 +61,8 @@
 		"nodebb-plugin-import-wordpress": "*",
 		"nodebb-plugin-import-jforum": "*",
 		"nodebb-plugin-import-punbb": "*",
-		"nodebb-plugin-import-esotalk": "*"
+		"nodebb-plugin-import-esotalk": "*",
+		"nodebb-plugin-import-esotalk2": "*"
 	},
     "nbbpm": {
         "compatibility": "0.6.1"
