@@ -65,6 +65,13 @@ var async = require('async'),
 		Data.count('posts:pid', callback);
 	};
 
+	// each favourite / vote is either up or down
+	Data.countFavourites = function(callback) {
+		Data.keys('uid:*', function(err, key){
+			keys.forEach(console.log(key)) // TODO
+		});
+	}
+
 	Data.eachUser = function(iterator, options, callback) {
 		return Data.each('users:joindate', 'user:', iterator, options, callback);
 	};
