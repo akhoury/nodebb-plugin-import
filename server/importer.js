@@ -10,7 +10,7 @@ var async = require('async'),
 		Data = require('./data.js'),
 
 		Groups = require('../../../src/groups.js'),
-		Favorites = require('../../../src/favourites.js'),
+		Favourites = require('../../../src/favourites.js'),
 		privileges = require('../../../src/privileges.js'),
 		Meta = require('../../../src/meta.js'),
 		User = require('../../../src/user.js'),
@@ -1468,6 +1468,8 @@ var async = require('async'),
 		});
 	};
 
+	// Importer.importFavourites
+
 	Importer.teardown = function(next) {
 		Importer.phase('importerTeardownStart');
 		Importer.phase('importerTeardownDone');
@@ -1927,6 +1929,12 @@ var async = require('async'),
 					total += count;
 					next();
 				});
+			},
+			function(next) {
+				Data.count('_imported:_favourites', function(err, count) {
+					total += count;
+					next();
+				});
 			}
 		], function(err) {
 			if (err) {
@@ -1990,6 +1998,22 @@ var async = require('async'),
 									Importer.progress(index++, total);
 									db.sortedSetRemove('_imported:_posts', _pid, function() {
 										db.delete('_imported_post:' + _pid, cb);
+									});
+								}, nextBatch);
+							},
+							{
+								alwaysStartAt: 0
+							},
+							next);
+				},
+				function(next) {
+					Data.processIdsSet(
+							'_imported:_favourites',
+							function(err, ids, nextBatch) {
+								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_fid, cb) {
+									Importer.progress(index++, total);
+									db.sortedSetRemove('_imported:_favourites', _fid, function() {
+										db.delete('_imported_favourite:' + _fid, cb);
 									});
 								}, nextBatch);
 							},

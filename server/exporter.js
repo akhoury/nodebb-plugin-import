@@ -496,6 +496,10 @@ var async = require('async'),
 		return Exporter.exportType('posts', process, options, callback);
 	};
 
+	Exporter.exportFavourites = function(process, options, callback) {
+		return Exporter.exportType('favourites', process, options, callback);
+	};
+
 	Exporter.exportType = function(type, process, options, callback) {
 		if (typeof options === 'function') {
 			callback = options;
