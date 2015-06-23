@@ -201,6 +201,22 @@ var async = require('async'),
 					cb(err, count);
 				});
 	};
+	Exporter.countFavourites = function(cb) {
+		if (Exporter._exporter.countFavourites) {
+			return Exporter._exporter.countFavourites(cb);
+		}
+		var count = 0;
+		Exporter.exportFavourites(function(err, map, arr, nextBatch) {
+					count += arr.length;
+					nextBatch();
+				},
+				{
+					batch: COUNT_BATCH_SIZE
+				},
+				function(err) {
+					cb(err, count);
+				});
+	};
 
 	var onGroups = function(err, arg1, arg2, cb) {
 		if (err) return cb(err);
@@ -348,6 +364,30 @@ var async = require('async'),
 		});
 	};
 
+	var onFavourites = function(err, arg1, arg2, cb) {
+		if (err) return cb(err);
+
+		if (_.isObject(arg1)) {
+			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+		}
+		if (_.isArray(arg1)) {
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_fid'), arg1);
+		}
+	};
+	Exporter.getFavourites = function(cb) {
+		Exporter._exporter.getFavourites(function(err, arg1, arg2) {
+			onFavourites(err, arg1, arg2, cb);
+		});
+	};
+	Exporter.getPaginatedFavourites = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedFavourites) {
+			return Exporter.getFavourites(cb);
+		}
+		Exporter._exporter.getPaginatedFavourites(start, end, function(err, arg1, arg2) {
+			onFavourites(err, arg1, arg2, cb);
+		});
+	};
+
 	Exporter.teardown = function(cb) {
 		Exporter._exporter.teardown(cb);
 	};
@@ -462,6 +502,9 @@ var async = require('async'),
 							break;
 						case 'posts':
 							return _.isFunction(exporter.getPaginatedPosts);
+							break;
+						case 'favourites':
+							return _.isFunction(exporter.getPaginatedFavourites);
 							break;
 						default:
 							return _.isFunction(exporter.getPaginatedUsers)
