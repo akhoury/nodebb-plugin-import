@@ -201,12 +201,12 @@ var async = require('async'),
 					cb(err, count);
 				});
 	};
-	Exporter.countFavourites = function(cb) {
-		if (Exporter._exporter.countFavourites) {
-			return Exporter._exporter.countFavourites(cb);
+	Exporter.countVotes = function(cb) {
+		if (Exporter._exporter.countVotes) {
+			return Exporter._exporter.countVotes(cb);
 		}
 		var count = 0;
-		Exporter.exportFavourites(function(err, map, arr, nextBatch) {
+		Exporter.exportVotes(function(err, map, arr, nextBatch) {
 					count += arr.length;
 					nextBatch();
 				},
@@ -364,27 +364,27 @@ var async = require('async'),
 		});
 	};
 
-	var onFavourites = function(err, arg1, arg2, cb) {
+	var onVotes = function(err, arg1, arg2, cb) {
 		if (err) return cb(err);
 
 		if (_.isObject(arg1)) {
 			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
 		}
 		if (_.isArray(arg1)) {
-			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_fid'), arg1);
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_vid'), arg1);
 		}
 	};
-	Exporter.getFavourites = function(cb) {
-		Exporter._exporter.getFavourites(function(err, arg1, arg2) {
-			onFavourites(err, arg1, arg2, cb);
+	Exporter.getVotes = function(cb) {
+		Exporter._exporter.getVotes(function(err, arg1, arg2) {
+			onVotes(err, arg1, arg2, cb);
 		});
 	};
-	Exporter.getPaginatedFavourites = function(start, end, cb) {
-		if (!Exporter._exporter.getPaginatedFavourites) {
-			return Exporter.getFavourites(cb);
+	Exporter.getPaginatedVotes = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedVotes) {
+			return Exporter.getVotes(cb);
 		}
-		Exporter._exporter.getPaginatedFavourites(start, end, function(err, arg1, arg2) {
-			onFavourites(err, arg1, arg2, cb);
+		Exporter._exporter.getPaginatedVotes(start, end, function(err, arg1, arg2) {
+			onVotes(err, arg1, arg2, cb);
 		});
 	};
 
@@ -503,8 +503,8 @@ var async = require('async'),
 						case 'posts':
 							return _.isFunction(exporter.getPaginatedPosts);
 							break;
-						case 'favourites':
-							return _.isFunction(exporter.getPaginatedFavourites);
+						case 'votes':
+							return _.isFunction(exporter.getPaginatedVotes);
 							break;
 						default:
 							return _.isFunction(exporter.getPaginatedUsers)
@@ -539,8 +539,8 @@ var async = require('async'),
 		return Exporter.exportType('posts', process, options, callback);
 	};
 
-	Exporter.exportFavourites = function(process, options, callback) {
-		return Exporter.exportType('favourites', process, options, callback);
+	Exporter.exportVotes = function(process, options, callback) {
+		return Exporter.exportType('votes', process, options, callback);
 	};
 
 	Exporter.exportType = function(type, process, options, callback) {

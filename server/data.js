@@ -65,9 +65,12 @@ var async = require('async'),
 		Data.count('posts:pid', callback);
 	};
 
-	// each favourite / vote is either up or down
-	Data.countFavourites = function(callback) {
-		Data.keys('uid:*', function(err, key){
+	// each vote / vote is either up or down
+	Data.countVotes = function(callback) {
+		Data.keys('uid:*', function(err, keys){
+			if (err) {
+				callback(err);
+			}
 			keys.forEach(console.log(key)) // TODO
 		});
 	}
@@ -289,8 +292,8 @@ var async = require('async'),
 		return Data.getImported('_imported:_posts', '_imported_post:', _pid, callback);
 	};
 
-	Data.getImportedFavourite = function(_fid, callback) {
-		return Data.getImported('_imported:_favourites', '_imported_favourite:', _fid, callback);
+	Data.getImportedVote = function(_vid, callback) {
+		return Data.getImported('_imported:_votes', '_imported_vote:', _vid, callback);
 	};
 
 	Data.setImported = function(setKey, objPrefix, _id, id, data, callback) {
@@ -329,8 +332,8 @@ var async = require('async'),
 		return Data.setImported('_imported:_posts', '_imported_post:', _pid, pid, post, callback);
 	};
 
-	Data.setFavouriteImported = function(_fid, fid, fav, callback){
-		return Data.setImported('_imported:_favourites', 'imported_favorite:', _fid, fid, fav, callback);
+	Data.setVoteImported = function(_vid, vid, vote, callback){
+		return Data.setImported('_imported:_votes', 'imported_vote:', _vid, vid, vote, callback);
 	}
 
 	Data.isGroupImported = function(_gid, callback) {
@@ -357,8 +360,8 @@ var async = require('async'),
 		return Data.isImported('_imported:_posts', _pid, callback);
 	};
 
-	Data.isFavouriteImported = function(_fid, callback) {
-		return Data.isImported('_imported:_favourites', _fid, callback);
+	Data.isVoteImported = function(_vid, callback) {
+		return Data.isImported('_imported:_votes', _vid, callback);
 	};
 
 	Data.countImportedGroups = function(callback) {
@@ -385,8 +388,8 @@ var async = require('async'),
 		Data.count('_imported:_posts', callback);
 	};
 
-	Data.countImportedFavourites = function(callback) {
-		Data.count('_imported:_favourites', callback);
+	Data.countImportedVotes = function(callback) {
+		Data.count('_imported:_votes', callback);
 	};
 
 	Data.eachImportedGroup = function(iterator, options, callback) {
@@ -413,8 +416,8 @@ var async = require('async'),
 		return Data.each('_imported:_posts', '_imported_post:', iterator, options, callback);
 	};
 
-	Data.eachImportedFavourite = function(iterator, options, callback) {
-		return Data.each('_imported:_favourites', '_imported_favourite:', iterator, options, callback);
+	Data.eachImportedVote = function(iterator, options, callback) {
+		return Data.each('_imported:_votes', '_imported_vote:', iterator, options, callback);
 	};
 
 	Data.keys = (function() {
