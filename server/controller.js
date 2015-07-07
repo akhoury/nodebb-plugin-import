@@ -357,7 +357,7 @@ var fs = require('fs-extra'),
 	};
 	var jsdom = require("jsdom-nogyp");
 	var htmlMd = require('html-md-optional_window');
-	Controller['html-to-md'] = function(){
+	Controller['html-to-md'] = (function(){
 		var brRe = /<br\s*(\/)?>/gmi;
 		var entities = new (require('html-entities')).AllHtmlEntities();
 		return function(str){
@@ -369,7 +369,7 @@ var fs = require('fs-extra'),
 			window.close();
 			return str;
 		}
-	};
+	})();
 
 	Controller['bbcode-to-md'] = require('bbcode-to-markdown');
 
