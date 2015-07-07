@@ -477,6 +477,7 @@ var async = require('async'),
 				&& _.isFunction(exporter.getCategories)
 				&& _.isFunction(exporter.getTopics)
 				&& _.isFunction(exporter.getPosts)
+				&& _.isFunction(exporter.getVotes)
 				)
 				)
 				&& _.isFunction(exporter.teardown)
@@ -510,7 +511,8 @@ var async = require('async'),
 							return _.isFunction(exporter.getPaginatedUsers)
 									&& _.isFunction(exporter.getPaginatedCategories)
 									&& _.isFunction(exporter.getPaginatedTopics)
-									&& _.isFunction(exporter.getPaginatedPosts);
+									&& _.isFunction(exporter.getPaginatedPosts)
+									&& _.isFunction(exporter.getPaginatedVotes);
 					}
 				})(type);
 	};
