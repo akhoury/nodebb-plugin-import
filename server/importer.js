@@ -1468,7 +1468,110 @@ var async = require('async'),
 		});
 	};
 
-	// Importer.importVotes
+	Importer.importVotes = function(next) {
+		Importer.phase('votesImportStart');
+		Importer.progress(0, 1);
+
+		Importer._lastPercentage = 0;
+
+		var count = 0,
+				imported = 0,
+				startTime = +new Date(),
+				config = Importer.config(); // TODO get config of if Kudos are enabled here?
+
+		fs.writeFileSync(DIRTY_VOTES_FILE, +new Date(), {encoding: 'utf8'});
+
+		Importer.exporter.countVotes(function(err, total) {
+			Importer.success('Importing ' + total + ' votes.');
+			Importer.exporter.exportVotes(
+					function(err, votes, votesArr, nextExportBatch) {
+
+						var onEach = function(vote, done) {
+							count++;
+							var _vid = vote._vid;
+
+							recoverImportedVote(_vid, function(err, _vote) {
+								if (_vote) {
+									imported++;
+									Importer.progress(count, total);
+									return done();
+								}
+
+								Importer.log('[process-count-at:' + count + '] saving vote:_vid: ' + _vid);
+
+								// var groupData = {
+								// 	name: group._name || ('Group ' + (count + 1)),
+								// 	description: group._description || 'no description available'
+								// };
+
+								var onCreate = function(err, voteReturn) {
+									if (err) {
+										Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
+										Importer.progress(count, total);
+										return done();
+									}
+
+									var onFields = function(err) {
+										if (err) {
+											Importer.warn(err);
+										}
+
+										var onTime = function () {
+
+											Importer.progress(count, total);
+
+											vote.imported = true;
+											imported++;
+											vote = nodeExtend(true, {}, vote, voteReturn, fields);
+											votes[_vid] = vote;
+
+											Data.setVoteImported(_vid, voteReturn.name, vote, done);
+										};
+
+										if (vote._createtime || vote._timestamp) { // TODO fix this
+											db.sortedSetAdd('votes:createtime', vote._createtime || vote._timestamp, voteReturn.name, function() {
+												onTime();
+											});
+										} else {
+											onTime();
+										}
+									};
+
+									// var fields = {
+									// 	_imported_vid: _vid,
+									// 	_imported_name: group._name,
+									// 	_imported_ownerUid: group._ownerUid || '',
+									// 	_imported_path: group._path || '',
+									// 	_imported_slug: group._slug || '',
+									// 	_imported_description: group._description || ''
+									// };
+
+									// if (group._createtime || group._timestamp) {
+									// 	fields.createtime = group._createtime || group._timestamp;
+									// }
+
+									// db.setObject('votes:' + groupReturn.name, fields, onFields); // TODO is this right?
+								};
+								// TODO: Fix this
+								// Favourites.create(groupData, onCreate);
+							});
+						};
+						async.eachLimit(groupsArr, 1, onEach, nextExportBatch);
+					},
+					{
+						// options
+					},
+					function(err) {
+						if (err) {
+							throw err;
+						}
+						Importer.success('Importing ' + imported + '/' + total + ' votes took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.progress(1, 1);
+						Importer.phase('votesImportDone');
+						fs.remove(DIRTY_VOTES_FILE, next);
+					});
+		});
+	};
 
 	Importer.teardown = function(next) {
 		Importer.phase('importerTeardownStart');
