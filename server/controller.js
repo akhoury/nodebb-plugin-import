@@ -357,18 +357,16 @@ var fs = require('fs-extra'),
 	};
 	var jsdom = require("jsdom-nogyp");
 	var htmlMd = require('html-md-optional_window');
-	Controller['html-to-md'] = function(){
+	Controller['html-to-md'] = function(str){
 		var brRe = /<br\s*(\/)?>/gmi;
 		var entities = new (require('html-entities')).AllHtmlEntities();
-		return function(str){
-			var window = jsdom.jsdom(null, null, {features: {FetchExternalResources: false}}).parentWindow;
-			str = str || '';
-			str = entities.decode(str);
-			str = htmlMd(str, {window: window}).replace(brRe, "\n");
-			// Important! Prevents memory leaks.
-			window.close();
-			return str;
-		}
+		var window = jsdom.jsdom(null, null, {features: {FetchExternalResources: false}}).parentWindow;
+		str = str || '';
+		str = entities.decode(str);
+		str = htmlMd(str, {window: window}).replace(brRe, "\n");
+		// Important! Prevents memory leaks.
+		window.close();
+		return str;
 	};
 
 	Controller['bbcode-to-md'] = require('bbcode-to-markdown');
