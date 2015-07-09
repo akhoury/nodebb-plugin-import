@@ -1475,9 +1475,9 @@ var async = require('async'),
 		Importer._lastPercentage = 0;
 
 		var count = 0,
-				imported = 0,
-				startTime = +new Date(),
-				config = Importer.config(); // TODO get config of if Kudos are enabled here?
+			imported = 0,
+			startTime = +new Date(),
+			config = Importer.config(); // TODO get config of if Kudos are enabled here?
 
 		fs.writeFileSync(DIRTY_VOTES_FILE, +new Date(), {encoding: 'utf8'});
 
@@ -1497,66 +1497,119 @@ var async = require('async'),
 									return done();
 								}
 
+								if (err) {
+									Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
+									Importer.progress(count, total);
+									return done();
+								}
+
 								Importer.log('[process-count-at:' + count + '] saving vote:_vid: ' + _vid);
 
-								// var groupData = {
-								// 	name: group._name || ('Group ' + (count + 1)),
-								// 	description: group._description || 'no description available'
-								// };
-
-								var onCreate = function(err, voteReturn) {
-									if (err) {
-										Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
-										Importer.progress(count, total);
-										return done();
-									}
-
-									var onFields = function(err) {
-										if (err) {
-											Importer.warn(err);
-										}
-
-										var onTime = function () {
-
-											Importer.progress(count, total);
-
-											vote.imported = true;
-											imported++;
-											vote = nodeExtend(true, {}, vote, voteReturn, fields);
-											votes[_vid] = vote;
-
-											Data.setVoteImported(_vid, voteReturn.name, vote, done);
-										};
-
-										if (vote._createtime || vote._timestamp) { // TODO fix this
-											db.sortedSetAdd('votes:createtime', vote._createtime || vote._timestamp, voteReturn.name, function() {
-												onTime();
+								async.parallel([
+										function(cb) {
+											Data.getImportedPost(vote._pid, function(err, post) {
+												if (err) {
+													Importer.warn('getImportedPost: ' + vote._pid + ' err: ' + err);
+												}
+												cb(null, post);
 											});
-										} else {
-											onTime();
+										},
+										function(cb) {
+											Data.getImportedTopic(vote._tid, function(err, topic) {
+												if (err) {
+													Importer.warn('getImportedTopic: ' + vote._tid + ' err: ' + err);
+												}
+												cb(null, topic);
+											});
+										},
+										function(cb) {
+											Data.getImportedUser(vote._uid, function(err, user) {
+												if (err) {
+													Importer.warn('getImportedTopic: ' + vote._uid + ' err: ' + err);
+												}
+												cb(null, user);
+											});
 										}
-									};
+									],
+									function(err, results){
+										var post = results[0];
+										var topic = results[1];
+										var user = results[2] || {uid: '0'};
 
-									// var fields = {
-									// 	_imported_vid: _vid,
-									// 	_imported_name: group._name,
-									// 	_imported_ownerUid: group._ownerUid || '',
-									// 	_imported_path: group._path || '',
-									// 	_imported_slug: group._slug || '',
-									// 	_imported_description: group._description || ''
-									// };
+										if (!post) {
+											Importer.warn('[process-count-at: ' + count + '] post doesn\'t exist');
+											done();
+										} else if (!topic) {
+											Importer.warn('[process-count-at: ' + count + '] topic doesn\'t exist');
+											done();
+										} else {
 
-									// if (group._createtime || group._timestamp) {
-									// 	fields.createtime = group._createtime || group._timestamp;
-									// }
+											var onCreate = function(err, voteReturn) {
+												if (err) {
+													Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
+													Importer.progress(count, total);
+													return done();
+												}
 
-									// db.setObject('votes:' + groupReturn.name, fields, onFields); // TODO is this right?
-								};
-								// TODO: Fix this
-								// Favourites.create(groupData, onCreate);
+												var onFields = function(err) {
+													if (err) {
+														Importer.warn(err);
+													}
+
+													var onTime = function () {
+
+														Importer.progress(count, total);
+
+														vote.imported = true;
+														imported++;
+														vote = nodeExtend(true, {}, vote, voteReturn, fields);
+														votes[_vid] = vote;
+
+														Data.setVoteImported(_vid, vote._action, vote, done);
+													};
+
+													// if (vote._createtime || vote._timestamp) { // TODO fix this
+													// 	db.sortedSetAdd('votes:createtime', vote._createtime || vote._timestamp, voteReturn.name, function() {
+													// 		onTime();
+													// 	});
+													// } else {
+														onTime();
+													// }
+												};
+
+												// var fields = {
+												// 	_imported_vid: _vid,
+												// 	_imported_name: group._name,
+												// 	_imported_ownerUid: group._ownerUid || '',
+												// 	_imported_path: group._path || '',
+												// 	_imported_slug: group._slug || '',
+												// 	_imported_description: group._description || ''
+												// };
+
+												// if (group._createtime || group._timestamp) {
+												// 	fields.createtime = group._createtime || group._timestamp;
+												// }
+
+												// db.setObject('votes:' + groupReturn.name, fields, onFields); // TODO is this right?
+											};
+
+											var sendVote = function(pid, uid, action) {
+												if (action == 'down') {
+													Favourites.downvote(pid, uid, onCreate);	
+												} else {
+													Favourites.upvote(pid, uid, onCreate);
+												}
+											};
+
+											var pid = post.pid || topic.tid;
+											var action = vote._action == 2 ? 'down' : 'up';
+
+											sendVote(pid, user.uid, action);
+										}
+								});
 							});
 						};
-						async.eachLimit(groupsArr, 1, onEach, nextExportBatch);
+						async.eachLimit(votesArr, 1, onEach, nextExportBatch);
 					},
 					{
 						// options
