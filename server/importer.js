@@ -1536,11 +1536,8 @@ var async = require('async'),
 										var topic = results[1];
 										var user = results[2] || {uid: '0'};
 
-										if (!post) {
-											Importer.warn('[process-count-at: ' + count + '] post doesn\'t exist');
-											done();
-										} else if (!topic) {
-											Importer.warn('[process-count-at: ' + count + '] topic doesn\'t exist');
+										if (!post && !topic) {
+											Importer.warn('[process-count-at: ' + count + '] post and topic do not exist!');
 											done();
 										} else {
 
