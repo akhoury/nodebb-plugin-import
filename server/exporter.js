@@ -88,7 +88,8 @@ var async = require('async'),
 			Exporter.countCategories,
 			Exporter.countTopics,
 			Exporter.countPosts,
-			Exporter.countMessages
+			Exporter.countMessages,
+			Exporter.countVotes
 		], function(err, results) {
 			if (err) return cb(err);
 			cb({
@@ -97,7 +98,8 @@ var async = require('async'),
 				categories: results[2],
 				topics: results[3],
 				posts: results[4],
-				messages: results[5]
+				messages: results[5],
+				votes: results[6]
 			});
 		});
 	};
