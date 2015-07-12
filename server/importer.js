@@ -10,6 +10,7 @@ var async = require('async'),
 		Data = require('./data.js'),
 
 		Groups = require('../../../src/groups.js'),
+		Favourites = require('../../../src/favourites.js'),
 		privileges = require('../../../src/privileges.js'),
 		Meta = require('../../../src/meta.js'),
 		User = require('../../../src/user.js'),
@@ -36,6 +37,7 @@ var async = require('async'),
 		DIRTY_CATEGORIES_FILE = path.join(__dirname, '/tmp/importer.dirty.categories'),
 		DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
 		DIRTY_POSTS_FILE = path.join(__dirname, '/tmp/importer.dirty.posts'),
+		DIRTY_VOTES_FILE = path.join(__dirname, '/tmp/importer.dirty.votes'),
 
 		areGroupsDirty,
 		areUsersDirty,
@@ -43,6 +45,7 @@ var async = require('async'),
 		areCategoriesDirty,
 		areTopicsDirty,
 		arePostsDirty,
+		areVotesDirty,
 
 		isAnythingDirty,
 
@@ -52,6 +55,7 @@ var async = require('async'),
 		alreadyImportedAllCategories = false,
 		alreadyImportedAllTopics = false,
 		alreadyImportedAllPosts = false,
+		alreadyImportedAllVotes = false,
 
 		flushed = false,
 
@@ -159,6 +163,7 @@ var async = require('async'),
 			Importer.importPosts,
 			Importer.fixCategoriesParents,
 			Importer.fixPostsToPids,
+			Importer.importVotes,
 			Importer.fixGroupsOwners,
 			Importer.relockUnlockedTopics,
 			Importer.fixTopicTimestamps,
@@ -209,6 +214,12 @@ var async = require('async'),
 			Importer.warn('alreadyImportedAllPosts=true, skipping importPosts Phase');
 		}
 
+		if (! alreadyImportedAllVotes) {
+			series.push(Importer.importVotes);
+		} else {
+			Importer.warn('alreadyImportedAllVotes=true, skipping importVotes Phase');
+		}
+
 		series.push(Importer.fixCategoriesParents);
 		series.push(Importer.relockUnlockedTopics);
 		series.push(Importer.fixTopicTimestamps);
@@ -225,13 +236,21 @@ var async = require('async'),
 	Importer.isDirty = function(done) {
 
 		areGroupsDirty = !! fs.existsSync(DIRTY_GROUPS_FILE);
+		areVotesDirty = !! fs.existsSync(DIRTY_VOTES_FILE);
 		areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
 		areMessagesDirty = !! fs.existsSync(DIRTY_MESSAGES_FILE);
 		areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
 		areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
 		arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
 
-		isAnythingDirty = areUsersDirty || areCategoriesDirty || areTopicsDirty || arePostsDirty || areMessagesDirty;
+		isAnythingDirty =
+			areGroupsDirty
+			|| areVotesDirty
+			|| areUsersDirty
+			|| areCategoriesDirty
+			|| areTopicsDirty
+			|| arePostsDirty
+			|| areMessagesDirty;
 
 		// order in start() and resume() matters and must be in sync
 		if (areGroupsDirty) {
@@ -241,6 +260,7 @@ var async = require('async'),
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
+			alreadyImportedAllVotes = false;
 		} else if (areCategoriesDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = false;
@@ -248,6 +268,7 @@ var async = require('async'),
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
+			alreadyImportedAllVotes = false;
 		} else if (areUsersDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -255,6 +276,7 @@ var async = require('async'),
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
+			alreadyImportedAllVotes = false;
 		} else if (areMessagesDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -262,6 +284,7 @@ var async = require('async'),
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
+			alreadyImportedAllVotes = false;
 		} else if (areTopicsDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -269,6 +292,7 @@ var async = require('async'),
 			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
+			alreadyImportedAllVotes = false;
 		} else if (arePostsDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -276,6 +300,15 @@ var async = require('async'),
 			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = true;
 			alreadyImportedAllPosts = false;
+			alreadyImportedAllVotes = false;
+		} else if (alreadyImportedAllVotes) {
+			alreadyImportedAllGroups = true;
+			alreadyImportedAllCategories = true;
+			alreadyImportedAllUsers = true;
+			alreadyImportedAllMessages = true;
+			alreadyImportedAllTopics = true;
+			alreadyImportedAllPosts = true;
+			alreadyImportedAllVotes = false;
 		}
 
 		return _.isFunction(done) ? done(null, isAnythingDirty) : isAnythingDirty;
@@ -404,6 +437,12 @@ var async = require('async'),
 					},
 					function(cb) {
 						db.setObjectField('global', 'postCount', 1, cb);
+					},
+					function(cb) {
+						db.setObjectField('global', 'nextVid', 1, cb);
+					},
+					function(cb) {
+						db.setObjectField('global', 'voteCount', 1, cb);
 					}
 				], function() {
 					Importer.progress(1, 1);
@@ -476,6 +515,12 @@ var async = require('async'),
 	var recoverImportedPost = function(_pid, callback) {
 		if (! flushed && (alreadyImportedAllPosts || arePostsDirty)) {
 			return Data.getImportedPost(_pid, callback);
+		}
+		return callback(null, null);
+	};
+	var recoverImportedVote = function(_vid, callback) {
+		if (! flushed && (alreadyImportedAllVotes || areVotesDirty)) {
+			return Data.getImportedVote(_vid, callback);
 		}
 		return callback(null, null);
 	};
@@ -1429,6 +1474,140 @@ var async = require('async'),
 		});
 	};
 
+	Importer.importVotes = function(next) {
+		Importer.phase('votesImportStart');
+		Importer.progress(0, 1);
+
+		Importer._lastPercentage = 0;
+
+		var count = 0,
+			imported = 0,
+			startTime = +new Date(),
+			config = Importer.config(); // TODO get config of if Kudos are enabled here?
+
+		fs.writeFileSync(DIRTY_VOTES_FILE, +new Date(), {encoding: 'utf8'});
+
+		Importer.exporter.countVotes(function(err, total) {
+			Importer.success('Importing ' + total + ' votes.');
+			Importer.exporter.exportVotes(
+					function(err, votes, votesArr, nextExportBatch) {
+
+						var onEach = function(vote, done) {
+							count++;
+							var _vid = vote._vid;
+
+							recoverImportedVote(_vid, function(err, _vote) {
+								if (_vote) {
+									imported++;
+									Importer.progress(count, total);
+									return done();
+								}
+
+								if (err) {
+									Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
+									Importer.progress(count, total);
+									return done();
+								}
+
+								Importer.log('[process-count-at:' + count + '] saving vote:_vid: ' + _vid);
+
+								async.parallel([
+										function(cb) {
+											Data.getImportedPost(vote._pid, function(err, post) {
+												if (err) {
+													Importer.warn('getImportedPost: ' + vote._pid + ' err: ' + err);
+												}
+												cb(null, post);
+											});
+										},
+										function(cb) {
+											Data.getImportedTopic(vote._tid, function(err, topic) {
+												if (err) {
+													Importer.warn('getImportedTopic: ' + vote._tid + ' err: ' + err);
+												}
+												cb(null, topic);
+											});
+										},
+										function(cb) {
+											Data.getImportedUser(vote._uid, function(err, user) {
+												if (err) {
+													Importer.warn('getImportedTopic: ' + vote._uid + ' err: ' + err);
+												}
+												cb(null, user);
+											});
+										}
+									],
+									function(err, results){
+										var post = results[0];
+										var topic = results[1];
+										var user = results[2] || {uid: '0'};
+
+										if (!post && !topic) {
+											Importer.warn('[process-count-at: ' + count + '] post and topic do not exist! Likely it was deleted. _vid: ' + _vid);
+											done();
+										} else {
+
+											var onCreate = function(err, voteReturn) {
+												if (err) {
+													Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
+													Importer.warn(post);
+													Importer.warn(topic);
+													Importer.warn(user);
+													Importer.progress(count, total);
+													return done();
+												}
+
+												Importer.progress(count, total);
+
+												vote.imported = true;
+												imported++;
+												vote = nodeExtend(true, {}, vote, voteReturn);
+												votes[_vid] = vote;
+												console.log ('!!! setting vote as imported: ', _vid);
+												Data.setVoteImported(_vid, vote._action, vote, done);
+											};
+
+											var sendVote = function(pid, uid, action) {
+												console.log('!!! sending vote for ', pid, uid, action);
+												if (action == 'down') {
+													Favourites.downvote(pid, uid, onCreate);	
+												} else {
+													Favourites.upvote(pid, uid, onCreate);
+												}
+											};
+											var pid;
+											if (!_.isUndefined(post) && !_.isNull(post)) {
+												pid = post.pid;
+												console.log ('!!! pid from post is', pid);
+											} else if (!_.isUndefined(topic) && !_.isNull(topic)) {
+												pid = topic.tid;
+												console.log ('!!! pid from topic is', pid);
+											}
+
+											var action = vote._action == 2 ? 'down' : 'up';
+
+											sendVote(pid, user.uid, action);
+										}
+								});
+							});
+						};
+						async.eachLimit(votesArr, 1, onEach, nextExportBatch);
+					},
+					{
+						// options
+					},
+					function(err) {
+						if (err) {
+							throw err;
+						}
+						Importer.success('Importing ' + imported + '/' + total + ' votes took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.progress(1, 1);
+						Importer.phase('votesImportDone');
+						fs.remove(DIRTY_VOTES_FILE, next);
+					});
+		});
+	};
+
 	Importer.teardown = function(next) {
 		Importer.phase('importerTeardownStart');
 		Importer.phase('importerTeardownDone');
@@ -1888,6 +2067,12 @@ var async = require('async'),
 					total += count;
 					next();
 				});
+			},
+			function(next) {
+				Data.count('_imported:_votes', function(err, count) {
+					total += count;
+					next();
+				});
 			}
 		], function(err) {
 			if (err) {
@@ -1951,6 +2136,22 @@ var async = require('async'),
 									Importer.progress(index++, total);
 									db.sortedSetRemove('_imported:_posts', _pid, function() {
 										db.delete('_imported_post:' + _pid, cb);
+									});
+								}, nextBatch);
+							},
+							{
+								alwaysStartAt: 0
+							},
+							next);
+				},
+				function(next) {
+					Data.processIdsSet(
+							'_imported:_votes',
+							function(err, ids, nextBatch) {
+								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_vid, cb) {
+									Importer.progress(index++, total);
+									db.sortedSetRemove('_imported:_votes', _vid, function() {
+										db.delete('_imported_vote:' + _vid, cb);
 									});
 								}, nextBatch);
 							},
