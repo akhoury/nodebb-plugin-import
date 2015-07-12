@@ -161,9 +161,9 @@ var async = require('async'),
 			Importer.importMessages,
 			Importer.importTopics,
 			Importer.importPosts,
-			Importer.importVotes,
 			Importer.fixCategoriesParents,
 			Importer.fixPostsToPids,
+			Importer.importVotes,
 			Importer.fixGroupsOwners,
 			Importer.relockUnlockedTopics,
 			Importer.fixTopicTimestamps,
@@ -437,6 +437,12 @@ var async = require('async'),
 					},
 					function(cb) {
 						db.setObjectField('global', 'postCount', 1, cb);
+					},
+					function(cb) {
+						db.setObjectField('global', 'nextVid', 1, cb);
+					},
+					function(cb) {
+						db.setObjectField('global', 'voteCount', 1, cb);
 					}
 				], function() {
 					Importer.progress(1, 1);
@@ -1537,68 +1543,47 @@ var async = require('async'),
 										var user = results[2] || {uid: '0'};
 
 										if (!post && !topic) {
-											Importer.warn('[process-count-at: ' + count + '] post and topic do not exist!');
+											Importer.warn('[process-count-at: ' + count + '] post and topic do not exist! Likely it was deleted. _vid: ' + _vid);
 											done();
 										} else {
 
 											var onCreate = function(err, voteReturn) {
 												if (err) {
 													Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
+													Importer.warn(post);
+													Importer.warn(topic);
+													Importer.warn(user);
 													Importer.progress(count, total);
 													return done();
 												}
 
-												var onFields = function(err) {
-													if (err) {
-														Importer.warn(err);
-													}
+												Importer.progress(count, total);
 
-													var onTime = function () {
-
-														Importer.progress(count, total);
-
-														vote.imported = true;
-														imported++;
-														vote = nodeExtend(true, {}, vote, voteReturn, fields);
-														votes[_vid] = vote;
-
-														Data.setVoteImported(_vid, vote._action, vote, done);
-													};
-
-													// if (vote._createtime || vote._timestamp) { // TODO fix this
-													// 	db.sortedSetAdd('votes:createtime', vote._createtime || vote._timestamp, voteReturn.name, function() {
-													// 		onTime();
-													// 	});
-													// } else {
-														onTime();
-													// }
-												};
-
-												// var fields = {
-												// 	_imported_vid: _vid,
-												// 	_imported_name: group._name,
-												// 	_imported_ownerUid: group._ownerUid || '',
-												// 	_imported_path: group._path || '',
-												// 	_imported_slug: group._slug || '',
-												// 	_imported_description: group._description || ''
-												// };
-
-												// if (group._createtime || group._timestamp) {
-												// 	fields.createtime = group._createtime || group._timestamp;
-												// }
-
-												// db.setObject('votes:' + groupReturn.name, fields, onFields); // TODO is this right?
+												vote.imported = true;
+												imported++;
+												vote = nodeExtend(true, {}, vote, voteReturn);
+												votes[_vid] = vote;
+												console.log ('!!! setting vote as imported: ', _vid);
+												Data.setVoteImported(_vid, vote._action, vote, done);
 											};
 
 											var sendVote = function(pid, uid, action) {
+												console.log('!!! sending vote for ', pid, uid, action);
 												if (action == 'down') {
 													Favourites.downvote(pid, uid, onCreate);	
 												} else {
 													Favourites.upvote(pid, uid, onCreate);
 												}
 											};
+											var pid;
+											if (!_.isUndefined(post) && !_.isNull(post)) {
+												pid = post.pid;
+												console.log ('!!! pid from post is', pid);
+											} else if (!_.isUndefined(topic) && !_.isNull(topic)) {
+												pid = topic.tid;
+												console.log ('!!! pid from topic is', pid);
+											}
 
-											var pid = post.pid || topic.tid;
 											var action = vote._action == 2 ? 'down' : 'up';
 
 											sendVote(pid, user.uid, action);
