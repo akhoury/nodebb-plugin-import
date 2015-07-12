@@ -367,12 +367,15 @@ var async = require('async'),
 	};
 
 	var onVotes = function(err, arg1, arg2, cb) {
+		console.log('!!! in exporter.onVotes');
 		if (err) return cb(err);
 
 		if (_.isObject(arg1)) {
+			console.log('!!! is an object');
 			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
 		}
 		if (_.isArray(arg1)) {
+			console.log('!!! is an array');
 			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_vid'), arg1);
 		}
 	};
