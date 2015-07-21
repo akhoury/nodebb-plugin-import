@@ -126,7 +126,7 @@
 
             <div class="form-group">
                 <div class="checkbox">
-                    <label for="importer-admin-take-8ownership">
+                    <label for="importer-admin-take-ownership">
                         <input
                                 data-on="change"
                                 data-action="visibleToggle"
