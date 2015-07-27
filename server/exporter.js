@@ -377,6 +377,10 @@ var async = require('async'),
 		}
 	};
 	Exporter.getVotes = function(cb) {
+		if (!Exporter._exporter.getVotes) { // votes is an optional feature
+			Exporter.emit('exporter.warn', {warn: 'Importer does not implement getVotes function, skipping...'});
+			return onVotes(null, {}, [], cb);
+		}
 		Exporter._exporter.getVotes(function(err, arg1, arg2) {
 			onVotes(err, arg1, arg2, cb);
 		});

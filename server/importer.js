@@ -717,7 +717,7 @@ var async = require('async'),
 												}
 
 											}
-										};
+										};  // end onCreate
 
 										if (oldOwnerNotFound
 												&& parseInt(user._uid, 10) === parseInt(config.adminTakeOwnership._uid, 10)
