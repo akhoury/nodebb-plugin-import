@@ -575,8 +575,6 @@ var async = require('async'),
 
 		var batch = Exporter.supportsPagination(null, type) ? options.batch || Exporter._exporter.DEFAULT_EXPORT_BATCH_SIZE || DEFAULT_EXPORT_BATCH_SIZE : MAX_MYSQL_INT;
 
-		console.log("batch", batch);
-
 		var start = 0;
 		var limit = batch;
 		var done = false;
@@ -605,8 +603,7 @@ var async = require('async'),
 							if (err) {
 								return next(err);
 							}
-							start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch === MAX_MYSQL_INT ? MAX_MYSQL_INT : batch + 1;
-							console.log("process", batch, MAX_MYSQL_INT);
+							start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
 							next();
 						});
 					})
