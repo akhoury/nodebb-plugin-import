@@ -65,6 +65,16 @@ var async = require('async'),
 		Data.count('posts:pid', callback);
 	};
 
+	// each vote / vote is either up or down
+	Data.countVotes = function(callback) {
+		Data.keys('uid:*', function(err, keys){
+			if (err) {
+				callback(err);
+			}
+			keys.forEach(console.log(key)) // TODO
+		});
+	}
+
 	Data.eachUser = function(iterator, options, callback) {
 		return Data.each('users:joindate', 'user:', iterator, options, callback);
 	};
@@ -282,6 +292,10 @@ var async = require('async'),
 		return Data.getImported('_imported:_posts', '_imported_post:', _pid, callback);
 	};
 
+	Data.getImportedVote = function(_vid, callback) {
+		return Data.getImported('_imported:_votes', '_imported_vote:', _vid, callback);
+	};
+
 	Data.setImported = function(setKey, objPrefix, _id, id, data, callback) {
 		delete data._typeCast;
 		delete data.parse;
@@ -318,6 +332,10 @@ var async = require('async'),
 		return Data.setImported('_imported:_posts', '_imported_post:', _pid, pid, post, callback);
 	};
 
+	Data.setVoteImported = function(_vid, vid, vote, callback){
+		return Data.setImported('_imported:_votes', 'imported_vote:', _vid, vid, vote, callback);
+	}
+
 	Data.isGroupImported = function(_gid, callback) {
 		return Data.isImported('_imported:_groups', _gid, callback);
 	};
@@ -340,6 +358,10 @@ var async = require('async'),
 
 	Data.isPostImported = function(_pid, callback) {
 		return Data.isImported('_imported:_posts', _pid, callback);
+	};
+
+	Data.isVoteImported = function(_vid, callback) {
+		return Data.isImported('_imported:_votes', _vid, callback);
 	};
 
 	Data.countImportedGroups = function(callback) {
@@ -366,6 +388,10 @@ var async = require('async'),
 		Data.count('_imported:_posts', callback);
 	};
 
+	Data.countImportedVotes = function(callback) {
+		Data.count('_imported:_votes', callback);
+	};
+
 	Data.eachImportedGroup = function(iterator, options, callback) {
 		return Data.each('_imported:_groups', '_imported_group:', iterator, options, callback);
 	};
@@ -388,6 +414,10 @@ var async = require('async'),
 
 	Data.eachImportedPost = function(iterator, options, callback) {
 		return Data.each('_imported:_posts', '_imported_post:', iterator, options, callback);
+	};
+
+	Data.eachImportedVote = function(iterator, options, callback) {
+		return Data.each('_imported:_votes', '_imported_vote:', iterator, options, callback);
 	};
 
 	Data.keys = (function() {

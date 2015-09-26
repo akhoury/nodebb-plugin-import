@@ -88,7 +88,8 @@ var async = require('async'),
 			Exporter.countCategories,
 			Exporter.countTopics,
 			Exporter.countPosts,
-			Exporter.countMessages
+			Exporter.countMessages,
+			Exporter.countVotes
 		], function(err, results) {
 			if (err) return cb(err);
 			cb({
@@ -97,7 +98,8 @@ var async = require('async'),
 				categories: results[2],
 				topics: results[3],
 				posts: results[4],
-				messages: results[5]
+				messages: results[5],
+				votes: results[6]
 			});
 		});
 	};
@@ -191,6 +193,22 @@ var async = require('async'),
 		}
 		var count = 0;
 		Exporter.exportPosts(function(err, map, arr, nextBatch) {
+					count += arr.length;
+					nextBatch();
+				},
+				{
+					batch: COUNT_BATCH_SIZE
+				},
+				function(err) {
+					cb(err, count);
+				});
+	};
+	Exporter.countVotes = function(cb) {
+		if (Exporter._exporter.countVotes) {
+			return Exporter._exporter.countVotes(cb);
+		}
+		var count = 0;
+		Exporter.exportVotes(function(err, map, arr, nextBatch) {
 					count += arr.length;
 					nextBatch();
 				},
@@ -348,6 +366,34 @@ var async = require('async'),
 		});
 	};
 
+	var onVotes = function(err, arg1, arg2, cb) {
+		if (err) return cb(err);
+
+		if (_.isObject(arg1)) {
+			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+		}
+		if (_.isArray(arg1)) {
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_vid'), arg1);
+		}
+	};
+	Exporter.getVotes = function(cb) {
+		if (!Exporter._exporter.getVotes) { // votes is an optional feature
+			Exporter.emit('exporter.warn', {warn: 'Importer does not implement getVotes function, skipping...'});
+			return onVotes(null, {}, [], cb);
+		}
+		Exporter._exporter.getVotes(function(err, arg1, arg2) {
+			onVotes(err, arg1, arg2, cb);
+		});
+	};
+	Exporter.getPaginatedVotes = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedVotes) {
+			return Exporter.getVotes(cb);
+		}
+		Exporter._exporter.getPaginatedVotes(start, end, function(err, arg1, arg2) {
+			onVotes(err, arg1, arg2, cb);
+		});
+	};
+
 	Exporter.teardown = function(cb) {
 		Exporter._exporter.teardown(cb);
 	};
@@ -437,6 +483,7 @@ var async = require('async'),
 				&& _.isFunction(exporter.getCategories)
 				&& _.isFunction(exporter.getTopics)
 				&& _.isFunction(exporter.getPosts)
+				&& _.isFunction(exporter.getVotes)
 				)
 				)
 				&& _.isFunction(exporter.teardown)
@@ -463,11 +510,15 @@ var async = require('async'),
 						case 'posts':
 							return _.isFunction(exporter.getPaginatedPosts);
 							break;
+						case 'votes':
+							return _.isFunction(exporter.getPaginatedVotes);
+							break;
 						default:
 							return _.isFunction(exporter.getPaginatedUsers)
 									&& _.isFunction(exporter.getPaginatedCategories)
 									&& _.isFunction(exporter.getPaginatedTopics)
-									&& _.isFunction(exporter.getPaginatedPosts);
+									&& _.isFunction(exporter.getPaginatedPosts)
+									&& _.isFunction(exporter.getPaginatedVotes);
 					}
 				})(type);
 	};
@@ -494,6 +545,10 @@ var async = require('async'),
 
 	Exporter.exportPosts = function(process, options, callback) {
 		return Exporter.exportType('posts', process, options, callback);
+	};
+
+	Exporter.exportVotes = function(process, options, callback) {
+		return Exporter.exportType('votes', process, options, callback);
 	};
 
 	Exporter.exportType = function(type, process, options, callback) {
