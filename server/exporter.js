@@ -267,31 +267,6 @@ var async = require('async'),
 			onUsers(err, arg1, arg2, cb);
 		});
 	};
-	var onMessages = function(err, arg1, arg2, cb) {
-		if (err) return cb(err);
-		if (_.isObject(arg1)) {
-			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
-		}
-		if (_.isArray(arg1)) {
-			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid'), arg1);
-		}
-	};
-	Exporter.getMessages = function(cb) {
-		if (!Exporter._exporter.getMessages) {
-			return onMessages(null, {}, [], cb);
-		}
-		Exporter._exporter.getMessages(function(err, arg1, arg2) {
-			onMessages(err, arg1, arg2, cb);
-		});
-	};
-	Exporter.getPaginatedMessages = function(start, end, cb) {
-		if (!Exporter._exporter.getPaginatedMessages) {
-			return Exporter.getMessages(cb);
-		}
-		Exporter._exporter.getPaginatedMessages(start, end, function(err, arg1, arg2) {
-			onMessages(err, arg1, arg2, cb);
-		});
-	};
 
 	var onCategories = function(err, arg1, arg2, cb) {
 		if (err) return cb(err);
@@ -365,6 +340,33 @@ var async = require('async'),
 		});
 	};
 
+	var onMessages = function(err, arg1, arg2, cb) {
+		if (err) return cb(err);
+		if (_.isObject(arg1)) {
+			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+		}
+		if (_.isArray(arg1)) {
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid'), arg1);
+		}
+	};
+	Exporter.getMessages = function(cb) {
+		if (!Exporter._exporter.getMessages) {
+			Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getMessages function, skipping...'});
+			return onMessages(null, {}, [], cb);
+		}
+		Exporter._exporter.getMessages(function(err, arg1, arg2) {
+			onMessages(err, arg1, arg2, cb);
+		});
+	};
+	Exporter.getPaginatedMessages = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedMessages) {
+			return Exporter.getMessages(cb);
+		}
+		Exporter._exporter.getPaginatedMessages(start, end, function(err, arg1, arg2) {
+			onMessages(err, arg1, arg2, cb);
+		});
+	};
+
 	var onVotes = function(err, arg1, arg2, cb) {
 		if (err) return cb(err);
 
@@ -377,7 +379,7 @@ var async = require('async'),
 	};
 	Exporter.getVotes = function(cb) {
 		if (!Exporter._exporter.getVotes) { // votes is an optional feature
-			Exporter.emit('exporter.warn', {warn: 'Importer does not implement getVotes function, skipping...'});
+			Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getVotes function, skipping...'});
 			return onVotes(null, {}, [], cb);
 		}
 		Exporter._exporter.getVotes(function(err, arg1, arg2) {
@@ -478,11 +480,10 @@ var async = require('async'),
 				&& (
 				Exporter.supportsPagination(exporter) ||
 				(
-				_.isFunction(exporter.getUsers)
-				&& _.isFunction(exporter.getCategories)
-				&& _.isFunction(exporter.getTopics)
-				&& _.isFunction(exporter.getPosts)
-				&& _.isFunction(exporter.getVotes)
+					_.isFunction(exporter.getUsers)
+					&& _.isFunction(exporter.getCategories)
+					&& _.isFunction(exporter.getTopics)
+					&& _.isFunction(exporter.getPosts)
 				)
 				)
 				&& _.isFunction(exporter.teardown)
@@ -497,9 +498,6 @@ var async = require('async'),
 						case 'users':
 							return _.isFunction(exporter.getPaginatedUsers);
 							break;
-						case 'messages':
-							return _.isFunction(exporter.getPaginatedMessages);
-							break;
 						case 'categories':
 							return _.isFunction(exporter.getPaginatedCategories);
 							break;
@@ -509,15 +507,21 @@ var async = require('async'),
 						case 'posts':
 							return _.isFunction(exporter.getPaginatedPosts);
 							break;
+
+						// optional interfaces
+						case 'messages':
+							return _.isFunction(exporter.getPaginatedMessages);
+							break;
 						case 'votes':
 							return _.isFunction(exporter.getPaginatedVotes);
 							break;
+
+						// if just checking if in general pagination is supported, then don't check the optional ones
 						default:
 							return _.isFunction(exporter.getPaginatedUsers)
 									&& _.isFunction(exporter.getPaginatedCategories)
 									&& _.isFunction(exporter.getPaginatedTopics)
-									&& _.isFunction(exporter.getPaginatedPosts)
-									&& _.isFunction(exporter.getPaginatedVotes);
+									&& _.isFunction(exporter.getPaginatedPosts);
 					}
 				})(type);
 	};
