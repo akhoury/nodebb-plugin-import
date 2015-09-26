@@ -954,14 +954,18 @@ var async = require('async'),
 									// you can fix the order later, nbb/admin
 									order: category._order || (count + 1),
 
-
-									link: category._link || 0,
-
-									// roulette, that too,
-									icon: config.categoriesIcons[Math.floor(Math.random() * config.categoriesIcons.length)],
-									bgColor: config.categoriesBgColors[Math.floor(Math.random() * config.categoriesBgColors.length)],
-									color: config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)]
+									link: category._link || 0
 								};
+
+								if (config.categoriesIcons && config.categoriesIcons.length) {
+									categoryData.icon = config.categoriesIcons[Math.floor(Math.random() * config.categoriesIcons.length)];
+								}
+								if (config.categoriesBgColors && config.categoriesBgColors.length) {
+									categoryData.bgColor = config.categoriesBgColors[Math.floor(Math.random() * config.categoriesBgColors.length)];
+								}
+								if (config.categoriesTextColors && config.categoriesTextColors.length) {
+									categoryData.color = config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)];
+								}
 
 								var onCreate = function(err, categoryReturn) {
 									if (err) {
@@ -1570,7 +1574,7 @@ var async = require('async'),
 											var sendVote = function(pid, uid, action) {
 												console.log('!!! sending vote for ', pid, uid, action);
 												if (action == 'down') {
-													Favourites.downvote(pid, uid, onCreate);	
+													Favourites.downvote(pid, uid, onCreate);
 												} else {
 													Favourites.upvote(pid, uid, onCreate);
 												}
