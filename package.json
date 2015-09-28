@@ -17,6 +17,7 @@
         "convert",
         "import",
         "ubb",
+        "discourse",
         "phpbb",
         "xenforo",
         "vb",
@@ -50,6 +51,7 @@
         "html-entities": "1.0.10"
     },
 	"optionalDependencies": {
+		"nodebb-plugin-import-discourse": "*",
 		"nodebb-plugin-import-xenforo": "*",
 		"nodebb-plugin-import-wefrag": "*",
 		"nodebb-plugin-import-vbulletin": "*",
