@@ -71,7 +71,6 @@ var async = require('async'),
 	Exporter.setup = function(cb) {
 		Exporter.augmentLogFunctions();
 		Exporter._exporter.setup(Exporter.config, function(err) {
-			debugger;
 			if (err) {
 				Exporter.emit('exporter.error', {error: err});
 				return cb(err);
@@ -104,10 +103,8 @@ var async = require('async'),
 	};
 	Exporter.countUsers = function(cb) {
 		if (Exporter._exporter.countUsers) {
-			console.log("Found a native countUsers");
 			return Exporter._exporter.countUsers(cb);
 		}
-		console.log("no native countUsers");
 		var count = 0;
 		Exporter.exportUsers(function(err, map, arr, nextBatch) {
 					count += arr.length;

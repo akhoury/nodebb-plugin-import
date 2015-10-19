@@ -1567,12 +1567,10 @@ var async = require('async'),
 												imported++;
 												vote = nodeExtend(true, {}, vote, voteReturn);
 												votes[_vid] = vote;
-												console.log ('!!! setting vote as imported: ', _vid);
 												Data.setVoteImported(_vid, vote._action, vote, done);
 											};
 
 											var sendVote = function(pid, uid, action) {
-												console.log('!!! sending vote for ', pid, uid, action);
 												if (action == 'down') {
 													Favourites.downvote(pid, uid, onCreate);
 												} else {
@@ -1582,10 +1580,8 @@ var async = require('async'),
 											var pid;
 											if (!_.isUndefined(post) && !_.isNull(post)) {
 												pid = post.pid;
-												console.log ('!!! pid from post is', pid);
 											} else if (!_.isUndefined(topic) && !_.isNull(topic)) {
 												pid = topic.tid;
-												console.log ('!!! pid from topic is', pid);
 											}
 
 											var action = vote._action == 2 ? 'down' : 'up';
@@ -2017,7 +2013,6 @@ var async = require('async'),
 
 	Importer.error = function() {
 		var args = _.toArray(arguments);
-
 		args.unshift('importer.error');
 		args.push('logged');
 		Importer.emit.apply(Importer, args);
