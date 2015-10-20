@@ -9,6 +9,8 @@ var async = require('async'),
 		utils = require('../public/js/utils.js'),
 		Data = require('./data.js'),
 
+		MAX_INT = -1 >>> 1,
+
 		Groups = require('../../../src/groups.js'),
 		Favourites = require('../../../src/favourites.js'),
 		privileges = require('../../../src/privileges.js'),
@@ -79,15 +81,17 @@ var async = require('async'),
 			},
 
 			nbbTmpConfig: {
+				tagsPerTopic: MAX_INT,
+				maximumPostLength: MAX_INT,
+				maximumChatMessageLength: MAX_INT,
+				maximumTitleLength: MAX_INT,
+				maximumUsernameLength: MAX_INT,
 				postDelay: 0,
 				initialPostDelay: 0,
 				newbiePostDelay: 0,
 				minimumPostLength: 1,
 				minimumPasswordLength: 0,
 				minimumTitleLength: 0,
-				maximumTitleLength: 2000,
-				tagsPerTopic: 100,
-				maximumUsernameLength: 100,
 				requireEmailConfirmation: 0,
 				allowGuestPosting: 1
 			}
@@ -331,9 +335,12 @@ var async = require('async'),
 							},
 							{alwaysStartAt: 0},
 							function(err) {
+								if (err) {
+									Importer.warn(Importer._phase + " : " + err.message);
+								}
 								Importer.progress(1, 1);
 								Importer.phase('purgeCategories+Topics+PostsDone');
-								done(err)
+								done()
 							});
 				});
 
@@ -474,6 +481,7 @@ var async = require('async'),
 
 	Importer.phase = function(phase, data) {
 		Importer.phasePercentage = 0;
+		Importer._phase = phase;
 		Importer.emit('importer.phase', {phase: phase, data: data});
 	};
 
@@ -821,7 +829,7 @@ var async = require('async'),
 									function(cb) {
 										Data.getImportedUser(message._fromuid, function(err, toUser) {
 											if (err) {
-												Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err);
+												Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
 											}
 											cb(null, toUser);
 										});
@@ -829,7 +837,7 @@ var async = require('async'),
 									function(cb) {
 										Data.getImportedUser(message._touid, function(err, toUser) {
 											if (err) {
-												Importer.warn('getImportedUser:_touid:' + message._touid + ' err: ' + err);
+												Importer.warn('getImportedUser:_touid:' + message._touid + ' err: ' + err.message);
 											}
 											cb(null, toUser);
 										});
@@ -847,7 +855,8 @@ var async = require('async'),
 
 										var onAddMessage = function(err, messageReturn) {
 											if (err || !messageReturn) {
-												Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser);
+												Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser
+													+ (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
 												Importer.progress(count, total);
 												return done();
 											}
@@ -881,7 +890,7 @@ var async = require('async'),
 												}
 											], function(err) {
 												if (err) {
-													Importer.warn('[process-count-at: ' + count + '] post creation error message:_mid: ' + _mid + ':mid:' + mid, err);
+													Importer.warn('[process-count-at: ' + count + '] post creation error message:_mid: ' + _mid + ':mid:' + mid, err.message);
 													return done();
 												}
 
@@ -2012,6 +2021,8 @@ var async = require('async'),
 	};
 
 	Importer.error = function() {
+		debugger;
+
 		var args = _.toArray(arguments);
 		args.unshift('importer.error');
 		args.push('logged');
@@ -2075,7 +2086,7 @@ var async = require('async'),
 			}
 		], function(err) {
 			if (err) {
-				Importer.warn(err);
+				Importer.warn(err.message || err);
 			}
 			var index = 0;
 			async.series([

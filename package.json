@@ -65,6 +65,6 @@
 		"nodebb-plugin-import-esotalk2": "*"
 	},
     "nbbpm": {
-        "compatibility": "0.6.1"
+        "compatibility": "0.8.2"
     }
 }
