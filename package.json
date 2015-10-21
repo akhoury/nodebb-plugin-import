@@ -1,6 +1,6 @@
 {
     "name": "nodebb-plugin-import",
-    "version": "0.3.11",
+    "version": "0.3.12",
     "description": "Import your forum data to nodebb",
     "main": "./server/importer.js",
     "scripts": {
@@ -17,7 +17,6 @@
         "convert",
         "import",
         "ubb",
-        "discourse",
         "phpbb",
         "xenforo",
         "vb",
@@ -51,7 +50,6 @@
         "html-entities": "1.0.10"
     },
 	"optionalDependencies": {
-		"nodebb-plugin-import-discourse": "*",
 		"nodebb-plugin-import-xenforo": "*",
 		"nodebb-plugin-import-wefrag": "*",
 		"nodebb-plugin-import-vbulletin": "*",
