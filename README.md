@@ -39,7 +39,7 @@ Activate it, then visit
 
 Keep in mind that some Exporters may not be compatible or updated will all versions. File an issue when it's not.
 
-* [Works](https://github.com/akhoury/nodebb-plugin-import/issues?q=label%3AExporter+is%3Aclosed)
+* [Works](https://github.com/akhoury/nodebb-plugin-import/blob/master/package.json#L52-L65)
 * [In Progress, Needs testing or blocked (I need db dumps)](https://github.com/akhoury/nodebb-plugin-import/labels/Exporter)
 
 
