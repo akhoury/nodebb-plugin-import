@@ -5,7 +5,7 @@ var async = require('async'),
 		COUNT_BATCH_SIZE = 500000,
 		DEFAULT_EXPORT_BATCH_SIZE = 500000,
 
-		// mysql is terrible
+// mysql is terrible
 		MAX_MYSQL_INT = -1 >>> 1,
 
 		noop = function() {},
@@ -477,10 +477,10 @@ var async = require('async'),
 				&& (
 				Exporter.supportsPagination(exporter) ||
 				(
-					_.isFunction(exporter.getUsers)
-					&& _.isFunction(exporter.getCategories)
-					&& _.isFunction(exporter.getTopics)
-					&& _.isFunction(exporter.getPosts)
+				_.isFunction(exporter.getUsers)
+				&& _.isFunction(exporter.getCategories)
+				&& _.isFunction(exporter.getTopics)
+				&& _.isFunction(exporter.getPosts)
 				)
 				)
 				&& _.isFunction(exporter.teardown)

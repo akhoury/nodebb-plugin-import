@@ -248,13 +248,13 @@ var async = require('async'),
 		arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
 
 		isAnythingDirty =
-			areGroupsDirty
-			|| areVotesDirty
-			|| areUsersDirty
-			|| areCategoriesDirty
-			|| areTopicsDirty
-			|| arePostsDirty
-			|| areMessagesDirty;
+				areGroupsDirty
+				|| areVotesDirty
+				|| areUsersDirty
+				|| areCategoriesDirty
+				|| areTopicsDirty
+				|| arePostsDirty
+				|| areMessagesDirty;
 
 		// order in start() and resume() matters and must be in sync
 		if (areGroupsDirty) {
@@ -856,7 +856,7 @@ var async = require('async'),
 										var onAddMessage = function(err, messageReturn) {
 											if (err || !messageReturn) {
 												Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser
-													+ (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
+												+ (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
 												Importer.progress(count, total);
 												return done();
 											}
@@ -1494,9 +1494,9 @@ var async = require('async'),
 		Importer._lastPercentage = 0;
 
 		var count = 0,
-			imported = 0,
-			startTime = +new Date(),
-			config = Importer.config(); // TODO get config of if Kudos are enabled here?
+				imported = 0,
+				startTime = +new Date(),
+				config = Importer.config(); // TODO get config of if Kudos are enabled here?
 
 		fs.writeFileSync(DIRTY_VOTES_FILE, +new Date(), {encoding: 'utf8'});
 
@@ -1525,79 +1525,79 @@ var async = require('async'),
 								Importer.log('[process-count-at:' + count + '] saving vote:_vid: ' + _vid);
 
 								async.parallel([
-										function(cb) {
-											Data.getImportedPost(vote._pid, function(err, post) {
-												if (err) {
-													Importer.warn('getImportedPost: ' + vote._pid + ' err: ' + err);
-												}
-												cb(null, post);
-											});
-										},
-										function(cb) {
-											Data.getImportedTopic(vote._tid, function(err, topic) {
-												if (err) {
-													Importer.warn('getImportedTopic: ' + vote._tid + ' err: ' + err);
-												}
-												cb(null, topic);
-											});
-										},
-										function(cb) {
-											Data.getImportedUser(vote._uid, function(err, user) {
-												if (err) {
-													Importer.warn('getImportedTopic: ' + vote._uid + ' err: ' + err);
-												}
-												cb(null, user);
-											});
-										}
-									],
-									function(err, results){
-										var post = results[0];
-										var topic = results[1];
-										var user = results[2] || {uid: '0'};
-
-										if (!post && !topic) {
-											Importer.warn('[process-count-at: ' + count + '] post and topic do not exist! Likely it was deleted. _vid: ' + _vid);
-											done();
-										} else {
-
-											var onCreate = function(err, voteReturn) {
-												if (err) {
-													Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
-													Importer.warn(post);
-													Importer.warn(topic);
-													Importer.warn(user);
-													Importer.progress(count, total);
-													return done();
-												}
-
-												Importer.progress(count, total);
-
-												vote.imported = true;
-												imported++;
-												vote = nodeExtend(true, {}, vote, voteReturn);
-												votes[_vid] = vote;
-												Data.setVoteImported(_vid, vote._action, vote, done);
-											};
-
-											var sendVote = function(pid, uid, action) {
-												if (action == 'down') {
-													Favourites.downvote(pid, uid, onCreate);
-												} else {
-													Favourites.upvote(pid, uid, onCreate);
-												}
-											};
-											var pid;
-											if (!_.isUndefined(post) && !_.isNull(post)) {
-												pid = post.pid;
-											} else if (!_.isUndefined(topic) && !_.isNull(topic)) {
-												pid = topic.tid;
+											function(cb) {
+												Data.getImportedPost(vote._pid, function(err, post) {
+													if (err) {
+														Importer.warn('getImportedPost: ' + vote._pid + ' err: ' + err);
+													}
+													cb(null, post);
+												});
+											},
+											function(cb) {
+												Data.getImportedTopic(vote._tid, function(err, topic) {
+													if (err) {
+														Importer.warn('getImportedTopic: ' + vote._tid + ' err: ' + err);
+													}
+													cb(null, topic);
+												});
+											},
+											function(cb) {
+												Data.getImportedUser(vote._uid, function(err, user) {
+													if (err) {
+														Importer.warn('getImportedTopic: ' + vote._uid + ' err: ' + err);
+													}
+													cb(null, user);
+												});
 											}
+										],
+										function(err, results){
+											var post = results[0];
+											var topic = results[1];
+											var user = results[2] || {uid: '0'};
 
-											var action = vote._action == 2 ? 'down' : 'up';
+											if (!post && !topic) {
+												Importer.warn('[process-count-at: ' + count + '] post and topic do not exist! Likely it was deleted. _vid: ' + _vid);
+												done();
+											} else {
 
-											sendVote(pid, user.uid, action);
-										}
-								});
+												var onCreate = function(err, voteReturn) {
+													if (err) {
+														Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
+														Importer.warn(post);
+														Importer.warn(topic);
+														Importer.warn(user);
+														Importer.progress(count, total);
+														return done();
+													}
+
+													Importer.progress(count, total);
+
+													vote.imported = true;
+													imported++;
+													vote = nodeExtend(true, {}, vote, voteReturn);
+													votes[_vid] = vote;
+													Data.setVoteImported(_vid, vote._action, vote, done);
+												};
+
+												var sendVote = function(pid, uid, action) {
+													if (action == 'down') {
+														Favourites.downvote(pid, uid, onCreate);
+													} else {
+														Favourites.upvote(pid, uid, onCreate);
+													}
+												};
+												var pid;
+												if (!_.isUndefined(post) && !_.isNull(post)) {
+													pid = post.pid;
+												} else if (!_.isUndefined(topic) && !_.isNull(topic)) {
+													pid = topic.tid;
+												}
+
+												var action = vote._action == 2 ? 'down' : 'up';
+
+												sendVote(pid, user.uid, action);
+											}
+										});
 							});
 						};
 						async.eachLimit(votesArr, 1, onEach, nextExportBatch);
