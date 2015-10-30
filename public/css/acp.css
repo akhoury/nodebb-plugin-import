@@ -17,6 +17,7 @@
 .import-config-wrapper {
 	background: #E2E4F6;
 }
+.import-settings select.form-control,
 .import-settings input.form-control {
 	background-color: white;
 	padding: 3px;

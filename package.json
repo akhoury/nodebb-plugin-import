@@ -1,6 +1,6 @@
 {
     "name": "nodebb-plugin-import",
-    "version": "0.3.13",
+    "version": "0.3.14",
     "description": "Import your forum data to nodebb",
     "main": "./server/importer.js",
     "scripts": {
@@ -21,6 +21,8 @@
         "xenforo",
         "vb",
         "vbulletin",
+        "vanilla",
+        "discourse",
         "wordpress",
         "bbpress",
         "jforum",
@@ -50,6 +52,8 @@
         "html-entities": "1.0.10"
     },
 	"optionalDependencies": {
+		"nodebb-plugin-import-discourse": "*",
+		"nodebb-plugin-import-vanilla": "*",
 		"nodebb-plugin-import-xenforo": "*",
 		"nodebb-plugin-import-wefrag": "*",
 		"nodebb-plugin-import-vbulletin": "*",
@@ -60,7 +64,6 @@
 		"nodebb-plugin-import-smf": "*",
 		"nodebb-plugin-import-wordpress": "*",
 		"nodebb-plugin-import-jforum": "*",
-		"nodebb-plugin-import-punbb": "*",
 		"nodebb-plugin-import-esotalk": "*",
 		"nodebb-plugin-import-esotalk2": "*"
 	},
