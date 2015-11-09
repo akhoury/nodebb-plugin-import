@@ -333,7 +333,7 @@ var async = require('async'),
 	};
 
 	Data.setVoteImported = function(_vid, vid, vote, callback){
-		return Data.setImported('_imported:_votes', 'imported_vote:', _vid, vid, vote, callback);
+		return Data.setImported('_imported:_votes', '_imported_vote:', _vid, vid, vote, callback);
 	}
 
 	Data.isGroupImported = function(_gid, callback) {

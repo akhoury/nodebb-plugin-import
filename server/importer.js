@@ -1496,7 +1496,7 @@ var async = require('async'),
 		var count = 0,
 				imported = 0,
 				startTime = +new Date(),
-				config = Importer.config(); // TODO get config of if Kudos are enabled here?
+				config = Importer.config();
 
 		fs.writeFileSync(DIRTY_VOTES_FILE, +new Date(), {encoding: 'utf8'});
 
@@ -1544,7 +1544,7 @@ var async = require('async'),
 											function(cb) {
 												Data.getImportedUser(vote._uid, function(err, user) {
 													if (err) {
-														Importer.warn('getImportedTopic: ' + vote._uid + ' err: ' + err);
+														Importer.warn('getImportedUser: ' + vote._uid + ' err: ' + err);
 													}
 													cb(null, user);
 												});
