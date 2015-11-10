@@ -372,7 +372,7 @@ var async = require('async'),
 		return Data.isImported('_imported:_votes', _vid, callback);
 	};
 
-	Data.isVoteImported = function(_bid, callback) {
+	Data.isBookmarkImported = function(_bid, callback) {
 		return Data.isImported('_imported:_bookmarks', _bid, callback);
 	};
 
