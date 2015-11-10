@@ -1563,9 +1563,6 @@ var async = require('async'),
 												var onCreate = function(err, voteReturn) {
 													if (err) {
 														Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
-														Importer.warn(post);
-														Importer.warn(topic);
-														Importer.warn(user);
 														Importer.progress(count, total);
 														return done();
 													}
