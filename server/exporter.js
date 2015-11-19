@@ -87,7 +87,8 @@ var async = require('async'),
 			Exporter.countTopics,
 			Exporter.countPosts,
 			Exporter.countMessages,
-			Exporter.countVotes
+			Exporter.countVotes,
+			Exporter.countBookmarks
 		], function(err, results) {
 			if (err) return cb(err);
 			cb({
@@ -97,7 +98,8 @@ var async = require('async'),
 				topics: results[3],
 				posts: results[4],
 				messages: results[5],
-				votes: results[6]
+				votes: results[6],
+				bookmarks: results[7]
 			});
 		});
 	};
@@ -205,6 +207,22 @@ var async = require('async'),
 		}
 		var count = 0;
 		Exporter.exportVotes(function(err, map, arr, nextBatch) {
+					count += arr.length;
+					nextBatch();
+				},
+				{
+					batch: COUNT_BATCH_SIZE
+				},
+				function(err) {
+					cb(err, count);
+				});
+	};
+	Exporter.countBookmarks = function(cb) {
+		if (Exporter._exporter.countBookmarks) {
+			return Exporter._exporter.countBookmarks(cb);
+		}
+		var count = 0;
+		Exporter.exportBookmarks(function(err, map, arr, nextBatch) {
 					count += arr.length;
 					nextBatch();
 				},
@@ -364,6 +382,7 @@ var async = require('async'),
 		});
 	};
 
+	// Votes getters
 	var onVotes = function(err, arg1, arg2, cb) {
 		if (err) return cb(err);
 
@@ -391,6 +410,36 @@ var async = require('async'),
 			onVotes(err, arg1, arg2, cb);
 		});
 	};
+
+	// Bookmarks getters
+	var onBookmarks = function(err, arg1, arg2, cb) {
+		if (err) return cb(err);
+
+		if (_.isObject(arg1)) {
+			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+		}
+		if (_.isArray(arg1)) {
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_bid'), arg1);
+		}
+	};
+	Exporter.getBookmarks = function(cb) {
+		if (!Exporter._exporter.getBookmarks) { // votes is an optional feature
+			Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getBookmarks function, skipping...'});
+			return onBookmarks(null, {}, [], cb);
+		}
+		Exporter._exporter.getBookmarks(function(err, arg1, arg2) {
+			onBookmarks(err, arg1, arg2, cb);
+		});
+	};
+	Exporter.getPaginatedBookmarks = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedBookmarks) {
+			return Exporter.getBookmarks(cb);
+		}
+		Exporter._exporter.getPaginatedBookmarks(start, end, function(err, arg1, arg2) {
+			onBookmarks(err, arg1, arg2, cb);
+		});
+	};
+
 
 	Exporter.teardown = function(cb) {
 		Exporter._exporter.teardown(cb);
@@ -512,6 +561,9 @@ var async = require('async'),
 						case 'votes':
 							return _.isFunction(exporter.getPaginatedVotes);
 							break;
+						case 'bookmarks':
+							return _.isFunction(exporter.getPaginatedBookmarks);
+							break;
 
 						// if just checking if in general pagination is supported, then don't check the optional ones
 						default:
@@ -549,6 +601,10 @@ var async = require('async'),
 
 	Exporter.exportVotes = function(process, options, callback) {
 		return Exporter.exportType('votes', process, options, callback);
+	};
+
+	Exporter.exportBookmarks = function(process, options, callback) {
+		return Exporter.exportType('bookmarks', process, options, callback);
 	};
 
 	Exporter.exportType = function(type, process, options, callback) {

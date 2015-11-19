@@ -40,6 +40,7 @@ var async = require('async'),
 		DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
 		DIRTY_POSTS_FILE = path.join(__dirname, '/tmp/importer.dirty.posts'),
 		DIRTY_VOTES_FILE = path.join(__dirname, '/tmp/importer.dirty.votes'),
+		DIRTY_BOOKMARKS_FILE = path.join(__dirname, '/tmp/importer.dirty.bookmarks'),
 
 		areGroupsDirty,
 		areUsersDirty,
@@ -48,6 +49,7 @@ var async = require('async'),
 		areTopicsDirty,
 		arePostsDirty,
 		areVotesDirty,
+		areBookmarksDirty,
 
 		isAnythingDirty,
 
@@ -58,6 +60,7 @@ var async = require('async'),
 		alreadyImportedAllTopics = false,
 		alreadyImportedAllPosts = false,
 		alreadyImportedAllVotes = false,
+		alreadyImportedAllBookmarks = false,
 
 		flushed = false,
 
@@ -168,6 +171,7 @@ var async = require('async'),
 			Importer.fixCategoriesParents,
 			Importer.fixPostsToPids,
 			Importer.importVotes,
+			Importer.importBookmarks,
 			Importer.fixGroupsOwners,
 			Importer.relockUnlockedTopics,
 			Importer.fixTopicTimestamps,
@@ -224,6 +228,12 @@ var async = require('async'),
 			Importer.warn('alreadyImportedAllVotes=true, skipping importVotes Phase');
 		}
 
+		if (! alreadyImportedAllBookmarks) {
+			series.push(Importer.importBookmarks);
+		} else {
+			Importer.warn('alreadyImportedAllVotes=true, skipping importVotes Phase');
+		}
+
 		series.push(Importer.fixCategoriesParents);
 		series.push(Importer.relockUnlockedTopics);
 		series.push(Importer.fixTopicTimestamps);
@@ -246,6 +256,7 @@ var async = require('async'),
 		areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
 		areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
 		arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
+		areBookmarksDirty = !! fs.existsSync(DIRTY_BOOKMARKS_FILE);
 
 		isAnythingDirty =
 				areGroupsDirty
@@ -254,7 +265,8 @@ var async = require('async'),
 				|| areCategoriesDirty
 				|| areTopicsDirty
 				|| arePostsDirty
-				|| areMessagesDirty;
+				|| areMessagesDirty
+				|| areBookmarksDirty;
 
 		// order in start() and resume() matters and must be in sync
 		if (areGroupsDirty) {
@@ -265,6 +277,7 @@ var async = require('async'),
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 			alreadyImportedAllVotes = false;
+			alreadyImportedAllBookmarks = false;
 		} else if (areCategoriesDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = false;
@@ -273,6 +286,7 @@ var async = require('async'),
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 			alreadyImportedAllVotes = false;
+			alreadyImportedAllBookmarks = false;
 		} else if (areUsersDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -281,6 +295,7 @@ var async = require('async'),
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 			alreadyImportedAllVotes = false;
+			alreadyImportedAllBookmarks = false;
 		} else if (areMessagesDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -289,6 +304,7 @@ var async = require('async'),
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 			alreadyImportedAllVotes = false;
+			alreadyImportedAllBookmarks = false;
 		} else if (areTopicsDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -297,6 +313,7 @@ var async = require('async'),
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
 			alreadyImportedAllVotes = false;
+			alreadyImportedAllBookmarks = false;
 		} else if (arePostsDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -305,6 +322,7 @@ var async = require('async'),
 			alreadyImportedAllTopics = true;
 			alreadyImportedAllPosts = false;
 			alreadyImportedAllVotes = false;
+			alreadyImportedAllBookmarks = false;
 		} else if (alreadyImportedAllVotes) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
@@ -313,6 +331,16 @@ var async = require('async'),
 			alreadyImportedAllTopics = true;
 			alreadyImportedAllPosts = true;
 			alreadyImportedAllVotes = false;
+			alreadyImportedAllBookmarks = false;
+		} else if (alreadyImportedAllBookmarks) {
+			alreadyImportedAllGroups = true;
+			alreadyImportedAllCategories = true;
+			alreadyImportedAllUsers = true;
+			alreadyImportedAllMessages = true;
+			alreadyImportedAllTopics = true;
+			alreadyImportedAllPosts = true;
+			alreadyImportedAllVotes = true;
+			alreadyImportedAllBookmarks = false;
 		}
 
 		return _.isFunction(done) ? done(null, isAnythingDirty) : isAnythingDirty;
@@ -450,6 +478,12 @@ var async = require('async'),
 					},
 					function(cb) {
 						db.setObjectField('global', 'voteCount', 1, cb);
+					},
+					function(cb) {
+						db.setObjectField('global', 'nextBid', 1, cb);
+					},
+					function(cb) {
+						db.setObjectField('global', 'bookmarkCount', 1, cb);
 					}
 				], function() {
 					Importer.progress(1, 1);
@@ -529,6 +563,12 @@ var async = require('async'),
 	var recoverImportedVote = function(_vid, callback) {
 		if (! flushed && (alreadyImportedAllVotes || areVotesDirty)) {
 			return Data.getImportedVote(_vid, callback);
+		}
+		return callback(null, null);
+	};
+	var recoverImportedBookmark = function(_bid, callback) {
+		if (! flushed && (alreadyImportedAllBookmarks || areBookmarksDirty)) {
+			return Data.getImportedBookmark(_bid, callback);
 		}
 		return callback(null, null);
 	};
@@ -1614,6 +1654,128 @@ var async = require('async'),
 		});
 	};
 
+	Importer.importBookmarks = function(next) {
+		Importer.phase('bookmarksImportStart');
+		Importer.progress(0, 1);
+
+		Importer._lastPercentage = 0;
+
+		var count = 0,
+			imported = 0,
+			startTime = +new Date(),
+			config = Importer.config();
+
+		fs.writeFileSync(DIRTY_BOOKMARKS_FILE, +new Date(), {encoding: 'utf8'});
+
+		Importer.exporter.countBookmarks(function(err, total) {
+			Importer.success('Importing ' + total + ' bookmarks.');
+			Importer.exporter.exportBookmarks(
+					function(err, bookmarks, bookmarksArr, nextExportBatch) {
+
+						var onEach = function(bookmark, done) {
+							count++;
+							var _bid = bookmark._bid;
+
+							recoverImportedBookmark(_bid, function(err, _bookmark) {
+								if (_bookmark) {
+									imported++;
+									Importer.progress(count, total);
+									return done();
+								}
+
+								if (err) {
+									Importer.warn('skipping bookmark:_bid: ' + _bid + ' : ' + err);
+									Importer.progress(count, total);
+									return done();
+								}
+
+								Importer.log('[process-count-at:' + count + '] saving bookmark:_bid: ' + _bid);
+
+								async.parallel([
+											function(cb) {
+												Data.getImportedTopic(bookmark._tid, function(err, topic) {
+													if (err) {
+														Importer.warn('getImportedTopic: ' + bookmark._tid + ' err: ' + err);
+													}
+													cb(null, topic);
+												});
+											},
+											function(cb) {
+												Data.getImportedUser(bookmark._uid, function(err, user) {
+													if (err) {
+														Importer.warn('getImportedUser: ' + bookmark._uid + ' err: ' + err);
+													}
+													cb(null, user);
+												});
+											}
+										],
+										function(err, results){
+											var topic = results[0];
+											var user = results[1] || {uid: '0'};
+
+											if (!topic) {
+												Importer.warn('[process-count-at: ' + count + '] topic does not exist! Likely it was deleted. _bid: ' + _bid);
+												done();
+											} else {
+
+												var onCreate = function(err, bookmarkReturn) {
+													if (err) {
+														Importer.warn('skipping bookmark:_bid: ' + _bid + ' : ' + err);
+														// Importer.warn(topic);
+														// Importer.warn(user);
+														Importer.progress(count, total);
+														return done();
+													}
+
+													Importer.progress(count, total);
+
+													bookmark.imported = true;
+													imported++;
+													bookmark = nodeExtend(true, {}, bookmark, bookmarkReturn);
+													bookmarks[_bid] = bookmark;
+													Data.setBookmarkImported(_bid, bookmark._index, bookmark, done);
+												};
+
+												Topics.setUserBookmark(topic.tid, user.uid, bookmark._index, onCreate);
+
+												// var sendVote = function(pid, uid, action) {
+												// 	if (action == 'down') {
+												// 		Favourites.downvote(pid, uid, onCreate);
+												// 	} else {
+												// 		Favourites.upvote(pid, uid, onCreate);
+												// 	}
+												// };
+												// var pid;
+												// if (!_.isUndefined(post) && !_.isNull(post)) {
+												// 	pid = post.pid;
+												// } else if (!_.isUndefined(topic) && !_.isNull(topic)) {
+												// 	pid = topic.tid;
+												// }
+
+												// var action = vote._action == 2 ? 'down' : 'up';
+
+												// sendVote(pid, user.uid, action);
+											}
+										});
+							});
+						};
+						async.eachLimit(bookmarksArr, 1, onEach, nextExportBatch);
+					},
+					{
+						// options
+					},
+					function(err) {
+						if (err) {
+							throw err;
+						}
+						Importer.success('Importing ' + imported + '/' + total + ' bookmarks took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.progress(1, 1);
+						Importer.phase('bookmarksImportDone');
+						fs.remove(DIRTY_BOOKMARKS_FILE, next);
+					});
+		});
+	};
+
 	Importer.teardown = function(next) {
 		Importer.phase('importerTeardownStart');
 		Importer.phase('importerTeardownDone');
@@ -2080,6 +2242,12 @@ var async = require('async'),
 					total += count;
 					next();
 				});
+			},
+			function(next) {
+				Data.count('_imported:_bookmarks', function(err, count) {
+					total += count;
+					next();
+				});
 			}
 		], function(err) {
 			if (err) {
@@ -2159,6 +2327,22 @@ var async = require('async'),
 									Importer.progress(index++, total);
 									db.sortedSetRemove('_imported:_votes', _vid, function() {
 										db.delete('_imported_vote:' + _vid, cb);
+									});
+								}, nextBatch);
+							},
+							{
+								alwaysStartAt: 0
+							},
+							next);
+				},
+				function(next) {
+					Data.processIdsSet(
+							'_imported:_bookmarks',
+							function(err, ids, nextBatch) {
+								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_bid, cb) {
+									Importer.progress(index++, total);
+									db.sortedSetRemove('_imported:_bookmarks', _bid, function() {
+										db.delete('_imported_bookmark:' + _bid, cb);
 									});
 								}, nextBatch);
 							},

@@ -286,6 +286,10 @@ var async = require('async'),
 		return Data.getImported('_imported:_votes', '_imported_vote:', _vid, callback);
 	};
 
+	Data.getImportedBookmark = function(_bid, callback) {
+		return Data.getImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
+	};
+
 	Data.setImported = function(setKey, objPrefix, _id, id, data, callback) {
 		delete data._typeCast;
 		delete data.parse;
@@ -326,6 +330,10 @@ var async = require('async'),
 		return Data.setImported('_imported:_votes', '_imported_vote:', _vid, vid, vote, callback);
 	}
 
+	Data.setBookmarkImported = function(_bid, bid, bookmark, callback){
+		return Data.setImported('_imported:_bookmarks', '_imported_bookmark:', _bid, bid, bookmark, callback);
+	}
+
 	Data.isGroupImported = function(_gid, callback) {
 		return Data.isImported('_imported:_groups', _gid, callback);
 	};
@@ -352,6 +360,10 @@ var async = require('async'),
 
 	Data.isVoteImported = function(_vid, callback) {
 		return Data.isImported('_imported:_votes', _vid, callback);
+	};
+
+	Data.isBookmarkImported = function(_bid, callback) {
+		return Data.isImported('_imported:_bookmarks', _bid, callback);
 	};
 
 	Data.countImportedGroups = function(callback) {
@@ -382,6 +394,10 @@ var async = require('async'),
 		Data.count('_imported:_votes', callback);
 	};
 
+	Data.countImportedBookmarks = function(callback) {
+		Data.count('_imported:_bookmarks', callback);
+	};
+
 	Data.eachImportedGroup = function(iterator, options, callback) {
 		return Data.each('_imported:_groups', '_imported_group:', iterator, options, callback);
 	};
@@ -408,6 +424,10 @@ var async = require('async'),
 
 	Data.eachImportedVote = function(iterator, options, callback) {
 		return Data.each('_imported:_votes', '_imported_vote:', iterator, options, callback);
+	};
+
+	Data.eachImportedBookmark = function(iterator, options, callback) {
+		return Data.each('_imported:_bookmarks', '_imported_bookmark:', iterator, options, callback);
 	};
 
 	Data.keys = (function() {
