@@ -65,16 +65,6 @@ var async = require('async'),
 		Data.count('posts:pid', callback);
 	};
 
-	// each vote / vote is either up or down
-	Data.countVotes = function(callback) {
-		Data.keys('uid:*', function(err, keys){
-			if (err) {
-				callback(err);
-			}
-			keys.forEach(console.log(key)) // TODO
-		});
-	}
-
 	Data.eachUser = function(iterator, options, callback) {
 		return Data.each('users:joindate', 'user:', iterator, options, callback);
 	};
@@ -333,7 +323,7 @@ var async = require('async'),
 	};
 
 	Data.setVoteImported = function(_vid, vid, vote, callback){
-		return Data.setImported('_imported:_votes', 'imported_vote:', _vid, vid, vote, callback);
+		return Data.setImported('_imported:_votes', '_imported_vote:', _vid, vid, vote, callback);
 	}
 
 	Data.isGroupImported = function(_gid, callback) {

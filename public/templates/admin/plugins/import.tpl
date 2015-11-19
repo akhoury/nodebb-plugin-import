@@ -138,7 +138,7 @@
                         Say in your old forum you were the main admin, and your username was 'italian-desire', now after you've setup NodeBB, you decided to use the same
                         username; 'italian-desire' (meaning when you ran <code>node app --setup</code> or <code>./nodebb setup</code>).
 
-                        <br /> If you check this box and enter the username hat you want to take ownership of its posts, that user 'creation' will be skipped, and all of its posts, will owned by you, the main NodeBB admin and first user (uid=1).
+                        <br /> If you check this box and enter the username that you want to take ownership of its posts, that user 'creation' will be skipped, and all of its posts, will owned by you, the main NodeBB admin and first user (uid=1).
                         <br /> If you do not check this box, and it happens that you've chosen a username that already exists in your old database, that username's account creation,
                         will be skipped, because NodeBB cannot create 2 accounts with the same username, and all of its posts will be posted as 'guest'.
                     </p>
@@ -523,7 +523,7 @@
 </p>
 
 <p class="help-block">
-    For all problems, please file an issue at the plugin's <a href="https://github.com/akhoury/nodebb-plugin-import" target="_blank">gitbub repo</a>
+    For all problems, please file an issue at the plugin's <a href="https://github.com/akhoury/nodebb-plugin-import" target="_blank">github repo</a>
 </p>
 </div>
 
