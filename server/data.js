@@ -328,11 +328,11 @@ var async = require('async'),
 
 	Data.setVoteImported = function(_vid, vid, vote, callback){
 		return Data.setImported('_imported:_votes', '_imported_vote:', _vid, vid, vote, callback);
-	}
+	};
 
 	Data.setBookmarkImported = function(_bid, bid, bookmark, callback){
 		return Data.setImported('_imported:_bookmarks', '_imported_bookmark:', _bid, bid, bookmark, callback);
-	}
+	};
 
 	Data.isGroupImported = function(_gid, callback) {
 		return Data.isImported('_imported:_groups', _gid, callback);

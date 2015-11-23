@@ -323,7 +323,7 @@ var async = require('async'),
 			alreadyImportedAllPosts = false;
 			alreadyImportedAllVotes = false;
 			alreadyImportedAllBookmarks = false;
-		} else if (alreadyImportedAllVotes) {
+		} else if (areVotesDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
@@ -332,7 +332,7 @@ var async = require('async'),
 			alreadyImportedAllPosts = true;
 			alreadyImportedAllVotes = false;
 			alreadyImportedAllBookmarks = false;
-		} else if (alreadyImportedAllBookmarks) {
+		} else if (areBookmarksDirty) {
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
