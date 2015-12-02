@@ -96,7 +96,8 @@ var async = require('async'),
 				minimumPasswordLength: 0,
 				minimumTitleLength: 0,
 				requireEmailConfirmation: 0,
-				allowGuestPosting: 1
+				allowGuestPosting: 1,
+				trackIpPerPost: 1
 			}
 		};
 
@@ -1507,7 +1508,8 @@ var async = require('async'),
 											uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
 											tid: topic.tid,
 											content: post._content,
-											timestamp: post._timestamp || startTime
+											timestamp: post._timestamp || startTime,
+											ip: post._ip
 										}, onCreate);
 									}
 								});
