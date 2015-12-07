@@ -14,14 +14,22 @@ This section is up here because it's very important for you to read it, so let's
 * when you see the term __OLD__ it refers to your source forum or bulletin-board
 * when you see the term __NEW__ it refers to NodeBB
 * __ALL__ of the __OLD__ __variables__, must start with an __underscore__ character: `_`
-* `_cid` --> old category id, some forum software use different terms for categories, such as __forums__
+* `_cid` --> old category id, some forum software use different terms for categories, such as __forums__ or __boards__
 * `_uid` --> old user id
 * `_tid` --> old topic id, some forum software use different terms for topics, such as __threads__
 * `_pid` --> old post id
+* `_mid` --> old message id
+* `_gid` --> old group id
+* `_vid` --> old vote id
+* `_bid` --> old bookmark id
 * `cid` --> new category id
 * `uid` --> new user id
 * `tid` --> new topic id
 * `pid` --> new post id
+* `mid` --> new message id
+* `gid` --> new group id
+* `vid` --> new vote id
+* `bid` --> new bookmark id
 
 ## Required
 You need a node module that has the following interface.
@@ -30,7 +38,7 @@ You need a node module that has the following interface.
 
 Don't forget to check the "Skip the module install" checkbox in the "Select an Exporter" section, so the -import plugin won't delete your changes.
 
-### YourModule.setup(config, callback)
+### YourModule.setup(config, callback) [REQUIRED FUNCTION]
 * `config`: a JS object that will be passed to `setup()` and it contains the following:
 ```javascript
 {
@@ -40,6 +48,7 @@ Don't forget to check the "Skip the module install" checkbox in the "Select an E
     dbport: 3306, // a number, db port entered by the user on the UI
     dbname: 'my_schema', // db schema, or name, entered by the user on the UI
     tablePrefix: 'bb_', // db table prefix, entered by the user on the UI, ignore it if not applicable
+	custom: {} // a custom hash for your custom stuff,
 
     // these values are not defaults, these are just examples
 }
@@ -52,22 +61,22 @@ Don't forget to check the "Skip the module install" checkbox in the "Select an E
 
 ### YourModule.getUsers(callback) [deprecated]
 
-### YourModule.getPaginatedUsers(start, limit, callback)
+### YourModule.getPaginatedUsers(start, limit, callback) [REQUIRED FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the users, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
 
 ```
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the users ready to import
 ```
-In the `map`, the `keys` are the users `_uid` (or the old userId).
+In the `map`, the `keys` are the users `_uid` (or the old user id).
 
 Each record should look like this:
 ```javascript
 {
        // notice how all the old variables start with an _
-      // if any of the required variables fails, the user will be skipped
+       // if any of the required variables fails, the record will be skipped
 
         "_uid": 45, // REQUIRED
 
@@ -120,43 +129,12 @@ Each record should look like this:
 }
 ```
 
-### YourModule.getMessages(callback) [deprecated]
-
-### YourModule.getPaginatedMessages(start, limit, callback)
-* `start` of the query row
-* `limit` of the query results
-* `callback`  Query the users, filter them at will, then call the `callback(err, map)` wih the following arguments
-
-```
-  - err: if truthy the export process will throw the error and stop
-  - map: a hashmap of all the users ready to import
-```
-In the `map`, the `keys` are the users `_mid` (or the old message Id).
-
-Each record should look like this:
-```javascript
-{
-       // notice how all the old variables start with an _
-      // if any of the required variables fails, the user will be skipped
-
-        "_mid": 45, // REQUIRED
-
-        "_fromuid": 10, // REQUIRED
-
-        "_touid": 20, // REQUIRED
-
-        "_content": "Hello there!", // REQUIRED
-
-        "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
-}
-```
-
 ### YourModule.getCategories(callback) [deprecated]
 
-### YourModule.getPaginatedCategories(start, limit, callback)
+### YourModule.getPaginatedCategories(start, limit, callback) [REQUIRED FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the categories, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
 
 Note: Categories are sometimes known as __forums__ in some forums software
 
@@ -164,7 +142,7 @@ Note: Categories are sometimes known as __forums__ in some forums software
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the categories ready to import
 ```
-In the `map`, the `keys` are the categories `_cid` (or the old categorieId).
+In the `map`, the `keys` are the categories `_cid` (or the old categorie id).
 
 Each record should look like this:
 ```javascript
@@ -189,14 +167,12 @@ Each record should look like this:
 }
 ```
 
-
-
 ### YourModule.getTopics(callback) [deprecated]
 
-### YourModule.getPaginatedTopics(start, limit, callback)
+### YourModule.getPaginatedTopics(start, limit, callback) [REQUIRED FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the topics, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
 
 Note: Topics are sometimes known as __threads__ in some forums software
 
@@ -204,7 +180,7 @@ Note: Topics are sometimes known as __threads__ in some forums software
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the topics ready to import
 ```
-In the `map`, the `keys` are the topics `_tid` (or the old topicId).
+In the `map`, the `keys` are the topics `_tid` (or the old topic id).
 
 Each record should look like this:
 ```javascript
@@ -246,19 +222,18 @@ Each record should look like this:
 }
 ```
 
-
 ### YourModule.getPosts(callback) [deprecated]
 
-### YourModule.getPaginatedPosts(start, limit, callback)
+### YourModule.getPaginatedPosts(start, limit, callback) [REQUIRED FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the topics, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
 
 ```
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the posts ready to import
 ```
-In the `map`, the `keys` are the posts `_pid` (or the old postId).
+In the `map`, the `keys` are the posts `_pid` (or the old post id).
 
 Each record should look like this:
 ```javascript
@@ -270,18 +245,19 @@ Each record should look like this:
 
         "_tid": 1234, // REQUIRED, OLD TOPIC ID
 
+        "_content": "Post content ba dum tss", // REQUIRED
+
         "_uid": 202, // OPTIONAL, OLD USER ID, NodeBB will create under the "Guest" username
+
+        "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
 
         "_guest": "Some dude" // OPTIONAL, if you don't have _uid, you can pass a guest name to be used in future features, defaults to null
 
         "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
-        "_content": "Post content ba dum tss", // REQUIRED
 
         "_reputation": 0, // OPTIONAL, defaults to 0
 
-        "_votes": 0, // OPTIONAL, defaults to 0, can be negative
-
-        "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
+        "_votes": 0, // OPTIONAL, defaults to 0, These are more like favorites, Not to be confused with the up/down votes in a separate functions below, getPaginatedVotes
 
         "_path": "/myoldforum/topic/123#post56789", // OPTIONAL, the old path to reach this post's page and maybe deep link, defaults to ''
 
@@ -290,7 +266,129 @@ Each record should look like this:
 }
 ```
 
-### YourModule.teardown(callback)
+### YourModule.getMessages(callback) [deprecated]
+
+### YourModule.getPaginatedMessages(start, limit, callback) [OPTIONAL FUNCTION]
+* `start` of the query row
+* `limit` of the query results
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+
+```
+  - err: if truthy the export process will throw the error and stop
+  - map: a hashmap of all the messages ready to import
+```
+In the `map`, the `keys` are the messages `_mid` (or the old message id).
+
+Each record should look like this:
+```javascript
+{
+       // notice how all the old variables start with an _
+      // if any of the required variables fails, the record will be skipped
+
+        "_mid": 45, // REQUIRED
+
+        "_fromuid": 10, // REQUIRED
+
+        "_touid": 20, // REQUIRED
+
+        "_content": "Hello there!", // REQUIRED
+
+        "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+}
+```
+
+### YourModule.getGroups(callback) [deprecated]
+
+### YourModule.getPaginatedGroups(start, limit, callback) [OPTIONAL FUNCTION]
+* `start` of the query row
+* `limit` of the query results
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+
+```
+  - err: if truthy the export process will throw the error and stop
+  - map: a hashmap of all the groups ready to import
+```
+In the `map`, the `keys` are the groups `_gid` (or the old group id).
+
+Each record should look like this:
+```javascript
+{
+       // notice how all the old variables start with an _
+      // if any of the required variables fails, the record will be skipped
+
+        "_gid": 45, // REQUIRED, old group id
+
+        "_name": "My group name", // REQUIRED
+
+        "_ownerUid": 123, // REQUIRED, owner old user id, aka user._uid,
+
+        "_description": "My group description", // OPTIONAL
+
+        "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+}
+```
+
+### YourModule.getVotes(callback) [deprecated]
+
+### YourModule.getPaginatedVotes(start, limit, callback) [OPTIONAL FUNCTION]
+* `start` of the query row
+* `limit` of the query results
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+
+```
+  - err: if truthy the export process will throw the error and stop
+  - map: a hashmap of all the groups ready to import
+```
+In the `map`, the `keys` are the votes `_vid` (or the old vote id).
+
+Each record should look like this:
+```javascript
+{
+       // notice how all the old variables start with an _
+       // if any of the required variables fails, the record will be skipped
+
+        "_vid": 987, // REQUIRED, old vote id
+
+        "_uid": 789, // REQUIRED, old user id which did the vote
+
+		// of these 2 ids is REQUIRED
+        "_tid": 123, // MAYBE-OPTIONAL, old topic id which is the vote occured on
+        "_pid": 456, // MAYBE-OPTIONAL, old post id which is the vote occured on
+
+        "_action": 1 // REQUIRED 1 or -1, 1 means UP, -1 means down
+}
+```
+
+### YourModule.getBookmarks(callback) [deprecated]
+
+### YourModule.getPaginatedBookmarks(start, limit, callback) [OPTIONAL FUNCTION]
+* `start` of the query row
+* `limit` of the query results
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+
+```
+  - err: if truthy the export process will throw the error and stop
+  - map: a hashmap of all the groups ready to import
+```
+In the `map`, the `keys` are the groups `_bid` (or the old bookmark Id).
+
+Each record should look like this:
+```javascript
+{
+       // notice how all the old variables start with an _
+       // if any of the required variables fails, the record will be skipped
+
+        "_bid": 987, // REQUIRED, old bookmark id
+
+        "_tid": 123, // REQUIRED, old topic id
+
+        "_uid": 789, // REQUIRED, old user id
+
+        "_index": 2 // REQUIRED, the index of the bookmarked-post, i.e. 5 if the 6'sh post of that topic was the bookmarked post
+}
+```
+
+### YourModule.teardown(callback) [REQUIRED FUNCTION]
 
 If you need to do something before the export is done, like closing a connection or something, then call the `callback`
 

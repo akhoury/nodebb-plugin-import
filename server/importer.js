@@ -92,12 +92,30 @@ var async = require('async'),
 				postDelay: 0,
 				initialPostDelay: 0,
 				newbiePostDelay: 0,
-				minimumPostLength: 1,
+				minimumPostLength: 0,
 				minimumPasswordLength: 0,
 				minimumTitleLength: 0,
 				requireEmailConfirmation: 0,
 				allowGuestPosting: 1,
-				trackIpPerPost: 1
+				trackIpPerPost: 1,
+				"newbiePostDelayThreshold": 0,
+				"minimumTagsPerTopic": 0,
+				"maximumTagsPerTopic": MAX_INT,
+				"allowGuestSearching": 1,
+				"allowTopicsThumbnail": 1,
+				"registrationType": "normal",
+				"allowLocalLogin": 1,
+				"allowAccountDelete": 1,
+				"allowFileUploads": 1,
+				"allowUserHomePage": 1,
+				"maximumFileSize": MAX_INT,
+				"minimumUsernameLength": 1,
+				"maximumSignatureLength": MAX_INT,
+				"maximumAboutMeLength": MAX_INT,
+				"maximumProfileImageSize": MAX_INT,
+				"maximumCoverImageSize": MAX_INT,
+				"profileImageDimension": 128,
+				"profile:allowProfileImageUploads": 1,
 			}
 		};
 
@@ -1632,7 +1650,9 @@ var async = require('async'),
 													pid = topic.tid;
 												}
 
-												var action = vote._action == 2 ? 'down' : 'up';
+												// todo: leave action == 2 supported for vanilla
+												// https://github.com/akhoury/nodebb-plugin-import/pull/129#discussion_r46779044
+												var action = vote._action == 2 || vote._action == -1 ? 'down' : 'up';
 
 												sendVote(pid, user.uid, action);
 											}
@@ -1723,8 +1743,6 @@ var async = require('async'),
 												var onCreate = function(err, bookmarkReturn) {
 													if (err) {
 														Importer.warn('skipping bookmark:_bid: ' + _bid + ' : ' + err);
-														// Importer.warn(topic);
-														// Importer.warn(user);
 														Importer.progress(count, total);
 														return done();
 													}
@@ -1739,24 +1757,6 @@ var async = require('async'),
 												};
 
 												Topics.setUserBookmark(topic.tid, user.uid, bookmark._index, onCreate);
-
-												// var sendVote = function(pid, uid, action) {
-												// 	if (action == 'down') {
-												// 		Favourites.downvote(pid, uid, onCreate);
-												// 	} else {
-												// 		Favourites.upvote(pid, uid, onCreate);
-												// 	}
-												// };
-												// var pid;
-												// if (!_.isUndefined(post) && !_.isNull(post)) {
-												// 	pid = post.pid;
-												// } else if (!_.isUndefined(topic) && !_.isNull(topic)) {
-												// 	pid = topic.tid;
-												// }
-
-												// var action = vote._action == 2 ? 'down' : 'up';
-
-												// sendVote(pid, user.uid, action);
 											}
 										});
 							});
