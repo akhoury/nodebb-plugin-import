@@ -88,23 +88,26 @@ Each record should look like this:
 
         "_alternativeUsername": "u45alt", // OPTIONAL, defaults to '', some forums provide UserDisplayName, we could leverage that if the _username validation fails
 
-        "_password": '', // OPTIONAL, if you have them, or you want to generate them on your own, great, if not, all passwords will be blank
-
         // if you would like to generate random passwords, you will need to set the config.passwordGen.enabled = true, note that this will impact performance pretty hard
         // the new passwords with the usernames, emails and some more stuff will be spit out in the logs
         // look for the [user-csv] OR [user-json] tags to grep for a list of them
         // save dem logs
+        "_password": '', // OPTIONAL, if you have them, or you want to generate them on your own, great, if not, all passwords will be blank
 
         "_signature": "u45 signature", // OPTIONAL, defaults to '', over 150 chars will be truncated with an '...' at the end
 
         "_picture": "http://images.com/derp.png", // OPTIONAL, defaults to ''. Note that, if there is an '_piçture' on the 'normalized' object, the 'imported' objected will be augmented with a key imported.keptPicture = true, so you can iterate later and check if the images 200 or 404s
 
         "_pictureBlob": "...BINARY BLOB...", // OPTIONAL, defaults to null
+
         "_pictureFilename": "123.png", // OPTIONAL, only applicable if using _pictureBlob, defaults to ''
 
         "_path": "/myoldforum/user/123", // OPTIONAL, the old path to reach this user's page, defaults to ''
 
         "_slug": "old-user-slug", // OPTIONAL
+
+		// obviously this one depends on implementing the optional getPaginatedGroups function
+        "_groups": [123, 456, 789], // OPTIONAL, an array of old group ids that this user belongs to,
 
         "_website": "u45.com", // OPTIONAL, defaults to ''
 
@@ -114,7 +117,9 @@ Each record should look like this:
 
         "_location": "u45 city", // OPTIONAL, defaults to ''
 
-        "_reputation": 1, // OPTIONAL, defaults to 0, (there is a config for multiplying these with a number for moAr karma)
+		// (there is a config for multiplying these with a number for moAr karma)
+		// Also, if you're implementing getPaginatedVotes, every vote will also impact the user's reputation
+        "_reputation": 123, // OPTIONAL, defaults to 0,
 
         "_profileviews": 1, // OPTIONAL, defaults to 0
 
@@ -125,7 +130,6 @@ Each record should look like this:
         "_lastposttime": 1386475817370, // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
 
         "_level": "administrator" // OPTIONAL, [OPTIONS: 'administrator' or 'moderator'], defaults to '', also note that a moderator will become a NodeBB Moderator on ALL categories at the moment.
-
 }
 ```
 
@@ -216,6 +220,10 @@ Each record should look like this:
 
         "_pinned": 1 // OPTIONAL, defaults to 0
 
+        "_edited": 1386475817370 // OPTIONAL, [UNIT: Milliseconds] see post._edited defaults to null
+
+        "_reputation": 1234, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
+
         "_path": "/myoldforum/topic/123", // OPTIONAL, the old path to reach this topic's page, defaults to ''
 
         "_slug": "old-topic-slug" // OPTIONAL, defaults to ''
@@ -255,9 +263,9 @@ Each record should look like this:
 
         "_ip": "123.456.789.012", // OPTIONAL, not currently used in NodeBB core, but it might be in the future, defaults to null
 
-        "_reputation": 0, // OPTIONAL, defaults to 0
+        "_edited": 1386475829970, // OPTIONAL, [UNIT: Milliseconds], if and when the post was edited, defaults to null
 
-        "_votes": 0, // OPTIONAL, defaults to 0, These are more like favorites, Not to be confused with the up/down votes in a separate functions below, getPaginatedVotes
+        "_reputation": 0, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
 
         "_path": "/myoldforum/topic/123#post56789", // OPTIONAL, the old path to reach this post's page and maybe deep link, defaults to ''
 
@@ -331,6 +339,9 @@ Each record should look like this:
 ### YourModule.getVotes(callback) [deprecated]
 
 ### YourModule.getPaginatedVotes(start, limit, callback) [OPTIONAL FUNCTION]
+
+#### NOTE: Every vote WILL impact the post-user-owner reputation
+
 * `start` of the query row
 * `limit` of the query results
 * `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
@@ -351,7 +362,7 @@ Each record should look like this:
 
         "_uid": 789, // REQUIRED, old user id which did the vote
 
-		// of these 2 ids is REQUIRED
+		// 1 of these 2 ids is REQUIRED
         "_tid": 123, // MAYBE-OPTIONAL, old topic id which is the vote occured on
         "_pid": 456, // MAYBE-OPTIONAL, old post id which is the vote occured on
 

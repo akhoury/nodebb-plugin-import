@@ -1347,6 +1347,9 @@ var async = require('async'),
 
 												var postFields = {
 													timestamp: timestamp,
+													votes: topic._votes || 0,
+													reputation: topic._reputation || 0,
+													edited: topic._edited || undefined,
 													// todo: not sure if I need this
 													relativeTime: relativeTime
 												};
@@ -1487,7 +1490,8 @@ var async = require('async'),
 												var fields = {
 													reputation: post._reputation || 0,
 													votes: post._votes || 0,
-													edited: post._edited || 0,
+
+													edited: post._edited || undefined,
 													deleted: post._deleted || 0,
 
 													// todo: not sure if I need this

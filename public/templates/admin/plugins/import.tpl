@@ -56,9 +56,10 @@
             	class="form-control"
             	id="exporter-module"
             	name="exporter-module">
-            	<!-- BEGIN exporters -->
-					<option class="exporter-module-option" value="{exporters.name}">{exporters.name}</option>
-            	<!-- END exporters -->
+					<option class="exporter-module-option" value="">Select here or type it below</option>
+            		<!-- BEGIN exporters -->
+						<option class="exporter-module-option" value="{exporters.name}">{exporters.name}</option>
+            		<!-- END exporters -->
           	</select>
 
           	<p class="help-block">
