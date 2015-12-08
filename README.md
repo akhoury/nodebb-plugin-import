@@ -9,12 +9,16 @@ Import your old forum data to nodebb | a one time use plugin
 ![Imgur](http://i.imgur.com/aaWLORi.png)
 ![Imgur](http://i.imgur.com/01FUw0z.png)
 
-### Works with NodeBB stable [v0.8.2](https://github.com/NodeBB/NodeBB/tree/v0.8.2)
+### Works with NodeBB stable [v0.9.1](https://github.com/NodeBB/NodeBB/tree/v0.9.1)
 ```
 git clone https://github.com/NodeBB/NodeBB.git
 cd NodeBB
-git checkout v0.8.2
+git checkout v0.9.1
 npm install
+node app --setup
+
+# I recommend using mongo instead of redis
+
 ```
 
 If you want a higher revision, import to the supported one, then just follow the upgrade procedure here https://docs.nodebb.org/en/latest/upgrading/index.html
@@ -27,7 +31,7 @@ npm install nodebb-plugin-import
 ```
 then run nodebb
 ```
-./nodebb start
+node app
 ```
 __DISABLE ALL OTHER PLUGINS__ especially any DB indexer and Markdown
 
@@ -39,7 +43,7 @@ Activate it, then visit
 
 Keep in mind that some Exporters may not be compatible or updated will all versions. File an issue when it's not.
 
-* [Works](https://github.com/akhoury/nodebb-plugin-import/blob/master/package.json#L52-L65)
+* [Works](https://github.com/akhoury/nodebb-plugin-import/blob/master/package.json#L55-L68)
 * [In Progress, Needs testing or blocked (I need db dumps)](https://github.com/akhoury/nodebb-plugin-import/labels/Exporter)
 
 

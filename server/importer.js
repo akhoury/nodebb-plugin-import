@@ -924,32 +924,39 @@ var async = require('async'),
 											var mid = messageReturn.mid;
 											var uids =  [messageReturn.fromuid, messageReturn.touid].sort();
 
-											messageReturn._imported_content = message._content;
-											messageReturn.timestamp = message._timestamp;
-											messageReturn.timestampISO = (new Date(message._timestamp)).toISOString();
+											var _imported_content = message._content;
+											var timestamp = message._timestamp;
+											var timestampISO = (new Date(message._timestamp)).toISOString();
 
+											delete messageReturn._key;
 											delete messageReturn.toUser;
 											delete messageReturn.fromUser;
 
 											async.parallel([
 												function(next) {
-													db.setObject('message:' + mid, messageReturn, next);
+													db.setObjectField('message:' + mid, '_imported_content', _imported_content, next);
 												},
 												function(next) {
-													db.sortedSetAdd('messages:uid:' + uids[0] + ':to:' + uids[1], messageReturn.timestamp, mid, next);
+													db.setObjectField('message:' + mid, 'timestamp', timestamp, next);
 												},
 												function(next) {
-													db.sortedSetAdd('uid:' + uids[0] + ':chats', messageReturn.timestamp, uids[1], next);
+													db.setObjectField('message:' + mid, 'timestampISO', timestampISO, next);
 												},
 												function(next) {
-													db.sortedSetAdd('uid:' + uids[1] + ':chats', messageReturn.timestamp, uids[0], next);
+													db.sortedSetAdd('messages:uid:' + uids[0] + ':to:' + uids[1], timestamp, mid, next);
+												},
+												function(next) {
+													db.sortedSetAdd('uid:' + uids[0] + ':chats', timestamp, uids[1], next);
+												},
+												function(next) {
+													db.sortedSetAdd('uid:' + uids[1] + ':chats', timestamp, uids[0], next);
 												},
 												function(next) {
 													db.sortedSetRemove('uid:' + messageReturn.touid + ':chats:unread', messageReturn.fromuid, next);
 												}
 											], function(err) {
 												if (err) {
-													Importer.warn('[process-count-at: ' + count + '] post creation error message:_mid: ' + _mid + ':mid:' + mid, err.message);
+													Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
 													return done();
 												}
 
@@ -1654,9 +1661,7 @@ var async = require('async'),
 													pid = topic.tid;
 												}
 
-												// todo: leave action == 2 supported for vanilla
-												// https://github.com/akhoury/nodebb-plugin-import/pull/129#discussion_r46779044
-												var action = vote._action == 2 || vote._action == -1 ? 'down' : 'up';
+												var action = vote._action == -1 ? 'down' : 'up';
 
 												sendVote(pid, user.uid, action);
 											}
