@@ -84,7 +84,6 @@ var async = require('async'),
 			},
 
 			nbbTmpConfig: {
-				tagsPerTopic: MAX_INT,
 				maximumPostLength: MAX_INT,
 				maximumChatMessageLength: MAX_INT,
 				maximumTitleLength: MAX_INT,
@@ -96,7 +95,6 @@ var async = require('async'),
 				minimumPasswordLength: 0,
 				minimumTitleLength: 0,
 				requireEmailConfirmation: 0,
-				allowGuestPosting: 1,
 				trackIpPerPost: 1,
 				"newbiePostDelayThreshold": 0,
 				"minimumTagsPerTopic": 0,
@@ -173,10 +171,17 @@ var async = require('async'),
 		}
 	};
 
-	Importer.start = function(callback) {
+	function start (flush, callback) {
 		Importer.emit('importer.start');
-		async.series([
-			Importer.flushData,
+
+		var series = [];
+		if (flush) {
+			series.push(Importer.flushData);
+		} else {
+			Importer.log('Skipping data flush');
+			series.push(makeDirty);
+		}
+		async.series(series.concat([
 			Importer.backupConfig,
 			Importer.setTmpConfig,
 			Importer.importGroups,
@@ -197,7 +202,12 @@ var async = require('async'),
 			Importer.restoreConfig,
 			Importer.disallowGuestsWriteOnAllCategories,
 			Importer.teardown
-		], callback);
+		]), callback);
+	}
+
+	Importer.start = function(callback) {
+		var config = Importer.config();
+		start(config.flush, callback);
 	};
 
 	Importer.resume = function(callback) {
@@ -264,6 +274,32 @@ var async = require('async'),
 
 		async.series(series, callback);
 	};
+
+	function makeDirty (done) {
+
+		areGroupsDirty = true;
+		areUsersDirty = true;
+		areMessagesDirty = true;
+		areCategoriesDirty = true;
+		areTopicsDirty = true;
+		arePostsDirty = true;
+		areVotesDirty = true;
+		areBookmarksDirty = true;
+		isAnythingDirty = true;
+
+		alreadyImportedAllGroups = false;
+		alreadyImportedAllUsers = false;
+		alreadyImportedAllMessages = false;
+		alreadyImportedAllCategories = false;
+		alreadyImportedAllTopics = false;
+		alreadyImportedAllPosts = false;
+		alreadyImportedAllVotes = false;
+		alreadyImportedAllBookmarks = false;
+
+		flushed = false;
+
+		return _.isFunction(done) ? done(null, true) : true;
+	}
 
 	// todo: really? wtf is this logic
 	Importer.isDirty = function(done) {
@@ -368,9 +404,10 @@ var async = require('async'),
 	Importer.flushData = function(next) {
 		async.series([
 			function(done){
-				Importer.phase('purgeCategories+Topics+PostsStart');
+				Importer.phase('purgeCategories+Topics+Bookmarks+Posts+VotesStart');
 				Importer.progress(0, 1);
 
+				// that will delete, categories, topics, topics.bookmarks, posts and posts.votes
 				Data.countCategories(function(err, total) {
 					var index = 0;
 					Data.processCategoriesCidsSet(
@@ -386,7 +423,7 @@ var async = require('async'),
 									Importer.warn(Importer._phase + " : " + err.message);
 								}
 								Importer.progress(1, 1);
-								Importer.phase('purgeCategories+Topics+PostsDone');
+								Importer.phase('purgeCategories+Topics+Bookmarks+Posts+VotesDone');
 								done()
 							});
 				});
@@ -427,6 +464,43 @@ var async = require('async'),
 				});
 			},
 			function(done) {
+				Importer.phase('purgeGroupsStart');
+				Importer.progress(0, 1);
+
+				Data.countGroups(function(err, total) {
+					var index = 0; var count = 0;
+					Data.processGroupsNamesSet(
+							function(err, names, nextBatch) {
+								async.mapLimit(names, FLUSH_BATCH_SIZE, function(name, cb) {
+									Importer.progress(index++, total);
+
+									// skip if system group
+									if (name === 'administrators') {
+										return cb();
+									}
+									Groups.destroy(name, function() {
+										count++;
+										cb();
+									});
+								}, nextBatch);
+							}, {
+								// since we're deleting records the range is always shifting backwards, so need to advance the batch start boundary
+								alwaysStartAt: 0,
+
+								// done if the administrators group in the only one in the db
+								doneIf: function(start, end, names) {
+									return !names.length || names.length === 1;
+								}
+							},
+							function(err) {
+								Importer.progress(1, 1);
+								Importer.phase('purgeGroupsDone');
+								done(err)
+							}
+					);
+				});
+			},
+			function(done) {
 				Importer.phase('purgeMessagesStart');
 				Importer.progress(0, 1);
 
@@ -446,6 +520,12 @@ var async = require('async'),
 										db.sortedSetRemove('messages:uid:' + uids[0] + ':to:' + uids[1], message.mid, function() {
 											nxt();
 										});
+									},
+									function(next) {
+										db.sortedSetRemove('uid:' + uids[0] + ':chats', uids[1], next);
+									},
+									function(next) {
+										db.sortedSetRemove('uid:' + uids[1] + ':chats', uids[0], next);
 									}
 								], next);
 							},
@@ -470,6 +550,12 @@ var async = require('async'),
 					},
 					function(cb) {
 						db.setObjectField('global', 'userCount', 1, cb);
+					},
+					function(cb) {
+						db.setObjectField('global', 'nextGid', 1, cb);
+					},
+					function(cb) {
+						db.setObjectField('global', 'groupCount', 1, cb);
 					},
 					function(cb) {
 						db.setObjectField('global', 'nextMid', 1, cb);
@@ -506,6 +592,7 @@ var async = require('async'),
 					}
 				], function() {
 					Importer.progress(1, 1);
+					Importer.phase('resetGlobalsDone');
 					done();
 				});
 			},
@@ -515,8 +602,6 @@ var async = require('async'),
 				Importer.error(err);
 				next(err);
 			}
-			Importer.progress(1, 1);
-			Importer.phase('resetGlobalsDone');
 			next();
 		});
 	};
@@ -604,6 +689,7 @@ var async = require('async'),
 		Importer.progress(0, 1);
 		var count = 0,
 				imported = 0,
+				alreadyImported = 0,
 				picturesTmpPath = path.join(__dirname, '/tmp/pictures'),
 				folder = '_imported_profiles',
 				picturesPublicPath = path.join(nconf.get('base_dir'), nconf.get('upload_path'), '_imported_profiles'),
@@ -623,9 +709,9 @@ var async = require('async'),
 									var _uid = user._uid;
 									recoverImportedUser(_uid, function(err, _user) {
 										if (_user) {
-											// Importer.warn('[process-count-at:' + count + '] skipping user: ' + user._username + ':' + user._uid + ', already imported');
 											Importer.progress(count, total);
 											imported++;
+											alreadyImported++;
 											return done();
 										}
 										var u = Importer.makeValidNbbUsername(user._username || '', user._alternativeUsername || '');
@@ -819,7 +905,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + ' users took: ' + ((+new Date() - startTime) / 1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' users took: ' + ((+new Date() - startTime) / 1000).toFixed(2) + ' seconds');
 						var nxt = function () {
 							fs.remove(picturesTmpPath, function() {
 								fs.remove(DIRTY_USERS_FILE, next);
@@ -865,6 +951,7 @@ var async = require('async'),
 		Importer._lastPercentage = 0;
 		var count = 0,
 				imported = 0,
+				alreadyImported = 0,
 				startTime = +new Date();
 
 		fs.writeFileSync(DIRTY_MESSAGES_FILE, +new Date(), {encoding: 'utf8'});
@@ -881,6 +968,13 @@ var async = require('async'),
 								if (_message) {
 									Importer.progress(count, total);
 									imported++;
+									alreadyImported++;
+									return done();
+								}
+
+								if (message._fromuid == message._touid) {
+									Importer.warn('[process-count-at:' + count + '] skipping message:_mid: ' + _mid + ', because it was send to self');
+									Importer.progress(count, total);
 									return done();
 								}
 
@@ -979,7 +1073,7 @@ var async = require('async'),
 					function() {
 						Importer.progress(1, 1);
 						Importer.phase('messagesImportDone');
-						Importer.success('Importing ' + imported + '/' + total+ ' messages took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' messages took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
 						fs.remove(DIRTY_MESSAGES_FILE, next);
 					});
 		});
@@ -994,6 +1088,7 @@ var async = require('async'),
 
 		var count = 0,
 				imported = 0,
+				alreadyImported = 0,
 				startTime = +new Date(),
 				config = Importer.config();
 
@@ -1009,8 +1104,8 @@ var async = require('async'),
 
 							recoverImportedCategory(_cid, function(err, _category) {
 								if (_category) {
-									// Importer.warn('skipping category:_cid: ' + _cid + ', already imported');
 									imported++;
+									alreadyImported++;
 									Importer.progress(count, total);
 									return done();
 								}
@@ -1089,7 +1184,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
 						Importer.progress(1, 1);
 						Importer.phase('categoriesImportDone');
 						fs.remove(DIRTY_CATEGORIES_FILE, next);
@@ -1105,6 +1200,7 @@ var async = require('async'),
 
 		var count = 0,
 				imported = 0,
+				alreadyImported = 0,
 				startTime = +new Date(),
 				config = Importer.config();
 
@@ -1122,6 +1218,7 @@ var async = require('async'),
 							recoverImportedGroup(_gid, function(err, _group) {
 								if (_group) {
 									imported++;
+									alreadyImported++;
 									Importer.progress(count, total);
 									return done();
 								}
@@ -1194,7 +1291,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + ' groups took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' groups took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
 						Importer.progress(1, 1);
 						Importer.phase('groupsImportDone');
 						fs.remove(DIRTY_GROUPS_FILE, next);
@@ -1261,6 +1358,7 @@ var async = require('async'),
 		Importer._lastPercentage = 0;
 		var count = 0,
 				imported = 0,
+				alreadyImported = 0,
 				startTime = +new Date(),
 				config = Importer.config();
 
@@ -1275,9 +1373,9 @@ var async = require('async'),
 							var _tid = topic._tid;
 							recoverImportedTopic(_tid, function(err, _topic) {
 								if (_topic) {
-									// Importer.warn('[process-count-at:' + count + '] skipping topic:_tid: ' + _tid + ', already imported');
 									Importer.progress(count, total);
 									imported++;
+									alreadyImported++;
 									return done();
 								}
 
@@ -1419,7 +1517,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
 						Importer.progress(1, 1);
 						Importer.phase('topicsImportDone');
 						fs.remove(DIRTY_TOPICS_FILE, next);
@@ -1435,6 +1533,7 @@ var async = require('async'),
 		Importer._lastPercentage = 0;
 		var count = 0,
 				imported = 0,
+				alreadyImported = 0,
 				startTime = +new Date(),
 				config = Importer.config();
 
@@ -1450,9 +1549,9 @@ var async = require('async'),
 
 							recoverImportedPost(_pid, function(err, _post) {
 								if (_post) {
-									// Importer.warn('[process-count-at: ' + count + '] skipping post:_pid: ' + _pid + ', already imported');
 									Importer.progress(count, total);
 									imported++;
+									alreadyImported++;
 									return done();
 								}
 
@@ -1478,7 +1577,7 @@ var async = require('async'),
 									var user = results[1] || {uid: '0'};
 
 									if (!topic) {
-										Importer.warn('[process-count-at: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' imported: ' + topic);
+										Importer.warn('[process-count-at: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' imported: ' + !!topic);
 										done();
 									} else {
 
@@ -1552,7 +1651,7 @@ var async = require('async'),
 					function() {
 						Importer.progress(1, 1);
 						Importer.phase('postsImportDone');
-						Importer.success('Importing ' + imported + '/' + total+ ' posts took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' posts took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
 						fs.remove(DIRTY_POSTS_FILE, next);
 					});
 		});
@@ -1566,6 +1665,7 @@ var async = require('async'),
 
 		var count = 0,
 				imported = 0,
+				alreadyImported = 0,
 				startTime = +new Date(),
 				config = Importer.config();
 
@@ -1583,6 +1683,7 @@ var async = require('async'),
 							recoverImportedVote(_vid, function(err, _vote) {
 								if (_vote) {
 									imported++;
+									alreadyImported++;
 									Importer.progress(count, total);
 									return done();
 								}
@@ -1677,7 +1778,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + ' votes took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' votes took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
 						Importer.progress(1, 1);
 						Importer.phase('votesImportDone');
 						fs.remove(DIRTY_VOTES_FILE, next);
@@ -1692,9 +1793,10 @@ var async = require('async'),
 		Importer._lastPercentage = 0;
 
 		var count = 0,
-			imported = 0,
-			startTime = +new Date(),
-			config = Importer.config();
+				imported = 0,
+				alreadyImported = 0,
+				startTime = +new Date(),
+				config = Importer.config();
 
 		fs.writeFileSync(DIRTY_BOOKMARKS_FILE, +new Date(), {encoding: 'utf8'});
 
@@ -1710,6 +1812,7 @@ var async = require('async'),
 							recoverImportedBookmark(_bid, function(err, _bookmark) {
 								if (_bookmark) {
 									imported++;
+									alreadyImported++;
 									Importer.progress(count, total);
 									return done();
 								}
@@ -1779,7 +1882,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + ' bookmarks took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' bookmarks took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
 						Importer.progress(1, 1);
 						Importer.phase('bookmarksImportDone');
 						fs.remove(DIRTY_BOOKMARKS_FILE, next);
@@ -1883,14 +1986,14 @@ var async = require('async'),
 		Data.countPosts(function(err, total) {
 			Data.eachPost(function(post, done) {
 						Importer.progress(count++, total);
-						if (!post || !post._imported_toPid || !post.pid) {
+						if (!post || !post._imported_toPid || !post.pid || post._imported_toPid_fixed) {
 							return done();
 						}
 						Data.getImportedPost(post._imported_toPid, function(err, toPost) {
 							if (err || !toPost) {
 								return done();
 							}
-							Posts.setPostField(post.pid, 'toPid', toPost.pid, done);
+							Posts.setPostFields(post.pid, {'toPid': toPost.pid, '_imported_toPid_fixed': 1}, done);
 						});
 					},
 					{async: true, eachLimit: IMPORT_BATCH_SIZE},
@@ -2219,155 +2322,25 @@ var async = require('async'),
 	};
 
 	Importer.deleteTmpImportedSetsAndObjects = function(done) {
-		Importer.phase('deleteTmpImportedSetsAndObjectsStart');
-		Importer.progress(0, 1);
+		var phasePrefix = 'deleteTmpImportedSetsAndObjects';
+		async.series(['users', 'groups', 'categories', 'topics', 'posts', 'messages', 'votes', 'bookmarks']
+						.reduce(function(series, current) {
+							var Current = current[0].toUpperCase() + current.slice(1);
 
-		var total = 0;
-		async.parallel([
-			function(next) {
-				Data.count('_imported:_users', function(err, count) {
-					total += count;
-					next();
-				});
-			},
-			function(next) {
-				Data.count('_imported:_categories', function(err, count) {
-					total += count;
-					next();
-				});
-			},
-			function(next) {
-				Data.count('_imported:_topics', function(err, count) {
-					total += count;
-					next();
-				});
-			},
-			function(next) {
-				Data.count('_imported:_posts', function(err, count) {
-					total += count;
-					next();
-				});
-			},
-			function(next) {
-				Data.count('_imported:_votes', function(err, count) {
-					total += count;
-					next();
-				});
-			},
-			function(next) {
-				Data.count('_imported:_bookmarks', function(err, count) {
-					total += count;
-					next();
-				});
-			}
-		], function(err) {
-			if (err) {
-				Importer.warn(err.message || err);
-			}
-			var index = 0;
-			async.series([
-				function(next) {
-					Data.processIdsSet(
-							'_imported:_users',
-							function(err, ids, nextBatch) {
-								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_uid, cb) {
-									Importer.progress(index++, total);
-									db.sortedSetRemove('_imported:_users', _uid, function() {
-										db.delete('_imported_user:' + _uid, cb);
-									});
-								}, nextBatch);
-							},
-							{
-								alwaysStartAt: 0
-							},
-							next);
-				},
-				function(next) {
-					Data.processIdsSet(
-							'_imported:_categories',
-							function(err, ids, nextBatch) {
-								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_cid, cb) {
-									Importer.progress(index++, total);
-									db.sortedSetRemove('_imported:_categories', _cid, function() {
-										db.delete('_imported_category:' + _cid, cb);
-									});
-								}, nextBatch);
-							},
-							{
-								alwaysStartAt: 0
-							},
-							next);
-				},
-				function(next) {
-					Data.processIdsSet(
-							'_imported:_topics',
-							function(err, ids, nextBatch) {
-								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_tid, cb) {
-									Importer.progress(index++, total);
-									db.sortedSetRemove('_imported:_topics', _tid, function() {
-										db.delete('_imported_topic:' + _tid, cb);
-									});
-								}, nextBatch);
-							},
-							{
-								alwaysStartAt: 0
-							},
-							next);
-				},
-				function(next) {
-					Data.processIdsSet(
-							'_imported:_posts',
-							function(err, ids, nextBatch) {
-								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_pid, cb) {
-									Importer.progress(index++, total);
-									db.sortedSetRemove('_imported:_posts', _pid, function() {
-										db.delete('_imported_post:' + _pid, cb);
-									});
-								}, nextBatch);
-							},
-							{
-								alwaysStartAt: 0
-							},
-							next);
-				},
-				function(next) {
-					Data.processIdsSet(
-							'_imported:_votes',
-							function(err, ids, nextBatch) {
-								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_vid, cb) {
-									Importer.progress(index++, total);
-									db.sortedSetRemove('_imported:_votes', _vid, function() {
-										db.delete('_imported_vote:' + _vid, cb);
-									});
-								}, nextBatch);
-							},
-							{
-								alwaysStartAt: 0
-							},
-							next);
-				},
-				function(next) {
-					Data.processIdsSet(
-							'_imported:_bookmarks',
-							function(err, ids, nextBatch) {
-								async.mapLimit(ids, FLUSH_BATCH_SIZE, function(_bid, cb) {
-									Importer.progress(index++, total);
-									db.sortedSetRemove('_imported:_bookmarks', _bid, function() {
-										db.delete('_imported_bookmark:' + _bid, cb);
-									});
-								}, nextBatch);
-							},
-							{
-								alwaysStartAt: 0
-							},
-							next);
-				}
-			], function() {
-				Importer.phase('deleteTmpImportedSetsAndObjectsDone');
-				Importer.progress(1, 1);
-				done();
-			});
-		});
+							series.push(function(next) {
+								Importer.phase(phasePrefix + Current + 'Start');
+								Data['deleteImported' + Current](
+										function(err, progress) {
+											Importer.progress(progress.count, progress.total);
+										},
+										function(err) {
+											Importer.progress(1, 1);
+											Importer.phase(phasePrefix + Current + 'Done');
+											next();
+										});
+							});
+							return series;
+						}, []), done);
 	};
 
 })(module.exports);

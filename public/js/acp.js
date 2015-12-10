@@ -65,8 +65,19 @@
 
 			start: function(e) {
 				actions.saveSettings();
-				if (start()) {
+				if (start(true)) {
 					$wrapper.find('#import-start').prop('disabled', true).addClass('disabled');
+					$wrapper.find('#import-start-without-flush').prop('disabled', true).addClass('disabled');
+					$wrapper.find('#import-resume').prop('disabled', true).addClass('disabled');
+					$wrapper.find('.import-logs').empty();
+				}
+			},
+
+			startWithoutFlush: function(e) {
+				actions.saveSettings();
+				if (start(false)) {
+					$wrapper.find('#import-start').prop('disabled', true).addClass('disabled');
+					$wrapper.find('#import-start-without-flush').prop('disabled', true).addClass('disabled');
 					$wrapper.find('#import-resume').prop('disabled', true).addClass('disabled');
 					$wrapper.find('.import-logs').empty();
 				}
@@ -226,9 +237,12 @@
 			});
 		};
 
-		var start = plugin.start = function() {
+		var start = plugin.start = function(flush) {
 			var config = gatherConfig();
+
 			if (config) {
+				config.importer.flush = flush;
+
 				$.ajax({
 					type: 'post',
 					data: {
@@ -401,6 +415,7 @@
 			var icon = $wrapper.find('.controller-state-icon');
 			var event = $wrapper.find('.controller-state-event');
 			var startBtn = $wrapper.find('#import-start');
+			var startWithoutFlushBtn = $wrapper.find('#import-start-without-flush');
 			var resumeBtn = $wrapper.find('#import-resume');
 
 			return function(state) {
@@ -412,18 +427,21 @@
 					if (state.now === 'busy') {
 						icon.addClass('fa-spinner fa-spin');
 						utils.toggleAvailable(startBtn, false);
+						utils.toggleAvailable(startWithoutFlushBtn, false);
 						utils.toggleAvailable(resumeBtn, false);
 						container.css({color: 'blue'});
 						toggleLogBtns(false);
 						togglePostImportTools(false);
 					} else if (state.now === 'errored') {
 						utils.toggleAvailable(startBtn, true);
+						utils.toggleAvailable(startWithoutFlushBtn, true);
 						utils.toggleAvailable(resumeBtn, true);
 						icon.addClass('fa-warning');
 						container.css({color: 'red'});
 						toggleLogBtns(true);
 					} else if (state.now === 'idle') {
 						utils.toggleAvailable(startBtn, true);
+						utils.toggleAvailable(startWithoutFlushBtn, true);
 						utils.toggleAvailable(resumeBtn, true);
 						container.css({color: 'grey'});
 						postImportToolsAvailable();

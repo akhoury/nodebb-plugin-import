@@ -23,25 +23,208 @@ var async = require('async'),
 
 (function(Data) {
 
+	/* _imported Operations */
 
-	Data.init = function(callback) {
-		if (primaryDBName) {
-			callback();
-		} else {
-			db.init(callback);
-		}
+	Data.setUserImported = function(_uid, uid, user, callback) {
+		return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
 	};
 
-	Data.count = function(setKey, callback) {
-		db.sortedSetCard(setKey, callback);
+	Data.setGroupImported = function(_gid, gidOrGname, group, callback) {
+		return Data.setImported('_imported:_groups', '_imported_group:', _gid, gidOrGname, group, callback);
+	};
+
+	Data.setMessageImported = function(_mid, mid, message, callback) {
+		return Data.setImported('_imported:_messages', '_imported_message:', _mid, mid, message, callback);
+	};
+
+	Data.setCategoryImported = function(_cid, cid, category, callback) {
+		return Data.setImported('_imported:_categories', '_imported_category:', _cid, cid, category, callback);
+	};
+
+	Data.setTopicImported = function(_tid, tid, topic, callback) {
+		return Data.setImported('_imported:_topics', '_imported_topic:', _tid, tid, topic, callback);
+	};
+
+	Data.setPostImported = function(_pid, pid, post, callback) {
+		return Data.setImported('_imported:_posts', '_imported_post:', _pid, pid, post, callback);
+	};
+
+	Data.setVoteImported = function(_vid, vid, vote, callback){
+		return Data.setImported('_imported:_votes', '_imported_vote:', _vid, vid, vote, callback);
+	};
+
+	Data.setBookmarkImported = function(_bid, bid, bookmark, callback){
+		return Data.setImported('_imported:_bookmarks', '_imported_bookmark:', _bid, bid, bookmark, callback);
+	};
+
+	Data.isGroupImported = function(_gid, callback) {
+		return Data.isImported('_imported:_groups', _gid, callback);
+	};
+
+	Data.isUserImported = function(_uid, callback) {
+		return Data.isImported('_imported:_users', _uid, callback);
+	};
+
+	Data.isMessageImported = function(_mid, callback) {
+		return Data.isImported('_imported:_messages', _mid, callback);
+	};
+
+	Data.isCategoryImported = function(_cid, callback) {
+		return Data.isImported('_imported:_categories', _cid, callback);
+	};
+
+	Data.isTopicImported = function(_tid, callback) {
+		return Data.isImported('_imported:_topics', _tid, callback);
+	};
+
+	Data.isPostImported = function(_pid, callback) {
+		return Data.isImported('_imported:_posts', _pid, callback);
+	};
+
+	Data.isVoteImported = function(_vid, callback) {
+		return Data.isImported('_imported:_votes', _vid, callback);
+	};
+
+	Data.isBookmarkImported = function(_bid, callback) {
+		return Data.isImported('_imported:_bookmarks', _bid, callback);
+	};
+
+	Data.getImportedGroup = function(_gid, callback) {
+		return Data.getImported('_imported:_groups', '_imported_group:', _gid, callback);
+	};
+
+	Data.getImportedUser = function(_uid, callback) {
+		return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
+	};
+
+	Data.getImportedMessage = function(_mid, callback) {
+		return Data.getImported('_imported:_messages', '_imported_message:', _mid, callback);
+	};
+
+	Data.getImportedCategory = function(_cid, callback) {
+		return Data.getImported('_imported:_categories', '_imported_category:', _cid, callback);
+	};
+
+	Data.getImportedTopic = function(_tid, callback) {
+		return Data.getImported('_imported:_topics', '_imported_topic:', _tid, callback);
+	};
+
+	Data.getImportedPost = function(_pid, callback) {
+		return Data.getImported('_imported:_posts', '_imported_post:', _pid, callback);
+	};
+
+	Data.getImportedVote = function(_vid, callback) {
+		return Data.getImported('_imported:_votes', '_imported_vote:', _vid, callback);
+	};
+
+	Data.getImportedBookmark = function(_bid, callback) {
+		return Data.getImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
+	};
+
+	Data.deleteImportedUser = function(_uid, callback) {
+		return Data.deleteImported('_imported:_users', '_imported_user:', _uid, callback);
+	};
+
+	Data.deleteImportedGroup = function(_gid, callback) {
+		return Data.deleteImported('_imported:_groups', '_imported_group:', _gid, callback);
+	};
+
+	Data.deleteImportedMessage = function(_mid, callback) {
+		return Data.deleteImported('_imported:_messages', '_imported_message:', _mid, callback);
+	};
+
+	Data.deleteImportedCategory = function(_cid, callback) {
+		return Data.deleteImported('_imported:_categories', '_imported_category:', _cid, callback);
+	};
+
+	Data.deleteImportedTopic = function(_tid, callback) {
+		return Data.deleteImported('_imported:_topics', '_imported_topic:', _tid, callback);
+	};
+
+	Data.deleteImportedPost = function(_pid, callback) {
+		return Data.deleteImported('_imported:_posts', '_imported_post:', _pid, callback);
+	};
+
+	Data.deleteImportedVote = function(_vid, callback) {
+		return Data.deleteImported('_imported:_votes', '_imported_vote:', _vid, callback);
+	};
+
+	Data.deleteImportedBookmark = function(_bid, callback) {
+		return Data.deleteImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
+	};
+
+	Data.deleteImportedUsers = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_users', '_imported_user:', onProgress, callback);
+	};
+
+	Data.deleteImportedGroups = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_groups', '_imported_group:', onProgress, callback);
+	};
+
+	Data.deleteImportedMessages = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_messages', '_imported_message:', onProgress, callback);
+	};
+
+	Data.deleteImportedCategories = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_categories', '_imported_category:', onProgress, callback);
+	};
+
+	Data.deleteImportedTopics = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_topics', '_imported_topic:', onProgress, callback);
+	};
+
+	Data.deleteImportedPosts = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_posts', '_imported_post:', onProgress, callback);
+	};
+
+	Data.deleteImportedVotes = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_votes', '_imported_vote:', onProgress, callback);
+	};
+
+	Data.deleteImportedBookmarks = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_bookmarks', '_imported_bookmark:', onProgress, callback);
+	};
+
+	Data.countImportedGroups = function(callback) {
+		Data.count('_imported:_groups', callback);
+	};
+
+	Data.countImportedUsers = function(callback) {
+		Data.count('_imported:_users', callback);
+	};
+
+	Data.countImportedMessages = function(callback) {
+		Data.count('_imported:_messages', callback);
+	};
+
+	Data.countImportedCategories = function(callback) {
+		Data.count('_imported:_categories', callback);
+	};
+
+	Data.countImportedTopics = function(callback) {
+		Data.count('_imported:_topics', callback);
+	};
+
+	Data.countImportedPosts = function(callback) {
+		Data.count('_imported:_posts', callback);
+	};
+
+	Data.countImportedVotes = function(callback) {
+		Data.count('_imported:_votes', callback);
+	};
+
+	Data.countImportedBookmarks = function(callback) {
+		Data.count('_imported:_bookmarks', callback);
+	};
+
+	/* NodeBB Core records operations */
+
+	Data.countUsers = function(callback) {
+		Data.count('users:joindate', callback);
 	};
 
 	Data.countGroups = function(callback) {
 		Data.count('groups:createtime', callback);
-	};
-
-	Data.countUsers = function(callback) {
-		Data.count('users:joindate', callback);
 	};
 
 	Data.countMessages = function(callback) {
@@ -69,6 +252,10 @@ var async = require('async'),
 		return Data.each('users:joindate', 'user:', iterator, options, callback);
 	};
 
+	Data.eachGroup = function(iterator, options, callback) {
+		return Data.each('groups:createtime', 'group:', iterator, options, callback);
+	};
+
 	Data.eachMessage = function(iterator, options, callback) {
 		options = options || {};
 		Data.keys('message:*', function(err, keys) {
@@ -77,10 +264,6 @@ var async = require('async'),
 			}
 			async.mapLimit(keys, options.batch || DEFAULT_BATCH_SIZE, iterator, callback);
 		});
-	};
-
-	Data.eachGroup = function(iterator, options, callback) {
-		return Data.each('groups:createtime', 'group:', iterator, options, callback);
 	};
 
 	Data.eachCategory = function(iterator, options, callback) {
@@ -93,6 +276,92 @@ var async = require('async'),
 
 	Data.eachPost = function(iterator, options, callback) {
 		return Data.each('posts:pid', 'post:', iterator, options, callback);
+	};
+
+	Data.eachImportedUser = function(iterator, options, callback) {
+		return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
+	};
+
+	Data.eachImportedGroup = function(iterator, options, callback) {
+		return Data.each('_imported:_groups', '_imported_group:', iterator, options, callback);
+	};
+
+	Data.eachImportedMessage = function(iterator, options, callback) {
+		return Data.each('_imported:_messages', '_imported_message:', iterator, options, callback);
+	};
+
+	Data.eachImportedCategory = function(iterator, options, callback) {
+		return Data.each('_imported:_categories', '_imported_category:', iterator, options, callback);
+	};
+
+	Data.eachImportedTopic = function(iterator, options, callback) {
+		return Data.each('_imported:_topics', '_imported_topic:', iterator, options, callback);
+	};
+
+	Data.eachImportedPost = function(iterator, options, callback) {
+		return Data.each('_imported:_posts', '_imported_post:', iterator, options, callback);
+	};
+
+	Data.eachImportedVote = function(iterator, options, callback) {
+		return Data.each('_imported:_votes', '_imported_vote:', iterator, options, callback);
+	};
+
+	Data.eachImportedBookmark = function(iterator, options, callback) {
+		return Data.each('_imported:_bookmarks', '_imported_bookmark:', iterator, options, callback);
+	};
+
+	Data.processUsersSet = function(process, options, callback) {
+		return Data.processSet('users:joindate', 'user:', process, options, callback);
+	};
+
+	Data.processGroupsSet = function(process, options, callback) {
+		return Data.processSet('groups:createtime', 'group:', process, options, callback);
+	};
+
+	Data.processCategoriesSet = function(process, options, callback) {
+		return Data.processSet('categories:cid', 'category:', process, options, callback);
+	};
+
+	Data.processTopicsSet = function(process, options, callback) {
+		return Data.processSet('topics:tid', 'topic:', process, options, callback);
+	};
+
+	Data.processPostsSet = function(process, options, callback) {
+		return Data.processSet('posts:pid', 'post:', process, options, callback);
+	};
+
+	Data.processUsersUidsSet = function(process, options, callback) {
+		return Data.processIdsSet('users:joindate', process, options, callback);
+	};
+
+	Data.processGroupsNamesSet = function(process, options, callback) {
+		return Data.processIdsSet('groups:createtime', process, options, callback);
+	};
+
+	Data.processCategoriesCidsSet = function(process, options, callback) {
+		return Data.processIdsSet('categories:cid', process, options, callback);
+	};
+
+	Data.processTopicsTidsSet = function(process, options, callback) {
+		return Data.processIdsSet('topics:tid', process, options, callback);
+	};
+
+	Data.processPostsPidsSet = function(process, options, callback) {
+		return Data.processIdsSet('posts:pid', process, options, callback);
+	};
+
+	/*  General Functions */
+
+	Data.init = function(callback) {
+		if (primaryDBName) {
+			callback();
+		} else {
+			db.init(callback);
+		}
+	};
+
+	Data.count = function(setKey, callback) {
+		db.sortedSetCard(setKey, callback);
 	};
 
 	Data.each = function(setKey, prefixEachId, iterator, options, callback) {
@@ -197,46 +466,6 @@ var async = require('async'),
 		);
 	};
 
-	Data.processUsersSet = function(process, options, callback) {
-		return Data.processSet('users:joindate', 'user:', process, options, callback);
-	};
-
-	Data.processGroupsSet = function(process, options, callback) {
-		return Data.processSet('groups:createtime', 'group:', process, options, callback);
-	};
-
-	Data.processCategoriesSet = function(process, options, callback) {
-		return Data.processSet('categories:cid', 'category:', process, options, callback);
-	};
-
-	Data.processTopicsSet = function(process, options, callback) {
-		return Data.processSet('topics:tid', 'topic:', process, options, callback);
-	};
-
-	Data.processPostsSet = function(process, options, callback) {
-		return Data.processSet('posts:pid', 'post:', process, options, callback);
-	};
-
-	Data.processUsersUidsSet = function(process, options, callback) {
-		return Data.processIdsSet('users:joindate', process, options, callback);
-	};
-
-	Data.processGroupsGidsSet = function(process, options, callback) {
-		return Data.processIdsSet('groups:createtime', process, options, callback);
-	};
-
-	Data.processCategoriesCidsSet = function(process, options, callback) {
-		return Data.processIdsSet('categories:cid', process, options, callback);
-	};
-
-	Data.processTopicsTidsSet = function(process, options, callback) {
-		return Data.processIdsSet('topics:tid', process, options, callback);
-	};
-
-	Data.processPostsPidsSet = function(process, options, callback) {
-		return Data.processIdsSet('posts:pid', process, options, callback);
-	};
-
 	Data.isImported = function(setKey, _id, callback) {
 		return db.isSortedSetMember(setKey, _id, function(err, result) {
 			callback(err, result);
@@ -258,38 +487,6 @@ var async = require('async'),
 
 	};
 
-	Data.getImportedGroup = function(_gid, callback) {
-		return Data.getImported('_imported:_groups', '_imported_group:', _gid, callback);
-	};
-
-	Data.getImportedUser = function(_uid, callback) {
-		return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
-	};
-
-	Data.getImportedMessage = function(_mid, callback) {
-		return Data.getImported('_imported:_messages', '_imported_message:', _mid, callback);
-	};
-
-	Data.getImportedCategory = function(_cid, callback) {
-		return Data.getImported('_imported:_categories', '_imported_category:', _cid, callback);
-	};
-
-	Data.getImportedTopic = function(_tid, callback) {
-		return Data.getImported('_imported:_topics', '_imported_topic:', _tid, callback);
-	};
-
-	Data.getImportedPost = function(_pid, callback) {
-		return Data.getImported('_imported:_posts', '_imported_post:', _pid, callback);
-	};
-
-	Data.getImportedVote = function(_vid, callback) {
-		return Data.getImported('_imported:_votes', '_imported_vote:', _vid, callback);
-	};
-
-	Data.getImportedBookmark = function(_bid, callback) {
-		return Data.getImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
-	};
-
 	Data.setImported = function(setKey, objPrefix, _id, id, data, callback) {
 		delete data._typeCast;
 		delete data.parse;
@@ -302,132 +499,33 @@ var async = require('async'),
 		});
 	};
 
-	Data.setGroupImported = function(_gid, gidOrGname, group, callback) {
-		return Data.setImported('_imported:_groups', '_imported_group:', _gid, gidOrGname, group, callback);
+	Data.deleteImported = function(setKey, objPrefix, _id, callback) {
+		return db.sortedSetRemove(setKey, _id, function() {
+			db.delete(objPrefix + _id, function () {
+				// ignore errors
+				callback();
+			});
+		});
 	};
 
-	Data.setUserImported = function(_uid, uid, user, callback) {
-		return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
-	};
+	Data.deleteEachImported = function(setKey, objPrefix, onProgress, callback) {
+		Data.count(setKey, function(err, total) {
+			var count = 1;
+			Data.processIdsSet(setKey,
+					function(err, ids, nextBatch) {
+						async.mapLimit(ids, DEFAULT_BATCH_SIZE, function(_id, cb) {
+							Data.deleteImported(setKey, objPrefix, _id, function(err, response) {
+								onProgress(null, {total: total, count: count++, percentage: (count/total)});
+								cb();
+							});
+						}, nextBatch);
+					},
+					{
+						alwaysStartAt: 0
+					},
+					callback);
+		});
 
-	Data.setMessageImported = function(_mid, mid, message, callback) {
-		return Data.setImported('_imported:_messages', '_imported_message:', _mid, mid, message, callback);
-	};
-
-	Data.setCategoryImported = function(_cid, cid, category, callback) {
-		return Data.setImported('_imported:_categories', '_imported_category:', _cid, cid, category, callback);
-	};
-
-	Data.setTopicImported = function(_tid, tid, topic, callback) {
-		return Data.setImported('_imported:_topics', '_imported_topic:', _tid, tid, topic, callback);
-	};
-
-	Data.setPostImported = function(_pid, pid, post, callback) {
-		return Data.setImported('_imported:_posts', '_imported_post:', _pid, pid, post, callback);
-	};
-
-	Data.setVoteImported = function(_vid, vid, vote, callback){
-		return Data.setImported('_imported:_votes', '_imported_vote:', _vid, vid, vote, callback);
-	};
-
-	Data.setBookmarkImported = function(_bid, bid, bookmark, callback){
-		return Data.setImported('_imported:_bookmarks', '_imported_bookmark:', _bid, bid, bookmark, callback);
-	};
-
-	Data.isGroupImported = function(_gid, callback) {
-		return Data.isImported('_imported:_groups', _gid, callback);
-	};
-
-	Data.isUserImported = function(_uid, callback) {
-		return Data.isImported('_imported:_users', _uid, callback);
-	};
-
-	Data.isMessageImported = function(_mid, callback) {
-		return Data.isImported('_imported:_messages', _mid, callback);
-	};
-
-	Data.isCategoryImported = function(_cid, callback) {
-		return Data.isImported('_imported:_categories', _cid, callback);
-	};
-
-	Data.isTopicImported = function(_tid, callback) {
-		return Data.isImported('_imported:_topics', _tid, callback);
-	};
-
-	Data.isPostImported = function(_pid, callback) {
-		return Data.isImported('_imported:_posts', _pid, callback);
-	};
-
-	Data.isVoteImported = function(_vid, callback) {
-		return Data.isImported('_imported:_votes', _vid, callback);
-	};
-
-	Data.isBookmarkImported = function(_bid, callback) {
-		return Data.isImported('_imported:_bookmarks', _bid, callback);
-	};
-
-	Data.countImportedGroups = function(callback) {
-		Data.count('_imported:_groups', callback);
-	};
-
-	Data.countImportedUsers = function(callback) {
-		Data.count('_imported:_users', callback);
-	};
-
-	Data.countImportedMessages = function(callback) {
-		Data.count('_imported:_messages', callback);
-	};
-
-	Data.countImportedCategories = function(callback) {
-		Data.count('_imported:_categories', callback);
-	};
-
-	Data.countImportedTopics = function(callback) {
-		Data.count('_imported:_topics', callback);
-	};
-
-	Data.countImportedPosts = function(callback) {
-		Data.count('_imported:_posts', callback);
-	};
-
-	Data.countImportedVotes = function(callback) {
-		Data.count('_imported:_votes', callback);
-	};
-
-	Data.countImportedBookmarks = function(callback) {
-		Data.count('_imported:_bookmarks', callback);
-	};
-
-	Data.eachImportedGroup = function(iterator, options, callback) {
-		return Data.each('_imported:_groups', '_imported_group:', iterator, options, callback);
-	};
-
-	Data.eachImportedUser = function(iterator, options, callback) {
-		return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
-	};
-
-	Data.eachImportedMessage = function(iterator, options, callback) {
-		return Data.each('_imported:_messages', '_imported_message:', iterator, options, callback);
-	};
-
-	Data.eachImportedCategory = function(iterator, options, callback) {
-		return Data.each('_imported:_categories', '_imported_category:', iterator, options, callback);
-	};
-
-	Data.eachImportedTopic = function(iterator, options, callback) {
-		return Data.each('_imported:_topics', '_imported_topic:', iterator, options, callback);
-	};
-
-	Data.eachImportedPost = function(iterator, options, callback) {
-		return Data.each('_imported:_posts', '_imported_post:', iterator, options, callback);
-	};
-
-	Data.eachImportedVote = function(iterator, options, callback) {
-		return Data.each('_imported:_votes', '_imported_vote:', iterator, options, callback);
-	};
-
-	Data.eachImportedBookmark = function(iterator, options, callback) {
-		return Data.each('_imported:_bookmarks', '_imported_bookmark:', iterator, options, callback);
 	};
 
 	Data.keys = (function() {

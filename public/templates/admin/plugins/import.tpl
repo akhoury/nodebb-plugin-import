@@ -198,9 +198,9 @@
             </div>
         </div>
 
-        <button class="btn btn-lg btn-info hidden" data-on="click" data-action="resume" id="import-resume" type="button">Last run was interrupted, try to resume</button>
-
-        <button class="btn btn-lg btn-success" data-on="click" data-action="start" id="import-start" type="button">Flush NodeBB DB, then import</button>
+        <button title="Will try to resume import if it can, it not, I recommend you flush then import" class="btn btn-lg btn-info hidden" data-on="click" data-action="resume" id="import-resume" type="button">Last run was interrupted, try to resume</button>
+        <button title="Imports all records without flushing NodeBB, but will check each records if it was already imported and skip it" class="btn btn-lg btn-success" data-on="click" data-action="startWithoutFlush" id="import-start-no-flush" type="button">Don't Flush NodeBB DB, just import</button>
+        <button title="Will flush NodeBB DB from all records and start a fresh import" class="btn btn-lg btn-warning" data-on="click" data-action="start" id="import-start" type="button">Flush NodeBB DB, then import</button>
 
         <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
 
