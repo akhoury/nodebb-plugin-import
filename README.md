@@ -3,11 +3,13 @@ nodebb-plugin-import
 Import your old forum data to nodebb | a one time use plugin
 
 ## Screenshots
+![screen shot 2015-12-09 at 8 50 35 pm](https://cloud.githubusercontent.com/assets/1398375/11704595/f66a8a00-9eb6-11e5-8592-5e0f2ca650ef.png)
+![screen shot 2015-12-09 at 8 51 06 pm](https://cloud.githubusercontent.com/assets/1398375/11704593/f667be60-9eb6-11e5-856c-bdfacde800bf.png)
+![screen shot 2015-12-09 at 8 51 27 pm](https://cloud.githubusercontent.com/assets/1398375/11704598/f66bcb36-9eb6-11e5-801a-081c516fc522.png)
+![screen shot 2015-12-09 at 8 51 40 pm](https://cloud.githubusercontent.com/assets/1398375/11704597/f66bf37c-9eb6-11e5-9584-05f7c6a7ec37.png)
+![screen shot 2015-12-09 at 8 53 02 pm](https://cloud.githubusercontent.com/assets/1398375/11704596/f66bf7c8-9eb6-11e5-89c6-03268dc3b4ed.png)
+![screen shot 2015-12-09 at 8 53 12 pm](https://cloud.githubusercontent.com/assets/1398375/11704594/f6691350-9eb6-11e5-9713-5d2df1f3432a.png)
 
-![Imgur](http://i.imgur.com/rx1Ub5M.png)
-![Imgur](http://i.imgur.com/bng3KFp.png)
-![Imgur](http://i.imgur.com/aaWLORi.png)
-![Imgur](http://i.imgur.com/01FUw0z.png)
 
 ### Works with NodeBB stable [v0.9.1](https://github.com/NodeBB/NodeBB/tree/v0.9.1)
 ```
