@@ -175,6 +175,7 @@ var async = require('async'),
 		Importer.emit('importer.start');
 
 		var series = [];
+
 		if (flush) {
 			series.push(Importer.flushData);
 		} else {
@@ -192,12 +193,13 @@ var async = require('async'),
 			Importer.importMessages,
 			Importer.importTopics,
 			Importer.importPosts,
-			Importer.fixCategoriesParents,
-			Importer.fixPostsToPids,
 			Importer.importVotes,
 			Importer.importBookmarks,
+			Importer.fixCategoriesParentsAndAbilities,
+			Importer.fixPostsToPids,
 			Importer.fixGroupsOwners,
 			Importer.relockUnlockedTopics,
+			Importer.rebanUnbannedUsers,
 			Importer.fixTopicTimestamps,
 			Importer.restoreConfig,
 			Importer.disallowGuestsWriteOnAllCategories,
@@ -263,14 +265,17 @@ var async = require('async'),
 			Importer.warn('alreadyImportedAllVotes=true, skipping importVotes Phase');
 		}
 
-		series.push(Importer.fixCategoriesParents);
-		series.push(Importer.relockUnlockedTopics);
-		series.push(Importer.fixTopicTimestamps);
-		series.push(Importer.fixPostsToPids);
-		series.push(Importer.fixGroupsOwners);
-		series.push(Importer.restoreConfig);
-		series.push(Importer.disallowGuestsWriteOnAllCategories);
-		series.push(Importer.teardown);
+		series.concat([
+			Importer.fixCategoriesParentsAndAbilities,
+			Importer.fixPostsToPids,
+			Importer.fixGroupsOwners,
+			Importer.relockUnlockedTopics,
+			Importer.rebanUnbannedUsers,
+			Importer.fixTopicTimestamps,
+			Importer.restoreConfig,
+			Importer.disallowGuestsWriteOnAllCategories,
+			Importer.teardown
+		]);
 
 		async.series(series, callback);
 	};
@@ -620,7 +625,7 @@ var async = require('async'),
 	Importer.phase = function(phase, data) {
 		Importer.phasePercentage = 0;
 		Importer._phase = phase;
-		Importer.emit('importer.phase', {phase: phase, data: data});
+		Importer.emit('importer.phase', {phase: phase, data: data, timestamp: +new Date()});
 	};
 
 	var recoverImportedGroup = function(_gid, callback) {
@@ -752,7 +757,6 @@ var async = require('async'),
 															// preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
 															signature: user._signature || '',
 															website: user._website || '',
-															banned: user._banned ? 1 : 0,
 															location: user._location || '',
 															joindate: user._joindate || startTime,
 															reputation: (user._reputation || 0) * config.userReputationMultiplier,
@@ -764,6 +768,9 @@ var async = require('async'),
 
 															// this is a migration script, no one is online
 															status: 'offline',
+
+															// don't ban the users now, ban them later, if _imported_user:_uid._banned == 1
+															banned: 0,
 
 															_imported_path: user._path || '',
 															_imported_uid: _uid,
@@ -905,7 +912,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' users took: ' + ((+new Date() - startTime) / 1000).toFixed(2) + ' seconds');
+						Importer.success('Imported ' + imported + '/' + total + ' users' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						var nxt = function () {
 							fs.remove(picturesTmpPath, function() {
 								fs.remove(DIRTY_USERS_FILE, next);
@@ -1073,7 +1080,7 @@ var async = require('async'),
 					function() {
 						Importer.progress(1, 1);
 						Importer.phase('messagesImportDone');
-						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' messages took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Imported ' + imported + '/' + total + ' messages' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						fs.remove(DIRTY_MESSAGES_FILE, next);
 					});
 		});
@@ -1184,7 +1191,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' categories took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Imported ' + imported + '/' + total + ' categories' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						Importer.progress(1, 1);
 						Importer.phase('categoriesImportDone');
 						fs.remove(DIRTY_CATEGORIES_FILE, next);
@@ -1291,7 +1298,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' groups took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Importing ' + imported + '/' + total + ' groups' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						Importer.progress(1, 1);
 						Importer.phase('groupsImportDone');
 						fs.remove(DIRTY_GROUPS_FILE, next);
@@ -1517,7 +1524,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' topics took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Imported ' + imported + '/' + total + ' topics' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						Importer.progress(1, 1);
 						Importer.phase('topicsImportDone');
 						fs.remove(DIRTY_TOPICS_FILE, next);
@@ -1651,7 +1658,7 @@ var async = require('async'),
 					function() {
 						Importer.progress(1, 1);
 						Importer.phase('postsImportDone');
-						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' posts took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Imported ' + imported + '/' + total + ' posts' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						fs.remove(DIRTY_POSTS_FILE, next);
 					});
 		});
@@ -1778,7 +1785,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' votes took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Imported ' + imported + '/' + total + ' votes' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						Importer.progress(1, 1);
 						Importer.phase('votesImportDone');
 						fs.remove(DIRTY_VOTES_FILE, next);
@@ -1882,7 +1889,7 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Importing ' + imported + '/' + total + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : '') + ' bookmarks took: ' + ((+new Date()-startTime)/1000).toFixed(2) + ' seconds');
+						Importer.success('Imported ' + imported + '/' + total + ' bookmarks' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						Importer.progress(1, 1);
 						Importer.phase('bookmarksImportDone');
 						fs.remove(DIRTY_BOOKMARKS_FILE, next);
@@ -1908,10 +1915,11 @@ var async = require('async'),
 		Data.countImportedTopics(function(err, total) {
 			Data.eachImportedTopic(function(topic, done) {
 						Importer.progress(count++, total);
+
 						if (!topic || !parseInt(topic._locked, 10)) {
 							return done();
 						}
-						db.setObjectField('topic:' + topic.tid, 'locked', '1', function(err) {
+						db.setObjectField('topic:' + topic.tid, 'locked', 1, function(err) {
 							if (err) {
 								Importer.warn(err);
 							} else {
@@ -1925,6 +1933,38 @@ var async = require('async'),
 						if (err) throw err;
 						Importer.progress(1, 1);
 						Importer.phase('relockingTopicsDone');
+						next();
+					});
+		});
+	};
+
+	Importer.rebanUnbannedUsers = function(next) {
+		var count = 0;
+
+		Importer.phase('rebanUnbannedUsersStart');
+		Importer.progress(0, 1);
+
+		Data.countImportedUsers(function(err, total) {
+			Data.eachImportedUser(function(user, done) {
+						Importer.progress(count++, total);
+
+						if (!user || !parseInt(user._banned, 10)) {
+							return done();
+						}
+						User.ban(user.uid, function() {
+							if (err) {
+								Importer.warn(err);
+							} else {
+								Importer.log('[process-count-at: ' + count + '] banned user:' + user.uid + ' back');
+							}
+							done();
+						});
+					},
+					{async: true, eachLimit: IMPORT_BATCH_SIZE},
+					function(err) {
+						if (err) throw err;
+						Importer.progress(1, 1);
+						Importer.phase('rebanUnbannedUsersDone');
 						next();
 					});
 		});
@@ -2037,37 +2077,43 @@ var async = require('async'),
 	};
 
 
-	Importer.fixCategoriesParents = function(next) {
+	Importer.fixCategoriesParentsAndAbilities = function(next) {
 		var count = 0;
-		Importer.phase('fixCategoriesParentsStart');
+
+		Importer.phase('fixCategoriesParentsAndAbilitiesStart');
 		Importer.progress(0, 1);
+
 		Data.countCategories(function(err, total) {
 			Data.eachCategory(function (category, done) {
 						Importer.progress(count++, total);
+
+						var disabled = 0;
+
 						if (category) {
-							var hash = {};
-							if (parseInt(category._imported_disabled, 10)) {
-								hash['disabled'] = 1;
-							}
-							if (category._imported_parentCid) {
-								Data.getImportedCategory(category._imported_parentCid, function (err, parentCategory) {
-									if (!err && parentCategory) {
-										hash['parentCid'] = parentCategory.cid;
-										db.setObject('category:' + category.cid, hash, done);
-									} else {
-										if (hash.disabled) {
-											db.setObject('category:' + category.cid, hash, done);
-										} else {
-											done();
-										}
-									}
-								});
-							} else {
-								if (hash.disabled) {
+							var cb = function (parentCid, disabled) {
+								var hash = {};
+								if (disabled) {
+									hash['disabled'] = 1;
+								}
+								if (parentCid) {
+									hash['parentCid'] = parentCid;
+								}
+								if (Object.keys(hash).length) {
 									db.setObject('category:' + category.cid, hash, done);
 								} else {
 									done();
 								}
+							}
+
+							if (parseInt(category._imported_disabled, 10)) {
+								disabled = 1;
+							}
+							if (category._imported_parentCid) {
+								Data.getImportedCategory(category._imported_parentCid, function (err, parentCategory) {
+									cb(parentCategory && parentCategory.cid, disabled);
+								});
+							} else {
+								cb(null, disabled);
 							}
 						} else {
 							done();
@@ -2077,7 +2123,7 @@ var async = require('async'),
 					function() {
 						if (err) throw err;
 						Importer.progress(1, 1);
-						Importer.phase('fixCategoriesParentsDone');
+						Importer.phase('fixCategoriesParentsAndAbilitiesDone');
 						next();
 					}
 			);
@@ -2252,6 +2298,7 @@ var async = require('async'),
 
 	Importer.warn = function() {
 		var args = _.toArray(arguments);
+		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 
 		args.unshift('importer.warn');
 		args.push('logged');
@@ -2268,9 +2315,11 @@ var async = require('async'),
 		}
 
 		var args = _.toArray(arguments);
+		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 
 		args.unshift('importer.log');
 		args.push('logged');
+
 		if (Importer.config.clientLog) {
 			Importer.emit.apply(Importer, args);
 		}
@@ -2283,7 +2332,7 @@ var async = require('async'),
 
 	Importer.success = function() {
 		var args = _.toArray(arguments);
-
+		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 		args.unshift('importer.success');
 		args.push('logged');
 		Importer.emit.apply(Importer, args);
@@ -2294,9 +2343,8 @@ var async = require('async'),
 	};
 
 	Importer.error = function() {
-		debugger;
-
 		var args = _.toArray(arguments);
+		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 		args.unshift('importer.error');
 		args.push('logged');
 		Importer.emit.apply(Importer, args);
@@ -2324,23 +2372,23 @@ var async = require('async'),
 	Importer.deleteTmpImportedSetsAndObjects = function(done) {
 		var phasePrefix = 'deleteTmpImportedSetsAndObjects';
 		async.series(['users', 'groups', 'categories', 'topics', 'posts', 'messages', 'votes', 'bookmarks']
-						.reduce(function(series, current) {
-							var Current = current[0].toUpperCase() + current.slice(1);
+				.reduce(function(series, current) {
+					var Current = current[0].toUpperCase() + current.slice(1);
 
-							series.push(function(next) {
-								Importer.phase(phasePrefix + Current + 'Start');
-								Data['deleteImported' + Current](
-										function(err, progress) {
-											Importer.progress(progress.count, progress.total);
-										},
-										function(err) {
-											Importer.progress(1, 1);
-											Importer.phase(phasePrefix + Current + 'Done');
-											next();
-										});
-							});
-							return series;
-						}, []), done);
+					series.push(function(next) {
+						Importer.phase(phasePrefix + Current + 'Start');
+						Data['deleteImported' + Current](
+								function(err, progress) {
+									Importer.progress(progress.count, progress.total);
+								},
+								function(err) {
+									Importer.progress(1, 1);
+									Importer.phase(phasePrefix + Current + 'Done');
+									next();
+								});
+					});
+					return series;
+				}, []), done);
 	};
 
 })(module.exports);

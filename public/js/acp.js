@@ -469,7 +469,7 @@
 			if (!logOptionEl.is(':checked')) return;
 			msg = typeof msg === 'object' ? JSON.stringify(msg) : msg;
 
-			return $('<p />').text(msg).addClass('import-logs-line import-log '
+			return $('<p />').html(msg).addClass('import-logs-line import-log '
 			+ (level ? 'import-log-' + level + ' ': '')
 			+ (!logVerboseOptionEl.is(':checked') && level === 'info' ? 'hidden' : ''));
 		};
@@ -499,12 +499,33 @@
 			app.alertError(error);
 		};
 
+		var secondsToHuman = function (time) {
+			var hr = Math.floor(time / 3600);
+			var min = Math.floor((time % 3600) / 60);
+			var sec = Math.floor(time % 60);
+			var parts = [];
+
+			if(sec >= 0)
+				parts.unshift(sec + "s");
+			if(min > 0)
+				parts.unshift(min + "m");
+			if(hr > 0)
+				parts.unshift(hr + "h");
+
+			return parts.join("");
+		};
+
 		var $progress = $wrapper.find('.controller-progress');
 		var $progressPercentage = $wrapper.find('.controller-progress-percentage');
 		var $progressPhase = $wrapper.find('.controller-progress-phase');
 
+		var lastPhaseTimestamp = null;
 		var onPhase = function(data) {
-			onSuccess('current phase: ' + data.phase);
+			onSuccess(''
+				+ '[' + (new Date(data.timestamp)).toISOString() + '] current phase: <strong>' + data.phase + '</strong>'
+				+ (lastPhaseTimestamp ? ' (time since previous phase: <strong>' + secondsToHuman((data.timestamp - lastPhaseTimestamp)/1000) + '</strong>)': '')
+			);
+			lastPhaseTimestamp = data.timestamp;
 			$progressPhase.text(data.phase);
 		};
 

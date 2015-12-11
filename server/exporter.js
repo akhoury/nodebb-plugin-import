@@ -702,6 +702,7 @@ var async = require('async'),
 		if (_.isFunction(log)) {
 			Exporter._exporter.log = Exporter.augmentFn(log, function (a, b, c) {
 				var args = _.toArray(arguments);
+				args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 				args.unshift('exporter.log');
 				Exporter.emit.apply(Exporter, args);
 			});
@@ -710,6 +711,7 @@ var async = require('async'),
 		if (_.isFunction(warn)) {
 			Exporter._exporter.warn = Exporter.augmentFn(warn, function () {
 				var args = _.toArray(arguments);
+				args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 				args.unshift('exporter.warn');
 				Exporter.emit.apply(Exporter, args);
 			});
@@ -718,6 +720,7 @@ var async = require('async'),
 		if (_.isFunction(error)) {
 			Exporter._exporter.error = Exporter.augmentFn(error, function () {
 				var args = _.toArray(arguments);
+				args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 				args.unshift('exporter.error');
 				Exporter.emit.apply(Exporter, args);
 			});
