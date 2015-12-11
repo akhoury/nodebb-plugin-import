@@ -361,7 +361,7 @@ var async = require('async'),
 			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
 		}
 		if (_.isArray(arg1)) {
-			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_uid'), arg1);
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_mid'), arg1);
 		}
 	};
 	Exporter.getMessages = function(cb) {
