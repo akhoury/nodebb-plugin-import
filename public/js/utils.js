@@ -162,28 +162,6 @@
 		}
 	};
 
-	utils.buildFn = utils.buildFn || function(js) {
-		var fn, noop = function(s) {return s;};
-		try {
-			// Function.apply(context, args (csv string), function-code (string))
-			fn = Function.apply(null, ['content', (js || '') + '\nreturn content;' ]);
-
-		} catch (e) {
-			console.warn(js + '\nhas invalid javascript, ignoring...', e);
-			fn = noop;
-		}
-		// let's see if it doesn't crash
-		try {
-			fn("test");
-		} catch (e) {
-			// if it did, then too bad, you had a good run, but no thanks
-			console.warn(js + '\nhas a runtime error, ignoring...', e);
-			fn = noop;
-		}
-
-		return fn;
-	};
-
 	utils.truncate = utils.truncate || function(str, len) {
 		if (typeof str != 'string') return str;
 		len = utils.isNumber(len) && len > 3 ? len : 20;

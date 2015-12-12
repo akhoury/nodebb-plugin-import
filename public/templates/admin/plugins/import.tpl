@@ -238,14 +238,15 @@
                 <input data-on="change" data-action="visibleToggle" data-target=".content-convert-parse-before-container" type="checkbox" id="content-convert-use-parse-before" name="content-convert-use-parse-before"> Pre-parse all content with my custom JavaScript
             </label>
             <p class="help-block">
-                For advanced users only. This function will run <b>before</b> the main convert function, use it wisely. If it has invalid syntax or causes runtime error, it will be ignored.
+                For advanced users only. This function will run <b>before</b> the main convert function, use it wisely. If it has invalid syntax, it will be ignored.
+                <br>The first argument is the string content, the second is the <a target="_blank" href="https://github.com/andris9/encoding">encoding</a> library in case you need to convert encodings.
             </p>
         </div>
         <div class="content-convert-parse-before-container hidden">
             <p class="help-block">
-                <code>function parseBefore(content) {</code>
+                <code>function parseBefore(content, encoding) {</code>
             </p>
-            <textarea class="form-control" id="content-convert-parse-before" name="content-convert-parse-before" placeholder="content = content.replace(/orange/g, 'apple'); "></textarea>
+            <textarea class="form-control" id="content-convert-parse-before" name="content-convert-parse-before" placeholder="content = encoding.convert(content.replace(/orange/g, 'apple'), 'utf8', 'latin1'); "></textarea>
             <p class="help-block">
                 <code>&nbsp;&nbsp;return content;</code><br />
                 <code>}</code>
@@ -276,12 +277,13 @@
                 <input data-on="change" data-action="visibleToggle" data-target=".content-convert-parse-after-container" type="checkbox" id="content-convert-use-parse-after" name="content-convert-use-parse-after"> Post-parse all content with my custom JavaScript
             </label>
             <p class="help-block">
-                For advanced users only. This function will run <b>after</b> the main convert function, use it wisely. If it has invalid syntax or causes runtime error, it will be ignored.
+                For advanced users only. This function will run <b>after</b> the main convert function, use it wisely. If it has invalid syntax, it will be ignored.
+                <br>The first argument is the string content, the second is the <a target="_blank" href="https://github.com/andris9/encoding">encoding</a> library in case you need to convert encodings.
             </p>
         </div>
         <div class="content-convert-parse-after-container hidden">
             <p class="help-block">
-                <code>function parseAfter(content) {</code>
+                <code>function parseAfter(content, encoding) {</code>
             </p>
             <textarea class="form-control" id="content-convert-parse-after" name="content-convert-parse-after" placeholder="content = content.replace(/apple/g, 'kitkat'); "></textarea>
             <p class="help-block">

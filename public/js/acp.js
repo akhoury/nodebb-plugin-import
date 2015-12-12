@@ -522,7 +522,7 @@
 		var lastPhaseTimestamp = null;
 		var onPhase = function(data) {
 			onSuccess(''
-				+ '[' + (new Date(data.timestamp)).toISOString() + '] current phase: <strong>' + data.phase + '</strong>'
+				+ '[' + (new Date(data.timestamp || (+new Date))).toISOString() + '] current phase: <strong>' + data.phase + '</strong>'
 				+ (lastPhaseTimestamp ? ' (time since previous phase: <strong>' + secondsToHuman((data.timestamp - lastPhaseTimestamp)/1000) + '</strong>)': '')
 			);
 			lastPhaseTimestamp = data.timestamp;

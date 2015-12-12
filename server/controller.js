@@ -332,12 +332,25 @@ var fs = require('fs-extra'),
 		return Controller._config;
 	};
 
+
+	var buildFn = function(js) {
+		var fn, noop = function(s) {return s;};
+		try {
+			fn = Function.apply(null, ['content, iconv', (js || '') + '\nreturn content;' ]);
+		} catch (e) {
+			console.warn(js + '\nhas invalid javascript, ignoring...', e);
+			fn = noop;
+		}
+		return fn;
+	};
+
 	Controller.setupConvert = function() {
 		var cconf = Controller.config().contentConvert;
+		var encoding = require("encoding");
 
 		var parseBefore = function(s) { return s;};
 		if (cconf.parseBefore && cconf.parseBefore.enabled && cconf.parseBefore.js) {
-			parseBefore = utils.buildFn(cconf.parseBefore.js);
+			parseBefore = buildFn(cconf.parseBefore.js);
 		}
 
 		var parseMain = function(s) { return s;};
@@ -347,12 +360,13 @@ var fs = require('fs-extra'),
 
 		var parseAfter = function(s) { return s;};
 		if (cconf.parseAfter && cconf.parseAfter.enabled && cconf.parseAfter.js) {
-			parseAfter = utils.buildFn(cconf.parseAfter.js);
+			parseAfter = buildFn(cconf.parseAfter.js);
 		}
 
 		Controller.convert = function(s) {
 			s = s || '';
-			return parseAfter(parseMain(parseBefore(s)));
+			var ns = parseAfter(parseMain(parseBefore(s, encoding)), encoding);
+			return ns;
 		};
 	};
 	var jsdom = require("jsdom-nogyp");
