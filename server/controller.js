@@ -336,7 +336,7 @@ var fs = require('fs-extra'),
 	var buildFn = function(js) {
 		var fn, noop = function(s) {return s;};
 		try {
-			fn = Function.apply(null, ['content, iconv', (js || '') + '\nreturn content;' ]);
+			fn = Function.apply(null, ['content, encoding', (js || '') + '\nreturn content;' ]);
 		} catch (e) {
 			console.warn(js + '\nhas invalid javascript, ignoring...', e);
 			fn = noop;

@@ -48,7 +48,7 @@ var
 					config: Plugin.config || {},
 					pkg: pkg,
 					// clean this when https://github.com/psychobunny/templates.js/issues/19 is resolved
-					exporters: Object.keys(pkg.optionalDependencies).map(function(k) { return {name: k}; }),
+					exporters: Object.keys(Plugin.json.exporters).map(function(k) { return {name: k}; }),
 				}
 		);
 	};
