@@ -17,6 +17,7 @@
   "exporters": {
 	"nodebb-plugin-import-discourse": "*",
 	"nodebb-plugin-import-vanilla": "*",
+	"nodebb-plugin-import-punbb2": "*",
 	"nodebb-plugin-import-xenforo": "*",
 	"nodebb-plugin-import-wefrag": "*",
 	"nodebb-plugin-import-vbulletin": "*",

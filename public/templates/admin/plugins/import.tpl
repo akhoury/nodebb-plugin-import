@@ -64,7 +64,7 @@
 
           	<p class="help-block">
           		The reason I don't fetch from NPM by default is that, this API call using (<code>npm.commands.search()</code>) is very slow, consumes a lot of memory, and crashes the process sometimes.
-          		To add yours to the hardcoded list, submit a pull request editing the <code>optionalDependencies</code> block in <a href="https://github.com/akhoury/nodebb-plugin-import/blob/master/package.json" target="_blank">package.json</a>
+          		To add yours to the hardcoded list, submit a pull request editing the <code>exporters</code> JSON block in <a href="https://github.com/akhoury/nodebb-plugin-import/blob/d5eb5fcdcbc168c551b03bc2f97c660e1383a482/plugin.json#L17-L31" target="_blank">plugin.json</a>
           	</p>
 
             <label for="exporter-module-input">Or just enter the module's name or url you want to install</label>
@@ -246,7 +246,7 @@
             <p class="help-block">
                 <code>function parseBefore(content, encoding) {</code>
             </p>
-            <textarea class="form-control" id="content-convert-parse-before" name="content-convert-parse-before" placeholder="content = encoding.convert(content.replace(/orange/g, 'apple'), 'utf8', 'latin1'); "></textarea>
+            <textarea class="form-control" id="content-convert-parse-before" name="content-convert-parse-before" placeholder="content = encoding.convert( content.replace(/orange/g, 'apple'), /* to: */ 'utf8' , /* from: */ 'latin1' ).toString(); "></textarea>
             <p class="help-block">
                 <code>&nbsp;&nbsp;return content;</code><br />
                 <code>}</code>
@@ -270,7 +270,7 @@
         <option value="html-to-md">HTML to Markdown</option>
     </select>
 
-
+	<br>
     <div class="form-group">
         <div class="checkbox">
             <label for="content-convert-use-parse-after">
@@ -468,14 +468,6 @@
 
 <div class="import-toolbar import-overflow-hidden">
     <div class="form">
-        <div class="checkbox">
-            <label for="log-control-server">
-                <input class="log-control" type="checkbox" id="log-control-server" name="log-control-server"> Save logs on server
-            </label>
-            <p class="help-block">
-                Try disabling this if the server is crashing due to 'EMFILE too many open files' or 'Segmentation fault'
-            </p>
-        </div>
         <div class="checkbox">
             <label for="log-control-client">
                 <input checked class="log-control" type="checkbox" id="log-control-client" name="log-control-client"> Log on client
