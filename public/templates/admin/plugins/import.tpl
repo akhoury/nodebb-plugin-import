@@ -57,9 +57,9 @@
             	id="exporter-module"
             	name="exporter-module">
 					<option class="exporter-module-option" value="">Select here or type it below</option>
-            		<!-- BEGIN exporters -->
-						<option class="exporter-module-option" value="{exporters.name}">{exporters.name}</option>
-            		<!-- END exporters -->
+            		<!-- BEGIN exporterModules -->
+						<option class="exporter-module-option" value="{exporterModules.name}">{exporterModules.name}</option>
+            		<!-- END exporterModules -->
           	</select>
 
           	<p class="help-block">

@@ -41,16 +41,15 @@ var
 	};
 
 	Plugin.render = function(req, res, next) {
-		res.render(
-				'admin/plugins/' + Plugin.json.nbbId,
-				{
-					json: Plugin.json || {},
-					config: Plugin.config || {},
-					pkg: pkg,
-					// clean this when https://github.com/psychobunny/templates.js/issues/19 is resolved
-					exporters: Object.keys(Plugin.json.exporters).map(function(k) { return {name: k}; }),
-				}
-		);
+		// clean this when https://github.com/psychobunny/templates.js/issues/19 is resolved
+		var exporterModules = Object.keys(Plugin.json.exporters).map(function(k) { return {name: k}; }).slice(3);
+
+		res.render('admin/plugins/' + Plugin.json.nbbId, {
+			json: Plugin.json || {},
+			config: Plugin.config || {},
+			pkg: pkg,
+			exporterModules: exporterModules,
+		});
 	};
 
 	Plugin.hooks = {
