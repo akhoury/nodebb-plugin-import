@@ -348,7 +348,9 @@
             id="convert-content"
             type="button">Start Convert (might take some time)
     </button>
-
+        <p class="help-block">
+        	<strong>Once done, restart NodeBB to kill all the memory cache, or you may not see any changes</strong>
+        </p>
 </div>
 
 <hr />

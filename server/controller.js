@@ -369,23 +369,11 @@ var fs = require('fs-extra'),
 			return ns;
 		};
 	};
-	var jsdom = require("jsdom-nogyp");
-	var htmlMd = require('html-md-optional_window');
-	Controller['html-to-md'] = (function(){
-		var brRe = /<br\s*(\/)?>/gmi;
-		var entities = new (require('html-entities')).AllHtmlEntities();
-		return function(str){
-			var window = jsdom.jsdom(null, null, {features: {FetchExternalResources: false}}).parentWindow;
-			str = str || '';
-			str = entities.decode(str);
-			str = htmlMd(str, {window: window}).replace(brRe, "\n");
-			// Important! Prevents memory leaks.
-			window.close();
-			return str;
-		}
-	})();
 
-	Controller['bbcode-to-md'] = require('bbcode-to-markdown');
+	var _convert = require('bbcode-to-markdown');
+
+	Controller['html-to-md'] = _convert.htmlToMarkdown;
+	Controller['bbcode-to-md'] = _convert.bbcodeToMarkdown;
 
 	Controller.phasePercentage = 0;
 
@@ -400,7 +388,7 @@ var fs = require('fs-extra'),
 
 	Controller.phase = function(phase, data) {
 		Controller.phasePercentage = 0;
-		Controller.emit('controller.phase', {phase: phase, data: data});
+		Controller.emit('controller.phase', {phase: phase, data: data, timestamp: +new Date()});
 	};
 
 	Controller.getUsersCsv = function(callback) {
@@ -1154,9 +1142,10 @@ var fs = require('fs-extra'),
 											next(err);
 										};
 										if (user && user._imported_uid && user._imported_signature) {
-											db.setObjectField('user:' + user.uid,
+											db.setObjectField(
+													'user:' + user.uid,
 													'signature',
-													Controller.convert(utils.truncateStr(user._imported_signature, (Meta.config.maximumSignatureLength || 255) - 3)),
+													Controller.convert(user._imported_signature),
 													nxt
 											);
 										} else {
@@ -1256,7 +1245,11 @@ var fs = require('fs-extra'),
 											async.parallel([
 												function(cb) {
 													if (rconf.categoriesNames && category._imported_name) {
-														db.setObjectField('category:' + category.cid, 'name', Controller.convert(category._imported_name), cb);
+														var convertedName = Controller.convert(category._imported_name);
+														db.setObjectField('category:' + category.cid, 'name', Controller.convert(category._imported_name), function() {
+															if (err) return cb(err);
+															db.setObjectField('category:' + category.cid, 'slug', category.cid + '/' + utils.slugify(convertedName), cb);
+														});
 													} else {
 														cb();
 													}
