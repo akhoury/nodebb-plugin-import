@@ -1744,6 +1744,7 @@ var async = require('async'),
 
 											var voterUid = (user || {}).uid;
 											var targetUid = (post || topic || {}).uid;
+											var targetPid = (post || {}).pid || (topic || {}).mainPid;
 
 											if (targetUid == voterUid) {
 												selfVoted++;
@@ -1755,8 +1756,7 @@ var async = require('async'),
 												Importer.warn('[process-count-at: ' + count + '] skipping vote:_vid: ' + _vid
 													+ (vote._tid ? ', vote:_tid:' + vote._tid + ':imported:' + (!!topic) : '')
 													+ (vote._pid ? ', vote:_pid:' + vote._pid + ':imported:' + (!!post) : '')
-													+ ', user:_uid:' + vote._uid + ':imported:' + (!!user)
-													+ ', (imported so far: ' + imported + ')' );
+													+ ', user:_uid:' + vote._uid + ':imported:' + (!!user));
 
 												Importer.progress(count, total);
 												return done();
@@ -1778,9 +1778,9 @@ var async = require('async'),
 												};
 
 												if (vote._action == -1) {
-													Favourites.downvote(pid, uid, onCreate);
+													Favourites.downvote(targetPid, voterUid, onCreate);
 												} else {
-													Favourites.upvote(pid, uid, onCreate);
+													Favourites.upvote(targetPid, voterUid, onCreate);
 												}
 											}
 										});
