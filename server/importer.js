@@ -114,6 +114,8 @@ var async = require('async'),
 				"maximumCoverImageSize": MAX_INT,
 				"profileImageDimension": 128,
 				"profile:allowProfileImageUploads": 1,
+				"reputation:disabled": 0,
+				"downvote:disabled": 0
 			}
 		};
 
@@ -1581,7 +1583,7 @@ var async = require('async'),
 									}
 								], function(err, results) {
 									var topic = results[0];
-									var user = results[1] || {uid: '0'};
+									var user = results[1] || {uid: 0};
 
 									if (!topic) {
 										Importer.warn('[process-count-at: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' imported: ' + !!topic);
@@ -1673,6 +1675,7 @@ var async = require('async'),
 		var count = 0,
 				imported = 0,
 				alreadyImported = 0,
+				selfVoted = 0,
 				startTime = +new Date(),
 				config = Importer.config();
 
@@ -1689,12 +1692,13 @@ var async = require('async'),
 
 							recoverImportedVote(_vid, function(err, _vote) {
 								if (_vote) {
+									console.log("already imported", _vid);
+
 									imported++;
 									alreadyImported++;
 									Importer.progress(count, total);
 									return done();
 								}
-
 								if (err) {
 									Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
 									Importer.progress(count, total);
@@ -1705,6 +1709,9 @@ var async = require('async'),
 
 								async.parallel([
 											function(cb) {
+												if (!vote._pid)
+													return cb();
+
 												Data.getImportedPost(vote._pid, function(err, post) {
 													if (err) {
 														Importer.warn('getImportedPost: ' + vote._pid + ' err: ' + err);
@@ -1713,6 +1720,9 @@ var async = require('async'),
 												});
 											},
 											function(cb) {
+												if (!vote._tid)
+													return cb();
+
 												Data.getImportedTopic(vote._tid, function(err, topic) {
 													if (err) {
 														Importer.warn('getImportedTopic: ' + vote._tid + ' err: ' + err);
@@ -1732,13 +1742,27 @@ var async = require('async'),
 										function(err, results){
 											var post = results[0];
 											var topic = results[1];
-											var user = results[2] || {uid: '0'};
+											var user = results[2];
 
-											if (!post && !topic) {
-												Importer.warn('[process-count-at: ' + count + '] post and topic do not exist! Likely it was deleted. _vid: ' + _vid);
-												done();
+											var voterUid = (user || {}).uid;
+											var targetUid = (post || topic || {}).uid;
+
+											if (targetUid == voterUid) {
+												selfVoted++;
+												Importer.progress(count, total);
+												return done();
+											}
+
+											if ((!post && !topic) || !user) {
+												Importer.warn('[process-count-at: ' + count + '] skipping vote:_vid: ' + _vid
+													+ (vote._tid ? ', vote:_tid:' + vote._tid + ':imported:' + (!!topic) : '')
+													+ (vote._pid ? ', vote:_pid:' + vote._pid + ':imported:' + (!!post) : '')
+													+ ', user:_uid:' + vote._uid + ':imported:' + (!!user)
+													+ ', (imported so far: ' + imported + ')' );
+
+												Importer.progress(count, total);
+												return done();
 											} else {
-
 												var onCreate = function(err, voteReturn) {
 													if (err) {
 														Importer.warn('skipping vote:_vid: ' + _vid + ' : ' + err);
@@ -1752,26 +1776,14 @@ var async = require('async'),
 													imported++;
 													vote = nodeExtend(true, {}, vote, voteReturn);
 													votes[_vid] = vote;
-													Data.setVoteImported(_vid, vote._action, vote, done);
+													Data.setVoteImported(_vid, _vid /* there's no vote.vid */, vote, done);
 												};
 
-												var sendVote = function(pid, uid, action) {
-													if (action == 'down') {
-														Favourites.downvote(pid, uid, onCreate);
-													} else {
-														Favourites.upvote(pid, uid, onCreate);
-													}
-												};
-												var pid;
-												if (!_.isUndefined(post) && !_.isNull(post)) {
-													pid = post.pid;
-												} else if (!_.isUndefined(topic) && !_.isNull(topic)) {
-													pid = topic.tid;
+												if (vote._action == -1) {
+													Favourites.downvote(pid, uid, onCreate);
+												} else {
+													Favourites.upvote(pid, uid, onCreate);
 												}
-
-												var action = vote._action == -1 ? 'down' : 'up';
-
-												sendVote(pid, user.uid, action);
 											}
 										});
 							});
@@ -1785,7 +1797,9 @@ var async = require('async'),
 						if (err) {
 							throw err;
 						}
-						Importer.success('Imported ' + imported + '/' + total + ' votes' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
+						Importer.success('Imported ' + imported + '/' + total + ' votes'
+							+ (selfVoted ? ' (skipped ' + selfVoted + ' votes because they were self-voted.)' : '')
+							+ (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						Importer.progress(1, 1);
 						Importer.phase('votesImportDone');
 						fs.remove(DIRTY_VOTES_FILE, next);
@@ -1852,10 +1866,11 @@ var async = require('async'),
 										],
 										function(err, results){
 											var topic = results[0];
-											var user = results[1] || {uid: '0'};
+											var user = results[1];
 
-											if (!topic) {
-												Importer.warn('[process-count-at: ' + count + '] topic does not exist! Likely it was deleted. _bid: ' + _bid);
+											if (!topic || !user) {
+												Importer.warn('[process-count-at: ' + count + '] skipping bookmark:_bid: '
+													+ _bid + ', topic:_tid:' + bookmark._tid + ':imported:' + (!!topic) + ', user:_uid:' + bookmark._uid + ':imported:' + (!!user));
 												done();
 											} else {
 
@@ -1872,7 +1887,8 @@ var async = require('async'),
 													imported++;
 													bookmark = nodeExtend(true, {}, bookmark, bookmarkReturn);
 													bookmarks[_bid] = bookmark;
-													Data.setBookmarkImported(_bid, bookmark._index, bookmark, done);
+
+													Data.setBookmarkImported(_bid, _bid /* there's no bookmark.bid */, bookmark, done);
 												};
 
 												Topics.setUserBookmark(topic.tid, user.uid, bookmark._index, onCreate);
