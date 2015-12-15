@@ -1692,8 +1692,6 @@ var async = require('async'),
 
 							recoverImportedVote(_vid, function(err, _vote) {
 								if (_vote) {
-									console.log("already imported", _vid);
-
 									imported++;
 									alreadyImported++;
 									Importer.progress(count, total);
