@@ -255,7 +255,9 @@ Each record should look like this:
 
         "_content": "Post content ba dum tss", // REQUIRED
 
-        "_uid": 202, // OPTIONAL, OLD USER ID, NodeBB will create under the "Guest" username
+        "_uid": 202, // OPTIONAL, OLD USER ID, if not provided NodeBB will create under the "Guest" username, unless _guest is passed.
+
+        "_toPid": 65485, // OPTIONAL, OLD REPLIED-TO POST ID, 
 
         "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
 
@@ -362,8 +364,14 @@ Each record should look like this:
 
         "_uid": 789, // REQUIRED, old user id which did the vote
 
-		// 1 of these 2 ids is REQUIRED
-        "_tid": 123, // MAYBE-OPTIONAL, old topic id which is the vote occured on
+	// 1 of these 2 ids is REQUIRED
+	/* 
+	     you shouldn't need to include `vote._tid` AND `vote._pid`, 
+	     either or, use `_tid` when the Like occured on the "main-post" of that topic's tid (the importer will  find the new `topic.mainPid` using the old `_tid`), 
+	     and use `_pid` when it's on any other post within a topic.
+	*/
+	
+        "_tid": 123, // MAYBE-OPTIONAL, old topic id which is the vote occured on,
         "_pid": 456, // MAYBE-OPTIONAL, old post id which is the vote occured on
 
         "_action": 1 // REQUIRED 1 or -1, 1 means UP, -1 means down
