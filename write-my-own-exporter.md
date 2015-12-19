@@ -216,6 +216,15 @@ Each record should look like this:
 
         "_tags": ["tag1", "tag2", "tag3"], // OPTIONAL, an array of tags, or a comma separated string would work too, defaults to null
 
+        "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
+
+		// OPTIONAL, an array of objects, each object mush have the binary BLOB,
+		// either a filename or extension, then each file will be written to disk,
+		// if no filename is provided, the extension will be used and a filename will be generated as attachment_t_{_tid}_{index}{extension}
+		// and its url would be appended to the _content for download
+        "_attachmentsBlobs": [ {blob: <BINARY>, filename: "myfile.zip"}, {blob: <BINARY>, extension: ".zip"} ],
+
+
         "_deleted": 0, // OPTIONAL, defaults to 0
 
         "_pinned": 1 // OPTIONAL, defaults to 0
@@ -257,7 +266,7 @@ Each record should look like this:
 
         "_uid": 202, // OPTIONAL, OLD USER ID, if not provided NodeBB will create under the "Guest" username, unless _guest is passed.
 
-        "_toPid": 65485, // OPTIONAL, OLD REPLIED-TO POST ID, 
+        "_toPid": 65485, // OPTIONAL, OLD REPLIED-TO POST ID,
 
         "_timestamp": 1386475829970 // OPTIONAL, [UNIT: Milliseconds], defaults to current, but what's the point of migrating if you dont preserve dates.
 
@@ -268,6 +277,14 @@ Each record should look like this:
         "_edited": 1386475829970, // OPTIONAL, [UNIT: Milliseconds], if and when the post was edited, defaults to null
 
         "_reputation": 0, // OPTIONAL, defaults to 0, must be >= 0, not to be confused with _votes (see getPaginatedVotes for votes)
+
+        "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
+
+		// OPTIONAL, an array of objects, each object mush have the binary BLOB,
+		// either a filename or extension, then each file will be written to disk,
+		// if no filename is provided, the extension will be used and a filename will be generated as attachment_p_{_pid}_{index}{extension}
+		// and its url would be appended to the _content for download
+        "_attachmentsBlobs": [ {blob: <BINARY>, filename: "myfile.zip"}, {blob: <BINARY>, extension: ".zip"} ],
 
         "_path": "/myoldforum/topic/123#post56789", // OPTIONAL, the old path to reach this post's page and maybe deep link, defaults to ''
 
@@ -365,12 +382,12 @@ Each record should look like this:
         "_uid": 789, // REQUIRED, old user id which did the vote
 
 	// 1 of these 2 ids is REQUIRED
-	/* 
-	     you shouldn't need to include `vote._tid` AND `vote._pid`, 
-	     either or, use `_tid` when the Like occured on the "main-post" of that topic's tid (the importer will  find the new `topic.mainPid` using the old `_tid`), 
+	/*
+	     you shouldn't need to include `vote._tid` AND `vote._pid`,
+	     either or, use `_tid` when the Like occured on the "main-post" of that topic's tid (the importer will  find the new `topic.mainPid` using the old `_tid`),
 	     and use `_pid` when it's on any other post within a topic.
 	*/
-	
+
         "_tid": 123, // MAYBE-OPTIONAL, old topic id which is the vote occured on,
         "_pid": 456, // MAYBE-OPTIONAL, old post id which is the vote occured on
 

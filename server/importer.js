@@ -1369,17 +1369,24 @@ var async = require('async'),
 				imported = 0,
 				alreadyImported = 0,
 				startTime = +new Date(),
+				attachmentsTmpPath = path.join(__dirname, '/tmp/attachments'),
+				folder = '_imported_attachments',
+				attachmentsPublicPath = path.join(nconf.get('base_dir'), nconf.get('upload_path'), '_imported_attachments'),
 				config = Importer.config();
 
 		fs.writeFileSync(DIRTY_TOPICS_FILE, +new Date(), {encoding: 'utf8'});
+		fs.ensureDirSync(attachmentsTmpPath);
+		fs.ensureDirSync(attachmentsPublicPath);
 
 		Importer.exporter.countTopics(function(err, total) {
 			Importer.success('Importing ' + total + ' topics.');
 			Importer.exporter.exportTopics(
 					function(err, topics, topicsArr, nextExportBatch) {
-						var onEach = function(topic, done) {
+
+						async.eachLimit(topicsArr, IMPORT_BATCH_SIZE, function(topic, done) {
 							count++;
 							var _tid = topic._tid;
+
 							recoverImportedTopic(_tid, function(err, _topic) {
 								if (_topic) {
 									Importer.progress(count, total);
@@ -1417,107 +1424,135 @@ var async = require('async'),
 									} else {
 										Importer.log('[process-count-at:' + count + '] saving topic:_tid: ' + _tid);
 
-										var onPost = function (err, returnTopic) {
-											if (err) {
-												Importer.warn('[process-count-at:' + count + '] skipping topic:_tid: ' + _tid + ':cid:' + category.cid + ':_cid:' + topic._cid + ':uid:' + user.uid +  ':_uid:' + topic._uid + ' err: ' + err);
-												Importer.progress(count, total);
-												done();
-											} else {
+										if (topic._attachmentsBlobs && topic._attachmentsBlobs.length) {
+											var attachmentsIndex = 0;
 
-												topic.imported = true;
-												imported++;
+											topic._attachments = [].concat(topic._attachments || []);
 
-												var timestamp = topic._timestamp || startTime;
-												var relativeTime = new Date(timestamp).toISOString();
+											async.eachLimit(topic._attachmentsBlobs, 2, function(_attachmentsBlob, next) {
+												var filename = 'attachment_t_' + _tid + '_' + attachmentsIndex++ + (_attachmentsBlob.filename ? '_' + _attachmentsBlob.filename : _attachmentsBlob.extension);
+												var tmpPath = path.join(attachmentsTmpPath, filename);
 
-												var topicFields = {
-													viewcount: topic._viewcount || topic._viewscount || 0,
+												writeBlob(tmpPath, _attachmentsBlob.blob, function(err) {
+													if (err) {
+														Importer.warn(tmpPath, err);
+														next();
+													} else {
+														File.saveFileToLocal(filename, folder, tmpPath, function(err, ret) {
+															if (!err) {
+																topic._attachments.push(ret.url);
+															} else {
+																Importer.warn(filename, err);
+															}
+															next();
+														});
+													}
+												});
 
-													// assume that this topic not locked for now, but will iterate back again at the end and lock it back after finishing the importPosts()
-													// locked: normalizedTopic._locked ? 1 : 0,
-													locked: 0,
+											}, onAttachmentsBlobs);
 
-													deleted: topic._deleted ? 1 : 0,
-
-													// if pinned, we should set the db.sortedSetAdd('cid:' + cid + ':tids', Math.pow(2, 53), tid);
-													pinned: topic._pinned ? 1 : 0,
-													timestamp: timestamp,
-													lastposttime: timestamp,
-
-													_imported_tid: _tid,
-													_imported_uid: topic._uid || '',
-													_imported_cid: topic._cid,
-													_imported_slug: topic._slug || '',
-													_imported_path: topic._path || '',
-													_imported_title: topic._title || '',
-													_imported_content: topic._content || '',
-													_imported_guest: topic._guest || '',
-													_imported_ip: topic._ip || '',
-													_imported_user_slug: user._slug || '',
-													_imported_user_path: user._path || '',
-													_imported_category_path: category._path || '',
-													_imported_category_slug: category._slug || ''
-												};
-
-												var postFields = {
-													timestamp: timestamp,
-													votes: topic._votes || 0,
-													reputation: topic._reputation || 0,
-													edited: topic._edited || undefined,
-													// todo: not sure if I need this
-													relativeTime: relativeTime
-												};
-
-												var onPinned = function() {
-
-													var onFields = function(err, result) {
-														Importer.progress(count, total);
-														if (err) {
-															Importer.warn(err);
-														}
-
-														var onPostFields = function(){
-															topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
-															topics[_tid] = topic;
-															Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, done);
-														};
-
-														Posts.setPostFields(returnTopic.postData.pid, postFields, onPostFields);
-													};
-
-													db.setObject('topic:' + returnTopic.topicData.tid, topicFields, onFields);
-												};
-
-												// pinned = 1 not enough to float the topic to the top in it's category
-												if (topicFields.pinned) {
-													db.sortedSetAdd('cid:' + category.cid + ':tids', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
-												}  else {
-													db.sortedSetAdd('cid:' + category.cid + ':tids', timestamp, returnTopic.topicData.tid, onPinned);
-												}
-											}
-										};
-
-										topic._content = (topic._content || '').trim() ? topic._content : '[[blank-post-content-placeholder]]';
-										topic._title = utils.slugify(topic._title) ? topic._title[0].toUpperCase() + topic._title.substr(1) : utils.truncate(topic._content, 100);
-
-										if (topic._tags && !Array.isArray(topic._tags)) {
-											topic._tags = ('' + topic._tags).split(',');
+										} else {
+											onAttachmentsBlobs();
 										}
 
-										Topics.post({
-											uid: !config.adminTakeOwnership.enable ? user.uid : parseInt(config.adminTakeOwnership._uid, 10) === parseInt(topic._uid, 10) ? LOGGEDIN_UID : user.uid,
-											title: topic._title,
-											content: topic._content,
-											cid: category.cid,
-											thumb: topic._thumb,
-											tags: topic._tags
-										}, onPost);
+										function onAttachmentsBlobs () {
+											topic._content = (topic._content || '').trim() ? topic._content : '[[blank-post-content-placeholder]]';
+
+											topic._title = utils.slugify(topic._title) ? topic._title[0].toUpperCase() + topic._title.substr(1) : utils.truncate(topic._content, 100);
+
+											(topic._attachments || []).forEach(function(_attachment) {
+												topic._content += generateDownloadFileUrl(_attachment);
+											});
+
+											if (topic._tags && !Array.isArray(topic._tags)) {
+												topic._tags = ('' + topic._tags).split(',');
+											}
+
+											Topics.post({
+												uid: !config.adminTakeOwnership.enable ? user.uid : parseInt(config.adminTakeOwnership._uid, 10) === parseInt(topic._uid, 10) ? LOGGEDIN_UID : user.uid,
+												title: topic._title,
+												content: topic._content,
+												cid: category.cid,
+												thumb: topic._thumb,
+												tags: topic._tags
+											}, function (err, returnTopic) {
+												if (err) {
+													Importer.warn('[process-count-at:' + count + '] skipping topic:_tid: ' + _tid + ':cid:' + category.cid + ':_cid:' + topic._cid + ':uid:' + user.uid +  ':_uid:' + topic._uid + ' err: ' + err);
+													Importer.progress(count, total);
+													done();
+												} else {
+
+													topic.imported = true;
+													imported++;
+
+													var timestamp = topic._timestamp || startTime;
+													var relativeTime = new Date(timestamp).toISOString();
+
+													var topicFields = {
+														viewcount: topic._viewcount || topic._viewscount || 0,
+
+														// assume that this topic not locked for now, but will iterate back again at the end and lock it back after finishing the importPosts()
+														// locked: normalizedTopic._locked ? 1 : 0,
+														locked: 0,
+
+														deleted: topic._deleted ? 1 : 0,
+
+														// if pinned, we should set the db.sortedSetAdd('cid:' + cid + ':tids', Math.pow(2, 53), tid);
+														pinned: topic._pinned ? 1 : 0,
+														timestamp: timestamp,
+														lastposttime: timestamp,
+
+														_imported_tid: _tid,
+														_imported_uid: topic._uid || '',
+														_imported_cid: topic._cid,
+														_imported_slug: topic._slug || '',
+														_imported_path: topic._path || '',
+														_imported_title: topic._title || '',
+														_imported_content: topic._content || '',
+														_imported_guest: topic._guest || '',
+														_imported_ip: topic._ip || '',
+														_imported_user_slug: user._slug || '',
+														_imported_user_path: user._path || '',
+														_imported_category_path: category._path || '',
+														_imported_category_slug: category._slug || ''
+													};
+
+													var postFields = {
+														timestamp: timestamp,
+														votes: topic._votes || 0,
+														reputation: topic._reputation || 0,
+														edited: topic._edited || undefined,
+														// todo: not sure if I need this
+														relativeTime: relativeTime
+													};
+
+													var onPinned = function() {
+														db.setObject('topic:' + returnTopic.topicData.tid, topicFields, function(err, result) {
+															Importer.progress(count, total);
+															if (err) {
+																Importer.warn(err);
+															}
+															Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
+																topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
+																topics[_tid] = topic;
+																Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, done);
+															});
+														});
+													};
+
+													// pinned = 1 not enough to float the topic to the top in it's category
+													if (topicFields.pinned) {
+														db.sortedSetAdd('cid:' + category.cid + ':tids', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
+													}  else {
+														db.sortedSetAdd('cid:' + category.cid + ':tids', timestamp, returnTopic.topicData.tid, onPinned);
+													}
+												}
+											});
+										}
 									}
 								});
 							});
-						};
-
-						async.eachLimit(topicsArr, IMPORT_BATCH_SIZE, onEach, nextExportBatch);
+						}, nextExportBatch);
 					},
 					{
 						//options
@@ -1529,11 +1564,23 @@ var async = require('async'),
 						Importer.success('Imported ' + imported + '/' + total + ' topics' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						Importer.progress(1, 1);
 						Importer.phase('topicsImportDone');
-						fs.remove(DIRTY_TOPICS_FILE, next);
+
+						async.series([
+							function(nxt) {
+								fs.remove(DIRTY_TOPICS_FILE, nxt);
+							},
+							function(nxt) {
+								fs.remove(attachmentsTmpPath, nxt);
+							},
+						], next);
+
 					});
 		});
-
 	};
+
+	function generateDownloadFileUrl (url) {
+		return '\n[' + url.split('/').pop() + '](' + url + ')';
+	}
 
 	Importer.importPosts = function(next) {
 		Importer.phase('postsImportStart');
@@ -1544,15 +1591,21 @@ var async = require('async'),
 				imported = 0,
 				alreadyImported = 0,
 				startTime = +new Date(),
+				attachmentsTmpPath = path.join(__dirname, '/tmp/attachments'),
+				folder = '_imported_attachments',
+				attachmentsPublicPath = path.join(nconf.get('base_dir'), nconf.get('upload_path'), '_imported_attachments'),
 				config = Importer.config();
 
 		fs.writeFileSync(DIRTY_POSTS_FILE, +new Date(), {encoding: 'utf8'});
+		fs.ensureDirSync(attachmentsTmpPath);
+		fs.ensureDirSync(attachmentsPublicPath);
+
 		Importer.exporter.countPosts(function(err, total) {
 			Importer.success('Importing ' + total + ' posts.');
 			Importer.exporter.exportPosts(
 					function(err, posts, postsArr, nextExportBatch) {
 
-						var onEach = function(post, done) {
+						async.eachLimit(postsArr, IMPORT_BATCH_SIZE, function(post, done) {
 							count++;
 							var _pid = post._pid;
 
@@ -1592,67 +1645,106 @@ var async = require('async'),
 
 										Importer.log('[process-count-at: ' + count + '] saving post: ' + _pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid);
 
-										var onCreate = function(err, postReturn){
-											if (err) {
-												Importer.warn('[process-count-at: ' + count + '] skipping post: ' + post._pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' ' + err);
-												Importer.progress(count, total);
-												done();
-											} else {
+										if (post._attachmentsBlobs && post._attachmentsBlobs.length) {
+											var attachmentsIndex = 0;
 
-												post.imported = true;
-												imported++;
+											post._attachments = [].concat(post._attachments || []);
 
-												var fields = {
-													reputation: post._reputation || 0,
-													votes: post._votes || 0,
+											async.eachLimit(post._attachmentsBlobs, 2, function(_attachmentsBlob, next) {
+												var filename = 'attachment_p_' + _pid + '_' + attachmentsIndex++ + (_attachmentsBlob.filename ? '_' + _attachmentsBlob.filename : _attachmentsBlob.extension);
+												var tmpPath = path.join(attachmentsTmpPath, filename);
 
-													edited: post._edited || undefined,
-													deleted: post._deleted || 0,
+												writeBlob(tmpPath, _attachmentsBlob.blob, function(err) {
+													if (err) {
+														Importer.warn(tmpPath, err);
+														next();
+													} else {
+														File.saveFileToLocal(filename, folder, tmpPath, function(err, ret) {
+															if (!err) {
+																post._attachments.push(ret.url);
+															} else {
+																Importer.warn(filename, err);
+															}
+															next();
+														});
+													}
+												});
 
-													// todo: not sure if I need this
-													relativeTime: new Date(post._timestamp || startTime).toISOString(),
+											}, onAttachmentsBlobs);
 
-													_imported_pid: _pid,
-													_imported_uid: post._uid || '',
-													_imported_tid: post._tid || '',
-													_imported_content: post._content || '',
-													_imported_cid: topic._cid || '',
-													_imported_ip: post._ip || '',
-													_imported_guest: post._guest || '',
-													_imported_toPid: post._toPid || '',
-													_imported_user_slug: user._slug || '',
-													_imported_user_path: user._path || '',
-													_imported_topic_slug: topic._slug || '',
-													_imported_topic_path: topic._path || '',
-													_imported_category_path: topic._imported_category_path || '',
-													_imported_category_slug: topic._imported_category_slug || '',
-													_imported_path: post._path || ''
-												};
+										} else {
+											onAttachmentsBlobs();
+										}
 
-												var onPostFields = function() {
-													Importer.progress(count, total);
-													post = nodeExtend(true, {}, post, fields, postReturn);
-													post.imported = true;
-													posts[_pid] = post;
-													Data.setPostImported(_pid, post.pid, post, done);
-												};
-												Posts.setPostFields(postReturn.pid, fields, onPostFields);
+										function onAttachmentsBlobs () {
+
+											post._content = (post._content || '').trim() ? post._content : '[[blank-post-content-placeholder]]';
+
+											(post._attachments || []).forEach(function(_attachment) {
+												post._content += generateDownloadFileUrl(_attachment);
+											});
+
+											if (post._tags && !Array.isArray(post._tags)) {
+												post._tags = ('' + post._tags).split(',');
 											}
-										};
 
-										post._content = (post._content || '').trim() ? post._content : '[[blank-post-content-placeholder]]';
-										Posts.create({
-											uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
-											tid: topic.tid,
-											content: post._content,
-											timestamp: post._timestamp || startTime,
-											ip: post._ip
-										}, onCreate);
+											Posts.create({
+												uid: !config.adminTakeOwnership.enable ? user.uid : config.adminTakeOwnership._uid === post._uid ? 1 : user.uid,
+												tid: topic.tid,
+												content: post._content,
+												timestamp: post._timestamp || startTime,
+												ip: post._ip
+											}, function(err, postReturn){
+												if (err) {
+													Importer.warn('[process-count-at: ' + count + '] skipping post: ' + post._pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' ' + err);
+													Importer.progress(count, total);
+													done();
+												} else {
+
+													post.imported = true;
+													imported++;
+
+													var fields = {
+														reputation: post._reputation || 0,
+														votes: post._votes || 0,
+
+														edited: post._edited || undefined,
+														deleted: post._deleted || 0,
+
+														// todo: not sure if I need this
+														relativeTime: new Date(post._timestamp || startTime).toISOString(),
+
+														_imported_pid: _pid,
+														_imported_uid: post._uid || '',
+														_imported_tid: post._tid || '',
+														_imported_content: post._content || '',
+														_imported_cid: topic._cid || '',
+														_imported_ip: post._ip || '',
+														_imported_guest: post._guest || '',
+														_imported_toPid: post._toPid || '',
+														_imported_user_slug: user._slug || '',
+														_imported_user_path: user._path || '',
+														_imported_topic_slug: topic._slug || '',
+														_imported_topic_path: topic._path || '',
+														_imported_category_path: topic._imported_category_path || '',
+														_imported_category_slug: topic._imported_category_slug || '',
+														_imported_path: post._path || ''
+													};
+
+													Posts.setPostFields(postReturn.pid, fields, function() {
+														Importer.progress(count, total);
+														post = nodeExtend(true, {}, post, fields, postReturn);
+														post.imported = true;
+														posts[_pid] = post;
+														Data.setPostImported(_pid, post.pid, post, done);
+													});
+												}
+											});
+										}
 									}
 								});
 							});
-						};
-						async.eachLimit(postsArr, IMPORT_BATCH_SIZE, onEach, nextExportBatch);
+						}, nextExportBatch);
 					},
 					{
 						// options
@@ -1661,7 +1753,16 @@ var async = require('async'),
 						Importer.progress(1, 1);
 						Importer.phase('postsImportDone');
 						Importer.success('Imported ' + imported + '/' + total + ' posts' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
-						fs.remove(DIRTY_POSTS_FILE, next);
+
+						async.series([
+							function(nxt) {
+								fs.remove(DIRTY_TOPICS_FILE, nxt);
+							},
+							function(nxt) {
+								fs.remove(attachmentsTmpPath, nxt);
+							},
+						], next);
+
 					});
 		});
 	};
@@ -1753,10 +1854,10 @@ var async = require('async'),
 											}
 
 											if ((!post && !topic) || !user) {
-												Importer.warn('[process-count-at: ' + count + '] skipping vote:_vid: ' + _vid
-													+ (vote._tid ? ', vote:_tid:' + vote._tid + ':imported:' + (!!topic) : '')
-													+ (vote._pid ? ', vote:_pid:' + vote._pid + ':imported:' + (!!post) : '')
-													+ ', user:_uid:' + vote._uid + ':imported:' + (!!user));
+												//Importer.warn('[process-count-at: ' + count + '] skipping vote:_vid: ' + _vid
+												//	+ (vote._tid ? ', vote:_tid:' + vote._tid + ':imported:' + (!!topic) : '')
+												//	+ (vote._pid ? ', vote:_pid:' + vote._pid + ':imported:' + (!!post) : '')
+												//	+ ', user:_uid:' + vote._uid + ':imported:' + (!!user));
 
 												Importer.progress(count, total);
 												return done();
