@@ -2,6 +2,22 @@ nodebb-plugin-import
 =========
 Import your old forum data to nodebb | a one time use plugin
 
+# DOES NOT SUPPORT NODEBB V0.9.3+ YET!
+
+### Works with NodeBB stable [v0.9.2](https://github.com/NodeBB/NodeBB/tree/v0.9.2)
+
+```
+git clone https://github.com/NodeBB/NodeBB.git
+cd NodeBB
+git checkout v0.9.2
+npm install
+node app --setup
+
+# I recommend using mongo instead of redis
+
+```
+
+
 ## Screenshots
 ![screen shot 2015-12-09 at 8 50 35 pm](https://cloud.githubusercontent.com/assets/1398375/11704595/f66a8a00-9eb6-11e5-8592-5e0f2ca650ef.png)
 ![screen shot 2015-12-09 at 8 51 06 pm](https://cloud.githubusercontent.com/assets/1398375/11704593/f667be60-9eb6-11e5-856c-bdfacde800bf.png)
@@ -10,18 +26,6 @@ Import your old forum data to nodebb | a one time use plugin
 ![screen shot 2015-12-09 at 8 53 02 pm](https://cloud.githubusercontent.com/assets/1398375/11704596/f66bf7c8-9eb6-11e5-89c6-03268dc3b4ed.png)
 ![screen shot 2015-12-09 at 8 53 12 pm](https://cloud.githubusercontent.com/assets/1398375/11704594/f6691350-9eb6-11e5-9713-5d2df1f3432a.png)
 
-
-### Works with NodeBB stable [v0.9.1](https://github.com/NodeBB/NodeBB/tree/v0.9.1)
-```
-git clone https://github.com/NodeBB/NodeBB.git
-cd NodeBB
-git checkout v0.9.1
-npm install
-node app --setup
-
-# I recommend using mongo instead of redis
-
-```
 
 If you want a higher revision, import to the supported one, then just follow the upgrade procedure here https://docs.nodebb.org/en/latest/upgrading/index.html
 
