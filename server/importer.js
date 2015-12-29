@@ -1521,10 +1521,16 @@ var async = require('async'),
 														timestamp: timestamp,
 														votes: topic._votes || 0,
 														reputation: topic._reputation || 0,
-														edited: topic._edited || undefined,
+														edited: topic._edited || 0,
 														// todo: not sure if I need this
 														relativeTime: relativeTime
 													};
+
+													// if (topic._edited) {
+													// 	postFields.edited = topic._edited;
+													// }
+
+													// console.log("Topic Edited:", postFields.edited, "type:", typeof postFields.edited);
 
 													var onPinned = function() {
 														db.setObject('topic:' + returnTopic.topicData.tid, topicFields, function(err, result) {
@@ -1708,7 +1714,7 @@ var async = require('async'),
 														reputation: post._reputation || 0,
 														votes: post._votes || 0,
 
-														edited: post._edited || undefined,
+														edited: post._edited || 0,
 														deleted: post._deleted || 0,
 
 														// todo: not sure if I need this
@@ -1730,6 +1736,10 @@ var async = require('async'),
 														_imported_category_slug: topic._imported_category_slug || '',
 														_imported_path: post._path || ''
 													};
+
+													// if (post._edited) {
+													// 	fields.edited = post._edited;
+													// }
 
 													Posts.setPostFields(postReturn.pid, fields, function() {
 														Importer.progress(count, total);
@@ -1875,7 +1885,7 @@ var async = require('async'),
 													imported++;
 													vote = nodeExtend(true, {}, vote, voteReturn);
 													votes[_vid] = vote;
-													Data.setVoteImported(_vid, _vid /* there's no vote.vid */, vote, done);
+													Data.setVoteImported(_vid, 0 /* there's no vote.vid */, vote, done);
 												};
 
 												if (vote._action == -1) {
@@ -1987,7 +1997,7 @@ var async = require('async'),
 													bookmark = nodeExtend(true, {}, bookmark, bookmarkReturn);
 													bookmarks[_bid] = bookmark;
 
-													Data.setBookmarkImported(_bid, _bid /* there's no bookmark.bid */, bookmark, done);
+													Data.setBookmarkImported(_bid, 0 /* there's no bookmark.bid */, bookmark, done);
 												};
 
 												Topics.setUserBookmark(topic.tid, user.uid, bookmark._index, onCreate);
