@@ -115,6 +115,11 @@ Each record should look like this:
 
         "_banned": 0, // OPTIONAL, defaults to 0
 
+        // read cids and tids by that user, it's more efficient to use _read_cids if you know that a user has read all the topics in a category.
+        "_read_cids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []
+        // untested with very large sets. So.
+        "_read_tids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []
+
         "_location": "u45 city", // OPTIONAL, defaults to ''
 
 		// (there is a config for multiplying these with a number for moAr karma)

@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-import",
-  "version": "0.3.24",
+  "version": "0.3.25",
   "description": "Import your forum data to nodebb",
   "main": "./server/importer.js",
   "scripts": {

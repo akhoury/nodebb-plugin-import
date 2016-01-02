@@ -201,7 +201,7 @@ var async = require('async'),
 			Importer.fixPostsToPids,
 			Importer.fixGroupsOwners,
 			Importer.relockUnlockedTopics,
-			Importer.rebanUnbannedUsers,
+			Importer.rebanAndMarkReadForUsers,
 			Importer.fixTopicTimestamps,
 			Importer.restoreConfig,
 			Importer.disallowGuestsWriteOnAllCategories,
@@ -272,7 +272,7 @@ var async = require('async'),
 			Importer.fixPostsToPids,
 			Importer.fixGroupsOwners,
 			Importer.relockUnlockedTopics,
-			Importer.rebanUnbannedUsers,
+			Importer.rebanAndMarkReadForUsers,
 			Importer.fixTopicTimestamps,
 			Importer.restoreConfig,
 			Importer.disallowGuestsWriteOnAllCategories,
@@ -774,6 +774,8 @@ var async = require('async'),
 															// don't ban the users now, ban them later, if _imported_user:_uid._banned == 1
 															banned: 0,
 
+															_imported_read_tids: JSON.stringify(user._read_tids),
+															_imported_read_cids: JSON.stringify(user._read_cids),
 															_imported_path: user._path || '',
 															_imported_uid: _uid,
 															_imported_username: user._username || '',
@@ -1260,7 +1262,7 @@ var async = require('async'),
 											group = nodeExtend(true, {}, group, groupReturn, fields);
 											groups[_gid] = group;
 
-											Data.setGroupImported(_gid, groupReturn.name, group, done);
+											Data.setGroupImported(_gid, 0, group, done);
 										};
 
 										if (group._createtime || group._timestamp) {
@@ -1885,7 +1887,7 @@ var async = require('async'),
 													imported++;
 													vote = nodeExtend(true, {}, vote, voteReturn);
 													votes[_vid] = vote;
-													Data.setVoteImported(_vid, 0 /* there's no vote.vid */, vote, done);
+													Data.setVoteImported(_vid, +new Date(), vote, done);
 												};
 
 												if (vote._action == -1) {
@@ -1997,7 +1999,7 @@ var async = require('async'),
 													bookmark = nodeExtend(true, {}, bookmark, bookmarkReturn);
 													bookmarks[_bid] = bookmark;
 
-													Data.setBookmarkImported(_bid, 0 /* there's no bookmark.bid */, bookmark, done);
+													Data.setBookmarkImported(_bid, +new Date, bookmark, done);
 												};
 
 												Topics.setUserBookmark(topic.tid, user.uid, bookmark._index, onCreate);
@@ -2063,33 +2065,86 @@ var async = require('async'),
 		});
 	};
 
-	Importer.rebanUnbannedUsers = function(next) {
+	Importer.rebanAndMarkReadForUsers = function(next) {
 		var count = 0;
 
-		Importer.phase('rebanUnbannedUsersStart');
+		Importer.phase('rebanAndMarkReadForUsersStart');
 		Importer.progress(0, 1);
 
 		Data.countImportedUsers(function(err, total) {
 			Data.eachImportedUser(function(user, done) {
 						Importer.progress(count++, total);
 
-						if (!user || !parseInt(user._banned, 10)) {
-							return done();
-						}
-						User.ban(user.uid, function() {
-							if (err) {
-								Importer.warn(err);
-							} else {
-								Importer.log('[process-count-at: ' + count + '] banned user:' + user.uid + ' back');
+						async.parallel([
+							function(nxt) {
+								if (!user || !parseInt(user._banned, 10)) {
+									return nxt();
+								}
+								User.ban(user.uid, function() {
+									if (err) {
+										Importer.warn(err);
+									} else {
+										Importer.log('[process-count-at: ' + count + '] banned user:' + user.uid + ' back');
+									}
+									nxt();
+								});
+
+							},
+							function(nxt) {
+								if (!user || !user._imported_read_tids) {
+									return nxt();
+								}
+
+								var _tids = [];
+								try {
+									_tids = JSON.parse(user._imported_read_tids);
+								} catch(e) {
+									return nxt();
+								}
+								async.eachLimit(_tids || [], 10, function(_tid, nxtTid) {
+										Data.getImportedTopic(_tid, function(err, topic) {
+											if (err || !topic) return nxtTid();
+
+											Topics.markAsRead([topic.tid], user.uid, function() {
+												nxtTid();
+											});
+										});
+									},
+									function() {
+										nxt();
+								});
+							},
+							function(nxt) {
+								if (!user || !user._imported_read_cids) {
+									return nxt();
+								}
+
+								var _cids = [];
+								try {
+									_cids = JSON.parse(user._imported_read_cids);
+								} catch(e) {
+									return nxt();
+								}
+								async.eachLimit(_cids || [], 10, function(_cid, nxtCid) {
+										Data.getImportedCategory(_cid, function(err, category) {
+											if (err || !category) return nxtCid();
+
+											Categories.markAsRead([category.cid], user.uid, function() {
+												nxtCid();
+											});
+										});
+									},
+									function() {
+										nxt();
+									});
 							}
-							done();
-						});
+						], done);
 					},
 					{async: true, eachLimit: IMPORT_BATCH_SIZE},
 					function(err) {
 						if (err) throw err;
 						Importer.progress(1, 1);
-						Importer.phase('rebanUnbannedUsersDone');
+						Importer.phase('rebanAndMarkReadForUsersDone');
 						next();
 					});
 		});
@@ -2328,7 +2383,8 @@ var async = require('async'),
 	// aka forums
 	Importer.makeModeratorOnAllCategories = function(uid, timestamp, done) {
 		Data.eachCategory(function(category, next) {
-					groupsJoin('group:cid:' + category.cid + ':privileges:mods:members', uid, timestamp, function(err) {
+					// groupsJoin('group:cid:' + category.cid + ':privileges:mods:members', uid, timestamp, function(err) {
+					groupsJoin('cid:' + category.cid + ':privileges:mods:members', uid, timestamp, function(err) {
 						next();
 					});
 				},

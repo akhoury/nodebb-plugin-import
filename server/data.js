@@ -487,15 +487,20 @@ var async = require('async'),
 
 	};
 
-	Data.setImported = function(setKey, objPrefix, _id, id, data, callback) {
+	Data.setImported = function(setKey, objPrefix, _id, score, data, callback) {
 		delete data._typeCast;
 		delete data.parse;
 		delete data._key; // for mongo
+
+		if (typeof score != "number" || isNaN(score)) {
+			score = +new Date(); // for redis, zadd score must be a number
+		}
+
 		return db.setObject(objPrefix + _id, data, function(err) {
 			if (err) {
 				return callback(err);
 			}
-			db.sortedSetAdd(setKey, id, _id, callback);
+			db.sortedSetAdd(setKey, score, _id, callback);
 		});
 	};
 
