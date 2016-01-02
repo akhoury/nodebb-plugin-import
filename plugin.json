@@ -23,6 +23,7 @@
 	"nodebb-plugin-import-vbulletin": "*",
 	"nodebb-plugin-import-phpbb": "*",
 	"nodebb-plugin-import-ipboard": "*",
+	"nodebb-plugin-import-lithium": "*",
 	"nodebb-plugin-import-mybb": "*",
 	"nodebb-plugin-import-ubb": "*",
 	"nodebb-plugin-import-smf": "*",
