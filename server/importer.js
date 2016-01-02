@@ -774,8 +774,8 @@ var async = require('async'),
 															// don't ban the users now, ban them later, if _imported_user:_uid._banned == 1
 															banned: 0,
 
-															_imported_read_tids: JSON.stringify(user._read_tids),
-															_imported_read_cids: JSON.stringify(user._read_cids),
+															_imported_readTids: JSON.stringify(user._readTids),
+															_imported_readCids: JSON.stringify(user._readCids),
 															_imported_path: user._path || '',
 															_imported_uid: _uid,
 															_imported_username: user._username || '',
@@ -2091,13 +2091,13 @@ var async = require('async'),
 
 							},
 							function(nxt) {
-								if (!user || !user._imported_read_tids) {
+								if (!user || !user._imported_readTids) {
 									return nxt();
 								}
 
 								var _tids = [];
 								try {
-									_tids = JSON.parse(user._imported_read_tids);
+									_tids = JSON.parse(user._imported_readTids);
 								} catch(e) {
 									return nxt();
 								}
@@ -2115,13 +2115,13 @@ var async = require('async'),
 								});
 							},
 							function(nxt) {
-								if (!user || !user._imported_read_cids) {
+								if (!user || !user._imported_readCids) {
 									return nxt();
 								}
 
 								var _cids = [];
 								try {
-									_cids = JSON.parse(user._imported_read_cids);
+									_cids = JSON.parse(user._imported_readCids);
 								} catch(e) {
 									return nxt();
 								}
