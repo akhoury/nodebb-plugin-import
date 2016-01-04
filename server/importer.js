@@ -2095,16 +2095,26 @@ var async = require('async'),
 									return nxt();
 								}
 
-								var _tids = [];
+								var _tids = user._imported_readTids;
 								try {
-									_tids = JSON.parse(user._imported_readTids);
+									// value can come back as a double-stringed version of a JSON array
+									while (typeof _tids == 'string') {
+										_tids = JSON.parse(_tids);
+									}
 								} catch(e) {
 									return nxt();
 								}
+
 								async.eachLimit(_tids || [], 10, function(_tid, nxtTid) {
 										Data.getImportedTopic(_tid, function(err, topic) {
-											if (err || !topic) return nxtTid();
-
+											if (err) {
+												Importer.warn('Error:' + err);
+												return nxtTid();
+											}
+											if (!topic) {
+												Importer.warn('Error: no topic for _tid ' + _tid);
+												return nxtTid();
+											}
 											Topics.markAsRead([topic.tid], user.uid, function() {
 												nxtTid();
 											});
@@ -2119,15 +2129,24 @@ var async = require('async'),
 									return nxt();
 								}
 
-								var _cids = [];
+								var _cids = user._imported_readCids;
 								try {
-									_cids = JSON.parse(user._imported_readCids);
+									while (typeof _cids == 'string') {
+										_cids = JSON.parse(_cids);
+									}
 								} catch(e) {
 									return nxt();
 								}
 								async.eachLimit(_cids || [], 10, function(_cid, nxtCid) {
 										Data.getImportedCategory(_cid, function(err, category) {
-											if (err || !category) return nxtCid();
+											if (err) {
+												Importer.warn('Error:' + err);
+												return nxtTid();
+											}
+											if (!category) {
+												Importer.warn('Error: no topic for _cid ' + _cid);
+												return nxtTid();
+											}
 
 											Categories.markAsRead([category.cid], user.uid, function() {
 												nxtCid();
