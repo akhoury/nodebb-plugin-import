@@ -1,4 +1,5 @@
 var async = require('async'),
+		fileType = require('file-type'),
 		EventEmitter2 = require('eventemitter2').EventEmitter2,
 		_ = require('underscore'),
 		nodeExtend = require('node.extend'),
@@ -264,7 +265,7 @@ var async = require('async'),
 		if (! alreadyImportedAllBookmarks) {
 			series.push(Importer.importBookmarks);
 		} else {
-			Importer.warn('alreadyImportedAllVotes=true, skipping importVotes Phase');
+			Importer.warn('alreadyImportedAllBookmarks=true, skipping importBookmarks Phase');
 		}
 
 		series.concat([
@@ -685,8 +686,13 @@ var async = require('async'),
 	};
 
 	var writeBlob = function(filepath, blob, callback) {
-		fs.writeFile(filepath, new Buffer(blob, 'binary').toString('binary'), 'binary', function (err) {
-			callback();
+		var buffer = new Buffer(blob, 'binary');
+
+		var ftype = fileType(buffer);
+		ftype.filepath = filepath;
+
+		fs.writeFile(filepath, buffer.toString('binary'), 'binary', function (err) {
+			callback(err, ftype);
 		});
 	};
 
@@ -1430,19 +1436,24 @@ var async = require('async'),
 											var attachmentsIndex = 0;
 
 											topic._attachments = [].concat(topic._attachments || []);
+											topic._images = [].concat(topic._images || []);
 
 											async.eachLimit(topic._attachmentsBlobs, 2, function(_attachmentsBlob, next) {
 												var filename = 'attachment_t_' + _tid + '_' + attachmentsIndex++ + (_attachmentsBlob.filename ? '_' + _attachmentsBlob.filename : _attachmentsBlob.extension);
 												var tmpPath = path.join(attachmentsTmpPath, filename);
 
-												writeBlob(tmpPath, _attachmentsBlob.blob, function(err) {
+												writeBlob(tmpPath, _attachmentsBlob.blob, function(err, ftype) {
 													if (err) {
 														Importer.warn(tmpPath, err);
 														next();
 													} else {
 														File.saveFileToLocal(filename, folder, tmpPath, function(err, ret) {
 															if (!err) {
-																topic._attachments.push(ret.url);
+																if (/image/.test(ftype.mime)) {
+																	topic._images.push(ret.url);
+																} else {
+																	topic._attachments.push(ret.url);
+																}
 															} else {
 																Importer.warn(filename, err);
 															}
@@ -1462,8 +1473,11 @@ var async = require('async'),
 
 											topic._title = utils.slugify(topic._title) ? topic._title[0].toUpperCase() + topic._title.substr(1) : utils.truncate(topic._content, 100);
 
+											(topic._images || []).forEach(function(_image) {
+												topic._content += generateImageTag(_image);
+											});
 											(topic._attachments || []).forEach(function(_attachment) {
-												topic._content += generateDownloadFileUrl(_attachment);
+												topic._content += generateAnchorTag(_attachment);
 											});
 
 											if (topic._tags && !Array.isArray(topic._tags)) {
@@ -1586,8 +1600,11 @@ var async = require('async'),
 		});
 	};
 
-	function generateDownloadFileUrl (url) {
-		return '\n[' + url.split('/').pop() + '](' + url + ')';
+	function generateImageTag (src) {
+		return '\n<img class="imported-image-tag" style="display:block" src="' + src + '" alt="' + src.split('/').pop() + '" />';
+	}
+	function generateAnchorTag (url) {
+		return '\n<a class="imported-anchor-tag" href="' + url + '" target="_blank">' +  url.split('/').pop() + '</a>';
 	}
 
 	Importer.importPosts = function(next) {
@@ -1657,19 +1674,24 @@ var async = require('async'),
 											var attachmentsIndex = 0;
 
 											post._attachments = [].concat(post._attachments || []);
+											post._images = [].concat(post._images || []);
 
 											async.eachLimit(post._attachmentsBlobs, 2, function(_attachmentsBlob, next) {
 												var filename = 'attachment_p_' + _pid + '_' + attachmentsIndex++ + (_attachmentsBlob.filename ? '_' + _attachmentsBlob.filename : _attachmentsBlob.extension);
 												var tmpPath = path.join(attachmentsTmpPath, filename);
 
-												writeBlob(tmpPath, _attachmentsBlob.blob, function(err) {
+												writeBlob(tmpPath, _attachmentsBlob.blob, function(err, ftype) {
 													if (err) {
 														Importer.warn(tmpPath, err);
 														next();
 													} else {
 														File.saveFileToLocal(filename, folder, tmpPath, function(err, ret) {
 															if (!err) {
-																post._attachments.push(ret.url);
+																if (/image/.test(ftype.mime)) {
+																	post._images.push(ret.url);
+																} else {
+																	post._attachments.push(ret.url);
+																}
 															} else {
 																Importer.warn(filename, err);
 															}
@@ -1688,8 +1710,11 @@ var async = require('async'),
 
 											post._content = (post._content || '').trim() ? post._content : '[[blank-post-content-placeholder]]';
 
+											(post._images || []).forEach(function(_image) {
+												post._content += generateImageTag(_image);
+											});
 											(post._attachments || []).forEach(function(_attachment) {
-												post._content += generateDownloadFileUrl(_attachment);
+												post._content += generateAnchorTag(_attachment);
 											});
 
 											if (post._tags && !Array.isArray(post._tags)) {
@@ -2019,6 +2044,7 @@ var async = require('async'),
 						Importer.success('Imported ' + imported + '/' + total + ' bookmarks' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
 						Importer.progress(1, 1);
 						Importer.phase('bookmarksImportDone');
+
 						fs.remove(DIRTY_BOOKMARKS_FILE, next);
 					});
 		});
@@ -2277,8 +2303,11 @@ var async = require('async'),
 
 
 	Importer.fixCategoriesParentsAndAbilities = function(next) {
+		debugger;
+
 		var count = 0;
 
+		console.log('fixCategoriesParentsAndAbilitiesStart');
 		Importer.phase('fixCategoriesParentsAndAbilitiesStart');
 		Importer.progress(0, 1);
 

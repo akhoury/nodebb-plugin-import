@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-import",
-  "version": "0.3.25",
+  "version": "0.3.26",
   "description": "Import your forum data to nodebb",
   "main": "./server/importer.js",
   "scripts": {
@@ -50,9 +50,10 @@
     "async": "~0.9.0",
     "bbcode-to-markdown": "^0.0.15",
     "encoding": "^0.1.11",
-	"iconv": "^2.1.11",
     "eventemitter2": "~0.4.14",
+    "file-type": "^3.4.0",
     "fs-extra": "~0.11.0",
+    "iconv": "^2.1.11",
     "node.extend": "~1.0.10",
     "npm": "^1.4.6",
     "underscore": "~1.5.2"
