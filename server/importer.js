@@ -780,8 +780,8 @@ var async = require('async'),
 															// don't ban the users now, ban them later, if _imported_user:_uid._banned == 1
 															banned: 0,
 
-															_imported_readTids: JSON.stringify(user._readTids),
-															_imported_readCids: JSON.stringify(user._readCids),
+															_imported_readTids: user._readTids && JSON.stringify(user._readTids),
+															_imported_readCids: user._readCids && JSON.stringify(user._readCids),
 															_imported_path: user._path || '',
 															_imported_uid: _uid,
 															_imported_username: user._username || '',
