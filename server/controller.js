@@ -363,9 +363,10 @@ var fs = require('fs-extra'),
 			parseAfter = buildFn(cconf.parseAfter.js);
 		}
 
-		Controller.convert = function(s) {
+		Controller.convert = function(s, type, id) {
 			s = s || '';
-			var ns = parseAfter(parseMain(parseBefore(s, encoding)), encoding);
+			var ns = s;
+			ns = parseAfter(parseMain(parseBefore(s, encoding)), encoding);
 			return ns;
 		};
 	};
@@ -1145,7 +1146,7 @@ var fs = require('fs-extra'),
 											db.setObjectField(
 													'user:' + user.uid,
 													'signature',
-													Controller.convert(user._imported_signature),
+													Controller.convert(user._imported_signature, 'signature', user.uid),
 													nxt
 											);
 										} else {
@@ -1178,7 +1179,7 @@ var fs = require('fs-extra'),
 										if (message && message._imported_content) {
 											db.setObjectField('message:' + message.mid,
 													'content',
-													Controller.convert(message._imported_content),
+													Controller.convert(message._imported_content, 'message', message.mid),
 													nxt
 											);
 										} else {
@@ -1211,7 +1212,7 @@ var fs = require('fs-extra'),
 										if (group && group._imported_name && group._imported_description) {
 											db.setObjectField('group:' + group.name,
 													'description',
-													Controller.convert(group._imported_description),
+													Controller.convert(group._imported_description, 'group', group.name),
 													nxt
 											);
 										} else {
@@ -1245,7 +1246,7 @@ var fs = require('fs-extra'),
 											async.parallel([
 												function(cb) {
 													if (rconf.categoriesNames && category._imported_name) {
-														var convertedName = Controller.convert(category._imported_name);
+														var convertedName = Controller.convert(category._imported_name, 'category:name', category.cid);
 														db.setObjectField('category:' + category.cid, 'name', Controller.convert(category._imported_name), function() {
 															if (err) return cb(err);
 															db.setObjectField('category:' + category.cid, 'slug', category.cid + '/' + utils.slugify(convertedName), cb);
@@ -1256,7 +1257,7 @@ var fs = require('fs-extra'),
 												},
 												function(cb) {
 													if (rconf.categoriesDescriptions && category._imported_description) {
-														db.setObjectField('category:' + category.cid, 'description', Controller.convert(category._imported_description), cb);
+														db.setObjectField('category:' + category.cid, 'description', Controller.convert(category._imported_description, 'category:description', category.cid), cb);
 													} else {
 														cb();
 													}
@@ -1297,7 +1298,7 @@ var fs = require('fs-extra'),
 											async.parallel([
 												function(cb) {
 													if (rconf.topicsTitle && topic._imported_title) {
-														var convertedTitle = Controller.convert(topic._imported_title);
+														var convertedTitle = Controller.convert(topic._imported_title, 'title', topic.tid);
 														db.setObjectField('topic:' + topic.tid, 'title', convertedTitle, function(err) {
 															if (err) return cb(err);
 															db.setObjectField('topic:' + topic.tid, 'slug', topic.tid + '/' + utils.slugify(convertedTitle), cb);
@@ -1308,7 +1309,7 @@ var fs = require('fs-extra'),
 												},
 												function(cb) {
 													if (rconf.topicsContent && topic._imported_content) {
-														db.setObjectField('post:' + topic.mainPid, 'content', Controller.convert(topic._imported_content), cb);
+														db.setObjectField('post:' + topic.mainPid, 'content', Controller.convert(topic._imported_content, 'post', topic.mainPid), cb);
 													} else {
 														cb();
 													}
@@ -1342,7 +1343,7 @@ var fs = require('fs-extra'),
 											next(err);
 										};
 										if (post && post._imported_pid && ! _mainPids[post.pid] && post._imported_content) {
-											db.setObjectField('post:' + post.pid, 'content', Controller.convert(post._imported_content), nxt);
+											db.setObjectField('post:' + post.pid, 'content', Controller.convert(post._imported_content, 'post', post.pid), nxt);
 										} else {
 											nxt();
 										}
