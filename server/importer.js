@@ -1469,7 +1469,7 @@ var async = require('async'),
 										}
 
 										function onAttachmentsBlobs () {
-											topic._content = (topic._content || '').trim() ? topic._content : '[[blank-post-content-placeholder]]';
+											topic._content = (topic._content || '').trim();
 
 											topic._title = utils.slugify(topic._title) ? topic._title[0].toUpperCase() + topic._title.substr(1) : utils.truncate(topic._content, 100);
 
@@ -1708,7 +1708,7 @@ var async = require('async'),
 
 										function onAttachmentsBlobs () {
 
-											post._content = (post._content || '').trim() ? post._content : '[[blank-post-content-placeholder]]';
+											post._content = (post._content || '').trim();
 
 											(post._images || []).forEach(function(_image) {
 												post._content += generateImageTag(_image);
@@ -2303,11 +2303,8 @@ var async = require('async'),
 
 
 	Importer.fixCategoriesParentsAndAbilities = function(next) {
-		debugger;
-
 		var count = 0;
 
-		console.log('fixCategoriesParentsAndAbilitiesStart');
 		Importer.phase('fixCategoriesParentsAndAbilitiesStart');
 		Importer.progress(0, 1);
 
@@ -2327,7 +2324,23 @@ var async = require('async'),
 									hash['parentCid'] = parentCid;
 								}
 								if (Object.keys(hash).length) {
-									db.setObject('category:' + category.cid, hash, done);
+									async.parallel([
+										function (nxt) {
+											db.setObject('category:' + category.cid, hash, nxt);
+										},
+										function (nxt) {
+											if (parentCid) {
+												return db.sortedSetAdd('cid:' + parentCid + ':children', category.order || category.cid, category.cid, nxt);
+											}
+											nxt();
+										},
+										function (nxt) {
+											if (parentCid) {
+												return db.sortedSetRemove('cid:0:children', category.cid, nxt);
+											}
+											nxt();
+										}
+									], done);
 								} else {
 									done();
 								}
