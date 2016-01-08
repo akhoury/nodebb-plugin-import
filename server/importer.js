@@ -688,7 +688,7 @@ var async = require('async'),
 	var writeBlob = function(filepath, blob, callback) {
 		var buffer = new Buffer(blob, 'binary');
 
-		var ftype = fileType(buffer);
+		var ftype = fileType(buffer) || {mime: "unknown/unkown", extension: ""};
 		ftype.filepath = filepath;
 
 		fs.writeFile(filepath, buffer.toString('binary'), 'binary', function (err) {
