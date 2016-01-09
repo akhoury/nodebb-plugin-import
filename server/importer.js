@@ -822,6 +822,7 @@ var async = require('async'),
 														};
 
 														if (user._pictureBlob) {
+
 															var filename = user._pictureFilename ? '_' + uid + '_' + user._pictureFilename : uid + '.png';
 															var tmpPath = path.join(picturesTmpPath, filename);
 															writeBlob(tmpPath, user._pictureBlob, function(err) {
@@ -841,6 +842,7 @@ var async = require('async'),
 																	});
 																}
 															});
+
 														} else {
 															if (user._picture) {
 																fields.uploadedpicture = user._picture;
