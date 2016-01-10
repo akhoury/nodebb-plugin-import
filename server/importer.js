@@ -1322,28 +1322,10 @@ var async = require('async'),
 		Data.eachCategory(function(category, next) {
 				async.parallel([
 					function(nxt) {
-						Groups.join('cid:' + category.cid + ':privileges:groups:topics:create', 'registered-users', nxt);
-					},
-					function(nxt) {
-						Groups.join('cid:' + category.cid + ':privileges:groups:topics:reply', 'registered-users', nxt);
-					},
-					function(nxt) {
-						Groups.join('cid:' + category.cid + ':privileges:groups:find', 'registered-users', nxt);
-					},
-					function(nxt) {
-						Groups.join('cid:' + category.cid + ':privileges:groups:read', 'registered-users', nxt);
-					},
-					function(nxt) {
 						Groups.join('cid:' + category.cid + ':privileges:groups:topics:create', 'guests', nxt);
 					},
 					function(nxt) {
 						Groups.join('cid:' + category.cid + ':privileges:groups:topics:reply', 'guests', nxt);
-					},
-					function(nxt) {
-						Groups.join('cid:' + category.cid + ':privileges:groups:find', 'guests', nxt);
-					},
-					function(nxt) {
-						Groups.join('cid:' + category.cid + ':privileges:groups:read', 'guests', nxt);
 					}
 				], next);
 			},
@@ -1357,10 +1339,11 @@ var async = require('async'),
 		Data.eachCategory(function(category, next) {
 				async.parallel([
 					function(nxt) {
-						Groups.leave('cid:' + category.cid + ':privileges:groups:find', 'guests', nxt);
+						// 'cid:' + cids[i] + ':privileges:groups:' + privilege'
+						Groups.leave('cid:' + category.cid + ':privileges:groups:topics:create', 'guests', nxt);
 					},
 					function(nxt) {
-						Groups.leave('cid:' + category.cid + ':privileges:groups:read', 'guests', nxt);
+						Groups.leave('cid:' + category.cid + ':privileges:groups:topics:reply', 'guests', nxt);
 					}
 				], next);
 			},
