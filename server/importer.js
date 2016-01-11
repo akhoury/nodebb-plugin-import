@@ -717,7 +717,7 @@ var async = require('async'),
 		Importer.exporter.countUsers(function(err, total) {
 			Importer.success('Importing ' + total + ' users.');
 			Importer.exporter.exportUsers(function(err, users, usersArr, nextExportBatch) {
-					async.eachLimit(usersArr, IMPORT_BATCH_SIZE, function(user, done) {
+					async.eachSeries(usersArr, function(user, done) {
 							count++;
 							var _uid = user._uid;
 							recoverImportedUser(_uid, function(err, _user) {
@@ -865,7 +865,7 @@ var async = require('async'),
 											};
 
 											if (user._groups && user._groups.length) {
-												async.eachLimit(user._groups, 5, function(_gid, next) {
+												async.eachSeries(user._groups, function(_gid, next) {
 													Data.getImportedGroup(_gid, function(err, _group) {
 														if (_group && _group.name) {
 															groupsJoin(_group._name, uid, user._joindate || startTime, function() {
@@ -1094,7 +1094,9 @@ var async = require('async'),
 							});
 						});
 					};
-					async.eachLimit(messagesArr, IMPORT_BATCH_SIZE, onEach, nextExportBatch);
+
+					async.eachSeries(messagesArr, onEach, nextExportBatch);
+
 				},
 				{
 					// options
@@ -1204,7 +1206,7 @@ var async = require('async'),
 							Categories.create(categoryData, onCreate);
 						});
 					};
-					async.eachLimit(categoriesArr, 1, onEach, nextExportBatch);
+					async.eachSeries(categoriesArr, onEach, nextExportBatch);
 				},
 				{
 					// options
@@ -1311,7 +1313,7 @@ var async = require('async'),
 							Groups.create(groupData, onCreate);
 						});
 					};
-					async.eachLimit(groupsArr, 1, onEach, nextExportBatch);
+					async.eachSeries(groupsArr, onEach, nextExportBatch);
 				},
 				{
 					// options
@@ -1386,7 +1388,7 @@ var async = require('async'),
 			Importer.exporter.exportTopics(
 				function(err, topics, topicsArr, nextExportBatch) {
 
-					async.eachLimit(topicsArr, IMPORT_BATCH_SIZE, function(topic, done) {
+					async.eachSeries(topicsArr, function(topic, done) {
 						count++;
 						var _tid = topic._tid;
 
@@ -1433,7 +1435,7 @@ var async = require('async'),
 										topic._attachments = [].concat(topic._attachments || []);
 										topic._images = [].concat(topic._images || []);
 
-										async.eachLimit(topic._attachmentsBlobs, 2, function(_attachmentsBlob, next) {
+										async.eachSeries(topic._attachmentsBlobs, function(_attachmentsBlob, next) {
 											var filename = 'attachment_t_' + _tid + '_' + attachmentsIndex++ + (_attachmentsBlob.filename ? '_' + _attachmentsBlob.filename : _attachmentsBlob.extension);
 											var tmpPath = path.join(attachmentsTmpPath, filename);
 
@@ -1625,7 +1627,7 @@ var async = require('async'),
 			Importer.exporter.exportPosts(
 				function(err, posts, postsArr, nextExportBatch) {
 
-					async.eachLimit(postsArr, IMPORT_BATCH_SIZE, function(post, done) {
+					async.eachSeries(postsArr, function(post, done) {
 						count++;
 						var _pid = post._pid;
 
@@ -1671,7 +1673,7 @@ var async = require('async'),
 										post._attachments = [].concat(post._attachments || []);
 										post._images = [].concat(post._images || []);
 
-										async.eachLimit(post._attachmentsBlobs, 2, function(_attachmentsBlob, next) {
+										async.eachSeries(post._attachmentsBlobs, function(_attachmentsBlob, next) {
 											var filename = 'attachment_p_' + _pid + '_' + attachmentsIndex++ + (_attachmentsBlob.filename ? '_' + _attachmentsBlob.filename : _attachmentsBlob.extension);
 											var tmpPath = path.join(attachmentsTmpPath, filename);
 
@@ -1919,7 +1921,7 @@ var async = require('async'),
 								});
 						});
 					};
-					async.eachLimit(votesArr, 1, onEach, nextExportBatch);
+					async.eachSeries(votesArr, onEach, nextExportBatch);
 				},
 				{
 					// options
@@ -2027,7 +2029,7 @@ var async = require('async'),
 								});
 						});
 					};
-					async.eachLimit(bookmarksArr, 1, onEach, nextExportBatch);
+					async.eachSeries(bookmarksArr, onEach, nextExportBatch);
 				},
 				{
 					// options
