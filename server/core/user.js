@@ -92,7 +92,7 @@
 	};
 
 	// [potential-nodebb-core]
-	User.setRepuration = function (uid, reputation, callback) {
+	User.setReputation = function (uid, reputation, callback) {
 		async.series([
 			async.apply(db.sortedSetRemove, 'users:reputation', uid),
 			async.apply(db.sortedSetAdd, 'users:reputation', reputation, uid),
