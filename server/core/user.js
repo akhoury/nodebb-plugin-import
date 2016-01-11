@@ -68,27 +68,36 @@
 				var groups = [].concat(data.groups)
 
 					// backward compatible level field
-						.concat((data.level || "").toLowerCase() == "administrator" ? "administrators" : [])
-						.concat((data.level || "").toLowerCase() == "moderator" ? "moderators" : [])
+					.concat((data.level || "").toLowerCase() == "administrator" ? "administrators" : [])
+					.concat((data.level || "").toLowerCase() == "moderator" ? "moderators" : [])
 
 					// filter out the moderator.
-						.reduce(function (groups, group, index, arr) {
-							if (group == "moderators" && !isModerator) {
-								isModerator = true;
-								return groups;
-							}
-							if (group == "administrators" && !isAdministrator) {
-								isAdministrator = true;
-							}
-							groups.push(group);
+					.reduce(function (groups, group, index, arr) {
+						if (group == "moderators" && !isModerator) {
+							isModerator = true;
 							return groups;
-						}, []);
+						}
+						if (group == "administrators" && !isAdministrator) {
+							isAdministrator = true;
+						}
+						groups.push(group);
+						return groups;
+					}, []);
 
 				async.eachLimit(groups, 10, function (group, next) {
 					Groups.joinAt(uid, group, next);
 				}, next);
 			}
 		], function() {});
+	};
+
+	// [potential-nodebb-core]
+	User.setRepuration = function (uid, reputation, callback) {
+		async.series([
+			async.apply(db.sortedSetRemove, 'users:reputation', uid),
+			async.apply(db.sortedSetAdd, 'users:reputation', reputation, uid),
+			async.apply(User.setUserField, uid, 'reputation', reputation),
+		], callback);
 	};
 
 	// [potential-nodebb-core]
