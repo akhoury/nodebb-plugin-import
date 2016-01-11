@@ -811,9 +811,19 @@ var async = require('async'),
 													user.userslug = u.userslug;
 													users[_uid] = user;
 													Importer.progress(count, total);
+
+
 													var onEmailConfirmed = function() {
-														Data.setUserImported(_uid, uid, user, done);
+														var series = [];
+														if (fields.reputation > 0) {
+															series.push(async.apply(db.sortedSetRemove, 'users:reputation', uid));
+															series.push(async.apply(db.sortedSetAdd, 'users:reputation', fields.reputation, uid));
+														}
+														async.series(series, function () {
+															Data.setUserImported(_uid, uid, user, done);
+														});
 													};
+
 													if (config.autoConfirmEmails) {
 														db.setObjectField('email:confirmed', user.email, '1', onEmailConfirmed);
 													} else {
@@ -838,6 +848,7 @@ var async = require('async'),
 																} else {
 																	Importer.warn(filename, err);
 																}
+
 																User.setUserFields(uid, fields, onUserFields);
 															});
 														}
