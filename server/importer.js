@@ -551,54 +551,27 @@ var async = require('async'),
 
 				Importer.phase('resetGlobalsStart');
 				Importer.progress(0, 1);
-
-				async.parallel([
-					function(cb) {
-						db.setObjectField('global', 'nextUid', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'userCount', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'nextGid', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'groupCount', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'nextMid', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'nextCid', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'categoryCount', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'nextTid', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'topicCount', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'nextPid', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'postCount', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'nextVid', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'voteCount', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'nextBid', 1, cb);
-					},
-					function(cb) {
-						db.setObjectField('global', 'bookmarkCount', 1, cb);
+				
+				db.setObject('global', {
+					nextUid: 1,
+					userCount: 1,
+					nextGid: 1,
+					groupCount: 1,
+					nextMid: 1,
+					nextCid: 1,
+					categoryCount: 1,
+					nextTid: 1,
+					topicCount: 1,
+					nextPid: 1,
+					postCount: 1,
+					nextVid: 1,
+					voteCount: 1,
+					nextBid: 1,
+					bookmarkCount: 1
+				}, function(err) {
+					if (err) {
+						return done(err);
 					}
-				], function() {
 					Importer.progress(1, 1);
 					Importer.phase('resetGlobalsDone');
 					done();
