@@ -869,7 +869,6 @@ var async = require('async'),
 													Data.getImportedGroup(_gid, function(err, _group) {
 														if (_group && _group.name) {
 															groupsJoin(_group._name, uid, user._joindate || startTime, function() {
-																Importer.warn(userData.username + ' joined ' + _group._name);
 																next();
 															});
 														} else {
