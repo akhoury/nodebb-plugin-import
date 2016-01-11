@@ -816,7 +816,6 @@ var async = require('async'),
 													var onEmailConfirmed = function() {
 														var series = [];
 														if (fields.reputation > 0) {
-															series.push(async.apply(db.sortedSetRemove, 'users:reputation', uid));
 															series.push(async.apply(db.sortedSetAdd, 'users:reputation', fields.reputation, uid));
 														}
 														async.series(series, function () {

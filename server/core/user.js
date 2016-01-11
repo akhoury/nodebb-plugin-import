@@ -94,7 +94,6 @@
 	// [potential-nodebb-core]
 	User.setReputation = function (uid, reputation, callback) {
 		async.series([
-			async.apply(db.sortedSetRemove, 'users:reputation', uid),
 			async.apply(db.sortedSetAdd, 'users:reputation', reputation, uid),
 			async.apply(User.setUserField, uid, 'reputation', reputation),
 		], callback);
