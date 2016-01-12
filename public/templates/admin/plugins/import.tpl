@@ -411,14 +411,23 @@
     </div>
     <p></p>
     <button
-            title="Attempts to retrieve and download redirect.map.json of your last import run"
+            title="Attempts to retrieve and download redirect.map.csv of your last import run"
             class="btn btn-lg btn-default import-download-btn disabled"
             disabled="disabled"
             data-on="click"
-            data-action="downloadRedirectionJson"
-            id="download-redirection-json"
-            type="button">Download redirect.map.json (might take some time)
+            data-action="downloadRedirectionCsv"
+            id="download-redirection-csv"
+            type="button">Download redirect.map.csv (might take some time)
     </button>
+	<button
+			title="Attempts to retrieve and download redirect.map.json of your last import run"
+			class="btn btn-lg btn-default import-download-btn disabled"
+			disabled="disabled"
+			data-on="click"
+			data-action="downloadRedirectionJson"
+			id="download-redirection-json"
+			type="button">Download redirect.map.json (might take some time)
+	</button>
 </div>
 
 <div class="form-group">

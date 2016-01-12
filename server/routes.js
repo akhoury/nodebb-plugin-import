@@ -19,7 +19,9 @@ module.exports =  {
 
 		router.get(apiPrefix + '/download/users.csv', middleware.admin.isAdmin, Plugin.api.get.usersCsv);
 		router.get(apiPrefix + '/download/users.json', middleware.admin.isAdmin, Plugin.api.get.usersJson);
+
 		router.get(apiPrefix + '/download/redirect.json', Plugin.api.get.redirectJson);
+		router.get(apiPrefix + '/download/redirect.csv', Plugin.api.get.redirectCsv);
 
 		router.post(apiPrefix + '/start', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.start);
 		router.post(apiPrefix + '/resume', middleware.applyCSRF, middleware.admin.isAdmin, Plugin.api.post.resume);
