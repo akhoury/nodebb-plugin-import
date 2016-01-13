@@ -1,5 +1,6 @@
 
 (function(module) {
+	var utils = require('../../public/js/utils.js');
 
 	var nbbpath = require('./nbbpath.js');
 	var Groups = require('./groups.js');
@@ -8,87 +9,184 @@
 	var User = nbbpath.require('/src/user.js');
 
 	User.import = function (data, options, callback) {
-		var uid;
+		if (typeof callback == 'undefined') {
+			callback = options;
+			options = {};
+		}
 
-		async.waterfall([
+		var uid, createData;
+
+		async.series([
 			function(next) {
-				User.create({
-					username: data.username,
-					email: data.email,
-					password: data.password
-				}, next);
+				createData = {
+					username: pickNcleanUsername(data._username, data._alternativeUsername),
+					email: data._email,
+					password: options.passwordGen && options.passwordGen.enabled
+							? generateRandomPassword(options.passwordGen.len, options.passwordGen.chars)
+							: data._password
+				};
+				User.create(createData, function(err, userid) {
+					if (err) return next(err);
+					uid = userid;
+					data.userslug = data._userslug || utils.slugify(createData.username);
+				});
 			},
 
-			function(userid, next) {
-				uid = userid;
-				next();
-			},
-
 			function(next) {
-				if (data.picture) {
-					return User.setProfilePictureUrl(uid, data.picture, next);
+				if (data._picture) {
+					return User.setProfilePictureUrl(uid, data._picture, next);
 				}
-				if (data.pictureBlob) {
-					return User.setProfilePictureBlob(uid, data.pictureBlob, {filename: data.pictureFilename}, next);
+				if (data._pictureBlob) {
+					User.setProfilePictureBlob(uid, data._pictureBlob, {filename: data._pictureFilename}, function(err, ret) {
+						if (err) return next(err);
+						delete data._pictureBlob;
+						data._picture = ret.url;
+						next();
+					});
 				}
 			},
 
 			function(next) {
 				var fields = {
-					signature: data.signature || '',
-					website: data.website || '',
-					location: data.location || '',
-					joindate: data.joindate || +new Date(),
-					reputation: data.reputation || 0,
-					profileviews: data.profileviews || 0,
-					fullname: data.fullname || '',
-					birthday: data.birthday || '',
-					showemail: data.showemail ? 1 : 0,
-					lastposttime: data.lastposttime || 0,
+					signature: data._signature || '',
+					website: data._website || '',
+					location: data._location || '',
+					joindate: data._joindate || +new Date(),
+					reputation: data._reputation || 0,
+					profileviews: data._profileviews || 0,
+					fullname: data._fullname || '',
+					birthday: data._birthday || '',
+					showemail: data._showemail ? 1 : 0,
+					lastposttime: data._lastposttime || 0,
+
 					// we're importing, no one is online
 					status: 'offline',
 					// don't ban anyone now, ban them later
 					banned: 0,
 				};
 
-				if (data.lastonline) {
-					fields.lastonline = data.lastonline;
+				if (data._lastonline) {
+					fields.lastonline = data._lastonline;
 				}
 
-				fields._imported_original_ = JSON.stringify(data);
+				fields._imported_original_data = JSON.stringify(data);
 
 				User.setUserFields(uid, fields, next);
 			},
 
-			function(uid, next) {
+			function(next) {
 
 				var isModerator = false;
 				var isAdministrator = false;
 
-				var groups = [].concat(data.groups)
+				var _groupNames = [].concat(data._groupNames)
 
 					// backward compatible level field
-						.concat((data.level || "").toLowerCase() == "administrator" ? "administrators" : [])
-						.concat((data.level || "").toLowerCase() == "moderator" ? "moderators" : [])
+					.concat((data._level || "").toLowerCase() == "administrator" ? "administrators" : [])
+					.concat((data._level || "").toLowerCase() == "moderator" ? "moderators" : [])
 
 					// filter out the moderator.
-						.reduce(function (groups, group, index, arr) {
-							if (group == "moderators" && !isModerator) {
-								isModerator = true;
-								return groups;
-							}
-							if (group == "administrators" && !isAdministrator) {
-								isAdministrator = true;
-							}
-							groups.push(group);
-							return groups;
-						}, []);
+					.reduce(function (_groupNames, _groupName, index, arr) {
+						if (_groupName.toLowerCase() == "moderators" && !isModerator) {
+							isModerator = true;
+							return _groupNames;
+						}
+						if (_groupName.toLowerCase() == "administrators" && !isAdministrator) {
+							isAdministrator = true;
+						}
+							_groupNames.push(_groupName);
+						return _groupNames;
+					}, []);
 
-				async.eachLimit(groups, 10, function (group, next) {
-					Groups.joinAt(uid, group, next);
+				async.eachSeries(_groupNames, function (_groupName, next) {
+					Groups.joinAt(uid, _groupName, data._joindate, next);
 				}, next);
+			},
+
+			function(next) {
+				var _gids = [].concat(data._groups).concat(data._gids);
+
+				async.eachSeries(_gids, function (_gid, next) {
+					Groups.getImported(_gid, function(err, group) {
+						if (err || !group) {
+							return;
+						}
+						Groups.joinAt(uid, group.name, data._joindate, next);
+					});
+				}, next);
+			},
+
+			function(next) {
+				if (options.autoConfirmEmails || options.autoConfirmEmail) {
+					return User.confirmEmail(uid, next);
+				}
+				next();
 			}
-		], function() {});
+
+		], function(err) {
+			if (err) return callback(err);
+
+			User.setImported(data._uid, uid, extend(true, {}, data), callback);
+		});
+	};
+
+	User.setImported = function (_uid, uid, user, callback) {
+		return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
+	};
+
+	User.getImported = function (_uid, callback) {
+		return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
+	};
+
+	User.deleteImported = function (_uid, callback) {
+		return Data.deleteImported('_imported:_users', '_imported_user:', _uid, callback);
+	};
+
+	User.deleteEachImported = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_users', '_imported_user:', onProgress, callback);
+	};
+
+	User.isImported = function (_uid, callback) {
+		return Data.isImported('_imported:_users', _uid, callback);
+	};
+
+	User.eachImported = function (iterator, options, callback) {
+		return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
+	};
+
+	// [potential-nodebb-core]
+	User.count = function (callback) {
+		Data.count('users:joindate', callback);
+	};
+
+	// [potential-nodebb-core]
+	User.each = function (iterator, options, callback) {
+		return Data.each('users:joindate', 'user:', iterator, options, callback);
+	};
+
+	// [potential-nodebb-core]
+	User.processUidsSet = function(process, options, callback) {
+		return Data.processIdsSet('users:joindate', process, options, callback);
+	};
+
+	// [potential-nodebb-core]
+	User.processSet = function(process, options, callback) {
+		return Data.processSet('users:joindate', 'user:', process, options, callback);
+	};
+
+	// [potential-nodebb-core]
+	User.confirmEmail = function (uid, callback) {
+		async.series([
+			async.apply(User.setUserField, uid, 'email:confirmed', 1)
+		], callback);
+	};
+
+	// [potential-nodebb-core]
+	User.setReputation = function (uid, reputation, callback) {
+		async.series([
+			async.apply(db.sortedSetAdd, 'users:reputation', reputation, uid),
+			async.apply(User.setUserField, uid, 'reputation', reputation),
+		], callback);
 	};
 
 	// [potential-nodebb-core]
@@ -117,9 +215,49 @@
 		File.saveBlobToLocal(filename, folder, blob, function(err, ret) {
 			if (err) return callback(err);
 
-			User.setProfilePictureUrl(uid, ret.url, callback);
+			User.setProfilePictureUrl(uid, ret.url, function(err) {
+				if (err) return callback(err);
+				callback(null, ret);
+			});
 		});
 	};
+
+
+	function pickNcleanUsername () {
+		var args = Array.prototype.slice(arguments, 0);
+
+		if (!args.length) {
+			return '';
+		}
+
+		var username = args[0];
+		if (utils.isUserNameValid(username)) {
+			return username;
+		}
+
+		// todo: i don't know what I'm doing HALP
+		username = username
+				.replace(/[^\u00BF-\u1FFF\u2C00-\uD7FF\-.*\w\s]/gi, '')
+				.replace(/ /g,'')
+				.replace(/\*/g, '')
+				.replace(/æ/g, '')
+				.replace(/ø/g, '')
+				.replace(/å/g, '');
+
+		if (utils.isUserNameValid(username)) {
+			return username;
+		}
+
+		args.shift();
+
+		return pickNcleanUsername.apply(null, args);
+	}
+
+	function generateRandomPassword (len, chars) {
+		var index = (Math.random() * (chars.length - 1)).toFixed(0);
+		return len > 0 ? chars[index] + generateRandomPassword(len - 1, chars) : '';
+	}
+
 
 	module.exports = User;
 

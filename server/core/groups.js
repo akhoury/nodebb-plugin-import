@@ -12,17 +12,9 @@
 			if (err) {
 				return callback(err);
 			}
-
-			// partially undo what Group.join did, then setAdd with the new timestamp.
+			// partially undo what Group.join by replacing the timestamp
 			// obviously if this was moved to core, we would re-write Group.join
-			async.series([
-				function (next) {
-					db.sortedSetRemove('group:' + name + ':members', uid, next);
-				},
-				function (next) {
-					db.sortedSetAdd('group:' + name + ':members', timestamp, uid, next)
-				}
-			], callback);
+			db.sortedSetAdd('group:' + name + ':members', timestamp, uid, callback)
 		});
 	};
 

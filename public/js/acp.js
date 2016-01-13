@@ -35,7 +35,7 @@
 				var btn = $(e.target),
 						target = $wrapper.find(btn.attr('data-target'));
 
-				return utils.toggleVisible(target);
+				return utils.toggleVisible(target, btn.attr('type') == 'checkbox' ? btn.is(':checked') : undefined);
 			},
 
 			availableToggle: function(e) {
@@ -147,6 +147,26 @@
 					postImportToolsAvailable().done(function (data) {
 						if (data && data.available) {
 							$.get(plugin.apiHost + '/download/redirect.json')
+									.fail(function () {
+										app.alertError('Something went wrong :(');
+									})
+						} else {
+							app.alertError('Cannot download file at the moment', 1000);
+						}
+					});
+				});
+			},
+
+			downloadRedirectionCsv: function(e) {
+				togglePostImportTools(false);
+				app.alert({
+					message: 'Preparing redirect.map.csv, please be patient',
+					timeout: 1000
+				});
+				saveConfig().done(function() {
+					postImportToolsAvailable().done(function (data) {
+						if (data && data.available) {
+							$.get(plugin.apiHost + '/download/redirect.csv')
 									.fail(function () {
 										app.alertError('Something went wrong :(');
 									})
@@ -650,20 +670,23 @@
 				if (!err) {
 					values = values || {};
 					Object.keys(values).forEach(function(id) {
-						var val = values[id];
-						if ( val === 'on' || val[id] === 'off') {
-							val = val === 'on';
-							var checkbox = $wrapper.find('#' + id);
-							var on = checkbox.attr('data-on');
-							var action = checkbox.attr('data-action');
 
-							checkbox.prop('checked', val);
+						var field = $wrapper.find('#' + id);
+						var val = values[id];
+
+						if (val === 'on' || val === 'off') {
+							val = val === 'on';
+							var on = field.attr('data-on');
+							var action = field.attr('data-action');
+
+							field.prop('checked', val);
 							if (on && typeof actions[action] === 'function') {
-								checkbox.trigger(on);
+								field.trigger(on);
 							}
 						} else if (val && typeof val === 'object') {
-							var input = $wrapper.find('#' + id);
-							input.val(JSON.stringify(val));
+							field.val(JSON.stringify(val));
+						} else {
+							field.val(val);
 						}
 					});
 				} else {

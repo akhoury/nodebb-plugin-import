@@ -160,7 +160,7 @@
             <div class="form-group">
                 <div class="checkbox">
                     <label for="importer-autoconfirm-emails">
-                        <input checked type="checkbox" id="importer-autoconfirm-emails" name="importer-autoconfirm-emails"> Auto confirm user accounts
+                        <input type="checkbox" id="importer-autoconfirm-emails" name="importer-autoconfirm-emails"> Auto confirm user accounts
                     </label>
                     <p class="help-block">
                         Let the importer auto confirm the users new email automatically
@@ -198,13 +198,21 @@
             </div>
         </div>
 
+		<div style="overflow: hidden; margin: 10px 0;">
+        	<button class="btn btn-lg btn-primary"
+        			data-on="click"
+        			data-action="saveSettings"
+        			id="save"
+        			type="button">Save Config
+        	</button>
+        </div>
+
         <button title="Will try to resume import if it can, it not, I recommend you flush then import" class="btn btn-lg btn-info hidden" data-on="click" data-action="resume" id="import-resume" type="button">Last run was interrupted, try to resume</button>
         <button title="Imports all records without flushing NodeBB, but will check each records if it was already imported and skip it" class="btn btn-lg btn-success" data-on="click" data-action="startWithoutFlush" id="import-start-no-flush" type="button">Don't Flush NodeBB DB, just import</button>
         <button title="Will flush NodeBB DB from all records and start a fresh import" class="btn btn-lg btn-warning" data-on="click" data-action="start" id="import-start" type="button">Flush NodeBB DB, then import</button>
 
         <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
 
-        <button class="btn btn-lg btn-primary pull-right" data-on="click" data-action="saveSettings" id="save" type="button">Save Config</button>
     </div>
 
     <div class="text-center">
@@ -403,14 +411,23 @@
     </div>
     <p></p>
     <button
-            title="Attempts to retrieve and download redirect.map.json of your last import run"
+            title="Attempts to retrieve and download redirect.map.csv of your last import run"
             class="btn btn-lg btn-default import-download-btn disabled"
             disabled="disabled"
             data-on="click"
-            data-action="downloadRedirectionJson"
-            id="download-redirection-json"
-            type="button">Download redirect.map.json (might take some time)
+            data-action="downloadRedirectionCsv"
+            id="download-redirection-csv"
+            type="button">Download redirect.map.csv (might take some time)
     </button>
+	<button
+			title="Attempts to retrieve and download redirect.map.json of your last import run"
+			class="btn btn-lg btn-default import-download-btn disabled"
+			disabled="disabled"
+			data-on="click"
+			data-action="downloadRedirectionJson"
+			id="download-redirection-json"
+			type="button">Download redirect.map.json (might take some time)
+	</button>
 </div>
 
 <div class="form-group">

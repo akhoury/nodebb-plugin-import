@@ -152,7 +152,16 @@ var
 
 			redirectJson: function(req, res, next) {
 				if (Plugin.controller.postImportToolsAvailble()) {
-					Plugin.controller.getRedirectionJson();
+					Plugin.controller.getRedirectionMap({format: "json"});
+					res.json({started: true});
+				} else {
+					res.json({error: 'Cannot download now'});
+				}
+			},
+
+			redirectCsv: function(req, res, next) {
+				if (Plugin.controller.postImportToolsAvailble()) {
+					Plugin.controller.getRedirectionMap({format: "csv"});
 					res.json({started: true});
 				} else {
 					res.json({error: 'Cannot download now'});
