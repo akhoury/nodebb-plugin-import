@@ -10,20 +10,22 @@ if (primaryDBName) {
 }
 
 var async = require('async'),
-		utils = require('../public/js/utils.js'),
-		Meta = require('../../../src/meta.js'),
-		User = require('../../../src/user.js'),
-		Groups = require('../../../src/groups.js'),
-		Topics = require('../../../src/topics.js'),
-		Posts = require('../../../src/posts.js'),
-		Categories = require('../../../src/categories.js'),
+	utils = require('../public/js/utils.js'),
+	Meta = require('../../../src/meta.js'),
+	User = require('../../../src/user.js'),
+	Groups = require('../../../src/groups.js'),
+	Topics = require('../../../src/topics.js'),
+	Posts = require('../../../src/posts.js'),
+	Categories = require('../../../src/categories.js'),
 
-		DEFAULT_BATCH_SIZE = 100;
+	DEFAULT_BATCH_SIZE = 100;
 
 
 (function(Data) {
 
 	/* _imported Operations */
+
+	Data.db = db;
 
 	Data.setUserImported = function(_uid, uid, user, callback) {
 		return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
@@ -258,11 +260,19 @@ var async = require('async'),
 
 	Data.eachMessage = function(iterator, options, callback) {
 		options = options || {};
-		Data.keys('message:*', function(err, keys) {
+		var prefix = 'message:';
+		Data.keys(prefix + '*', function(err, keys) {
 			if (err) {
 				return callback(err);
 			}
-			async.mapLimit(keys, options.batch || DEFAULT_BATCH_SIZE, iterator, callback);
+			async.mapLimit(keys, options.batch || DEFAULT_BATCH_SIZE, function(key, next) {
+				db.getObject(key, function(err, message) {
+					if (message) {
+						message.mid = key.replace(prefix, '');
+					}
+					iterator(message, next);
+				});
+			}, callback);
 		});
 	};
 
@@ -370,46 +380,46 @@ var async = require('async'),
 			options = {};
 		}
 		return Data.processSet(
-				setKey,
-				prefixEachId,
-				function(err, records, nextBatch) {
-					if (err) {
-						return nextBatch(err);
-					}
-					if (options.async) {
-						if (options.eachLimit) {
-							async.eachLimit(records, options.eachLimit, iterator, nextBatch);
-						} else {
-							async.each(records, iterator, nextBatch);
-						}
+			setKey,
+			prefixEachId,
+			function(err, records, nextBatch) {
+				if (err) {
+					return nextBatch(err);
+				}
+				if (options.async) {
+					if (options.eachLimit) {
+						async.eachLimit(records, options.eachLimit, iterator, nextBatch);
 					} else {
-						records.forEach(iterator);
-						nextBatch();
+						async.each(records, iterator, nextBatch);
 					}
-				},
-				options,
-				callback
+				} else {
+					records.forEach(iterator);
+					nextBatch();
+				}
+			},
+			options,
+			callback
 		);
 	};
 
 	Data.processSet = function(setKey, prefixEachId, process, options, callback) {
 		return Data.processIdsSet(
-				setKey,
-				function(err, ids, next) {
-					var keys = ids.map(function(id) {
-						return prefixEachId + id;
+			setKey,
+			function(err, ids, next) {
+				var keys = ids.map(function(id) {
+					return prefixEachId + id;
+				});
+				db.getObjects(keys, function(err, objects) {
+					process(err, objects, function(err) {
+						if (err) {
+							return next(err);
+						}
+						next();
 					});
-					db.getObjects(keys, function(err, objects) {
-						process(err, objects, function(err) {
-							if (err) {
-								return next(err);
-							}
-							next();
-						});
-					});
-				},
-				options,
-				callback);
+				});
+			},
+			options,
+			callback);
 	};
 
 	Data.processIdsSet = function(setKey, process, options, callback) {
@@ -437,32 +447,32 @@ var async = require('async'),
 		var done = false;
 
 		async.whilst(
-				function(err) {
+			function(err) {
+				if (err) {
+					return true;
+				}
+				return !done;
+			},
+			function(next) {
+				db.getSortedSetRange(setKey, start, end, function(err, ids) {
 					if (err) {
-						return true;
+						return next(err);
 					}
-					return !done;
-				},
-				function(next) {
-					db.getSortedSetRange(setKey, start, end, function(err, ids) {
+					if (!ids.length || options.doneIf(start, end, ids)) {
+						done = true;
+						return next();
+					}
+					process(err, ids, function(err) {
 						if (err) {
 							return next(err);
 						}
-						if (!ids.length || options.doneIf(start, end, ids)) {
-							done = true;
-							return next();
-						}
-						process(err, ids, function(err) {
-							if (err) {
-								return next(err);
-							}
-							start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
-							end = start + batch;
-							next();
-						});
-					})
-				},
-				callback
+						start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
+						end = start + batch;
+						next();
+					});
+				})
+			},
+			callback
 		);
 	};
 
@@ -517,61 +527,64 @@ var async = require('async'),
 		Data.count(setKey, function(err, total) {
 			var count = 1;
 			Data.processIdsSet(setKey,
-					function(err, ids, nextBatch) {
-						async.mapLimit(ids, DEFAULT_BATCH_SIZE, function(_id, cb) {
-							Data.deleteImported(setKey, objPrefix, _id, function(err, response) {
-								onProgress(null, {total: total, count: count++, percentage: (count/total)});
-								cb();
-							});
-						}, nextBatch);
-					},
-					{
-						alwaysStartAt: 0
-					},
-					callback);
+				function(err, ids, nextBatch) {
+					async.mapLimit(ids, DEFAULT_BATCH_SIZE, function(_id, cb) {
+						Data.deleteImported(setKey, objPrefix, _id, function(err, response) {
+							onProgress(null, {total: total, count: count++, percentage: (count/total)});
+							cb();
+						});
+					}, nextBatch);
+				},
+				{
+					alwaysStartAt: 0
+				},
+				callback);
 		});
 
 	};
 
+	// only allows wildcards i.e. "user:*"
 	Data.keys = (function() {
-		return db.helpers.redis ? // if redis
-				function(key, callback) {
-					return db.client.keys(key, callback);
-				}
-			// if mongo
-				: db.helpers.mongo ?
-				function(key, callback) {
-					db.client.collection('objects').find( { _key: { $regex: key.replace(/\*/, '.*') } }, function(err, result) {
+		return db.helpers.mongo ? // if mongo
+			function(key, callback) {
+				key = key[0] == "*" ? key : "^" + key;
+				var regex = new RegExp(key.replace(/\*/g, '.*'));
+
+				db.client.collection('objects').find( { _key: { $regex: regex } }, function(err, result) {
+					if (err) {
+						return callback(err);
+					}
+					result.toArray(function(err, arr) {
 						if (err) {
 							return callback(err);
 						}
-						result.toArray(function(err, arr) {
-							if (err) {
-								return callback(err);
-							}
-							callback(null, !err && arr && arr[0] ?
-									Object.keys(arr[0]).map(function(v) {
-										return key.replace(/\*/, v).replace(/\uff0E/g, '.');
-									}) : []);
-						});
-
+						callback(null, !err && arr ? arr.map(function(v, i) {
+							return v._key;
+						}) : []);
 					});
-				}
+
+				});
+			}
+			: db.helpers.redis ? // if redis
+			function(key, callback) {
+				return db.client.keys(key, callback);
+			}
+
 			// if leveldb
-				: db.helpers.level ?
+			: db.helpers.level ?
 			// https://github.com/rvagg/node-levelup/issues/285
 			// todo: not tested :(
-				function(key, callback) {
-					var stream = db.client.createKeyStream({gte: key.replace(/\*/, '!'), lte: key.replace(/\*/, '~')});
-					var keys = [];
-					stream.on('data', function(key) {
-						keys.push(key);
-					});
-					stream.on('end', function() {
-						callback(null, keys);
-					})
-				}
-				: null;
+			function(key, callback) {
+				var stream = db.client.createKeyStream({gte: key.replace(/\*/, '!'), lte: key.replace(/\*/, '~')});
+				var keys = [];
+				stream.on('data', function(key) {
+					keys.push(key);
+				});
+				stream.on('end', function() {
+					callback(null, keys);
+				})
+			}
+			: null;
 	})();
 
 })(module.exports);
