@@ -823,6 +823,12 @@ var fs = require('fs-extra'),
 												db.deleteObjectField('user:' + user.uid, '_imported_slug', cb);
 											},
 											function(cb) {
+												db.deleteObjectField('user:' + user.uid, '_imported_readTids', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('user:' + user.uid, '_imported_readCids', cb);
+											}, 
+											function(cb) {
 												db.deleteObjectField('user:' + user.uid, '_imported_path', cb);
 											},
 											function(cb) {
@@ -933,6 +939,12 @@ var fs = require('fs-extra'),
 												db.deleteObjectField('category:' + category.cid, '_imported_cid', cb);
 											},
 											function(cb) {
+												db.deleteObjectField('category:' + category.cid, '_imported_parentCid', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('category:' + category.cid, '_imported_disabled', cb);
+											},		
+											function(cb) {
 												db.deleteObjectField('category:' + category.cid, '_imported_name', cb);
 											},
 											function(cb) {
@@ -995,6 +1007,9 @@ var fs = require('fs-extra'),
 											function(cb) {
 												db.deleteObjectField('topic:' + topic.tid, '_imported_guest', cb);
 											},
+											function(cb) {
+												db.deleteObjectField('topic:' + topic.tid, '_imported_path', cb);
+											},											
 											function(cb) {
 												db.deleteObjectField('topic:' + topic.tid, '_imported_user_slug', cb);
 											},
@@ -1063,6 +1078,9 @@ var fs = require('fs-extra'),
 											function(cb) {
 												db.deleteObjectField('post:' + post.pid, '_imported_user_path', cb);
 											},
+											function(cb) {
+												db.deleteObjectField('post:' + post.pid, '_imported_topic_path', cb);
+											},										
 											function(cb) {
 												db.deleteObjectField('post:' + post.pid, '_imported_topic_slug', cb);
 											},
