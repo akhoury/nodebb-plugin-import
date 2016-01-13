@@ -1,3 +1,12 @@
+var data = require('./data.js');
+
+setTimeout(function() {
+	data.db.getObject("message:1797", function(err, m) {
+		console.log(m);
+	});
+}, 1000);
+
+return;
 var exporter  = require('./exporter.js');
 var async = require('async');
 
