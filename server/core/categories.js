@@ -25,9 +25,20 @@
 	};
 
 	// [potential-nodebb-core]
-	Categories.orphan = function (cid, callback) {
-		return Categories.makeChild(cid, 0, callback);
+	Categories.abandon = function (parentCid, cid, callback) {
+		return Categories.orphan(cid, callback);
 	};
+
+	// [potential-nodebb-core]
+	Categories.orphan = function (cid, callback) {
+		return Categories.adopt(cid, 0, callback);
+	};
+
+	// [potential-nodebb-core]
+	Categories.reparent = function (cid, parentCid, callback) {
+		return Categories.adopt(parentCid, cid, callback);
+	};
+
 
 	// [potential-nodebb-core]
 	Categories.disable = function (cid, callback) {
