@@ -24,6 +24,7 @@ var fs = require('fs-extra'),
 		CONVERT_BATCH_LIMIT = 50,
 
 		defaults = {
+			redirectionFormat: 'json',
 			redirectionTemplates: {
 				users: {
 					oldPath: null,
@@ -528,7 +529,8 @@ var fs = require('fs-extra'),
 		}
 	};
 
-	Controller.getRedirectionJson = function(callback) {
+	Controller.getRedirectionMap = function(options, callback) {
+		options = options || {};
 		callback = _.isFunction(callback) ? callback : noop;
 
 		Controller.phase('redirectionMapStart');
@@ -556,15 +558,20 @@ var fs = require('fs-extra'),
 			}
 		});
 
-		var content = '';
+		var format = options.format || Controller.config().redirectionFormat;
+
+		var json = '';
+		var csv = '';
+
 		if (Controller.postImportToolsAvailble()) {
 
 			Controller.state({
 				now: 'busy',
-				event: 'controller.getRedirectionJson'
+				event: 'controller.getRedirectionMap'
 			});
 
-			content += '{\n';
+			json += '{\n';
+
 			async.series([
 				function(done) {
 					if (Controller.redirectTemplates.users.oldPath && Controller.redirectTemplates.users.newPath) {
@@ -583,7 +590,9 @@ var fs = require('fs-extra'),
 
 									var oldPath = Controller.redirectTemplates.users.oldPath(user);
 									var newPath = Controller.redirectTemplates.users.newPath(user);
-									content += '"' + oldPath + '":"' + newPath + '",\n';
+
+									json += '"' + oldPath + '":"' + newPath + '",\n';
+									csv += '\n' + oldPath + ',' + newPath;
 								}
 								Controller.progress(index++, total);
 							}, function(err) {
@@ -615,7 +624,9 @@ var fs = require('fs-extra'),
 
 											var oldPath = Controller.redirectTemplates.categories.oldPath(category);
 											var newPath = Controller.redirectTemplates.categories.newPath(category);
-											content += '"' + oldPath + '":"' + newPath + '",\n';
+
+											json += '"' + oldPath + '":"' + newPath + '",\n';
+											csv += '\n' + oldPath + ',' + newPath;
 										}
 										Controller.progress(index++, total);
 									},
@@ -658,7 +669,9 @@ var fs = require('fs-extra'),
 
 											var oldPath = Controller.redirectTemplates.topics.oldPath(topic);
 											var newPath = Controller.redirectTemplates.topics.newPath(topic);
-											content += '"' + oldPath + '":"' + newPath + '",\n';
+
+											json += '"' + oldPath + '":"' + newPath + '",\n';
+											csv += '\n' + oldPath + ',' + newPath;
 										}
 										Controller.progress(index++, total);
 									},
@@ -700,7 +713,9 @@ var fs = require('fs-extra'),
 
 											var oldPath = Controller.redirectTemplates.posts.oldPath(post);
 											var newPath = Controller.redirectTemplates.posts.newPath(post);
-											content += '"' + oldPath + '":"' + newPath + '",\n';
+
+											json += '"' + oldPath + '":"' + newPath + '",\n';
+											csv += '\n' + oldPath + ',' + newPath;
 										}
 										Controller.progress(index++, total);
 									},
@@ -723,13 +738,15 @@ var fs = require('fs-extra'),
 				Controller.progress(1, 1);
 				Controller.phase('redirectionMapDone');
 
-				var lastCommaIdx = content.lastIndexOf(',');
+				var lastCommaIdx = json.lastIndexOf(',');
 				if (lastCommaIdx > -1) {
-					content = content.substring(0, lastCommaIdx);
+					json = json.substring(0, lastCommaIdx);
 				}
-				content += '\n}';
+				json += '\n}';
 
-				var filename = 'redirect.map.json';
+				var filename = format == 'json' ? 'redirect.map.json' : 'redirect.map.csv';
+				var content = format == 'json' ? json : csv;
+
 				var filepath = path.join(DELIVERABLES_TMP_DIR, '/' + filename);
 				var fileurl = DELIVERABLES_TMP_URL + '/' + filename;
 				var ret = {filename: filename, fileurl: fileurl, filepath: filepath};
@@ -805,6 +822,12 @@ var fs = require('fs-extra'),
 											function(cb) {
 												db.deleteObjectField('user:' + user.uid, '_imported_slug', cb);
 											},
+											function(cb) {
+												db.deleteObjectField('user:' + user.uid, '_imported_readTids', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('user:' + user.uid, '_imported_readCids', cb);
+											}, 
 											function(cb) {
 												db.deleteObjectField('user:' + user.uid, '_imported_path', cb);
 											},
@@ -916,6 +939,12 @@ var fs = require('fs-extra'),
 												db.deleteObjectField('category:' + category.cid, '_imported_cid', cb);
 											},
 											function(cb) {
+												db.deleteObjectField('category:' + category.cid, '_imported_parentCid', cb);
+											},
+											function(cb) {
+												db.deleteObjectField('category:' + category.cid, '_imported_disabled', cb);
+											},		
+											function(cb) {
 												db.deleteObjectField('category:' + category.cid, '_imported_name', cb);
 											},
 											function(cb) {
@@ -978,6 +1007,9 @@ var fs = require('fs-extra'),
 											function(cb) {
 												db.deleteObjectField('topic:' + topic.tid, '_imported_guest', cb);
 											},
+											function(cb) {
+												db.deleteObjectField('topic:' + topic.tid, '_imported_path', cb);
+											},											
 											function(cb) {
 												db.deleteObjectField('topic:' + topic.tid, '_imported_user_slug', cb);
 											},
@@ -1046,6 +1078,9 @@ var fs = require('fs-extra'),
 											function(cb) {
 												db.deleteObjectField('post:' + post.pid, '_imported_user_path', cb);
 											},
+											function(cb) {
+												db.deleteObjectField('post:' + post.pid, '_imported_topic_path', cb);
+											},										
 											function(cb) {
 												db.deleteObjectField('post:' + post.pid, '_imported_topic_slug', cb);
 											},
