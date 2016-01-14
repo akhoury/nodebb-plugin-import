@@ -551,7 +551,7 @@ var async = require('async'),
 
 				Importer.phase('resetGlobalsStart');
 				Importer.progress(0, 1);
-				
+
 				db.setObject('global', {
 					nextUid: 1,
 					userCount: 1,
@@ -961,113 +961,93 @@ var async = require('async'),
 			Importer.exporter.exportMessages(
 				function(err, messages, messagesArr, nextExportBatch) {
 
-					var onEach = function(message, done) {
-						count++;
-						var _mid = message._mid;
+					async.eachSeries(messagesArr, function(message, done) {
+            count++;
+            var _mid = message._mid;
 
-						recoverImportedMessage(_mid, function(err, _message) {
-							if (_message) {
-								Importer.progress(count, total);
-								imported++;
-								alreadyImported++;
-								return done();
-							}
+            recoverImportedMessage(_mid, function(err, _message) {
+              if (_message) {
+                Importer.progress(count, total);
+                imported++;
+                alreadyImported++;
+                return done();
+              }
 
-							if (message._fromuid == message._touid) {
-								Importer.warn('[process-count-at:' + count + '] skipping message:_mid: ' + _mid + ', because it was send to self');
-								Importer.progress(count, total);
-								return done();
-							}
+              if (message._fromuid == message._touid) {
+                Importer.warn('[process-count-at:' + count + '] skipping message:_mid: ' + _mid + ', because it was send to self');
+                Importer.progress(count, total);
+                return done();
+              }
 
-							async.parallel([
-								function(cb) {
-									Data.getImportedUser(message._fromuid, function(err, toUser) {
-										if (err) {
-											Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
-										}
-										cb(null, toUser);
-									});
-								},
-								function(cb) {
-									Data.getImportedUser(message._touid, function(err, toUser) {
-										if (err) {
-											Importer.warn('getImportedUser:_touid:' + message._touid + ' err: ' + err.message);
-										}
-										cb(null, toUser);
-									});
-								}
-							], function(err, results) {
-								var fromUser = results[0];
-								var toUser = results[1];
+              async.parallel([
+                function(cb) {
+                  Data.getImportedUser(message._fromuid, function(err, toUser) {
+                    if (err) {
+                      Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
+                    }
+                    cb(null, toUser);
+                  });
+                },
+                function(cb) {
+                  Data.getImportedUser(message._touid, function(err, toUser) {
+                    if (err) {
+                      Importer.warn('getImportedUser:_touid:' + message._touid + ' err: ' + err.message);
+                    }
+                    cb(null, toUser);
+                  });
+                }
+              ], function(err, results) {
+                var fromUser = results[0];
+                var toUser = results[1];
 
-								if (!fromUser || !toUser) {
-									Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser);
-									Importer.progress(count, total);
-									done();
-								} else {
-									Importer.log('[process-count-at: ' + count + '] saving message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ', _touid:' + message._touid);
+                if (!fromUser || !toUser) {
+                  Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser);
+                  Importer.progress(count, total);
+                  done();
+                } else {
 
-									var onAddMessage = function(err, messageReturn) {
-										if (err || !messageReturn) {
-											Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser
-												+ (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
-											Importer.progress(count, total);
-											return done();
-										}
+                  Importer.log('[process-count-at: ' + count + '] saving message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ', _touid:' + message._touid);
 
-										imported++;
-										var mid = messageReturn.mid;
-										var uids =  [messageReturn.fromuid, messageReturn.touid].sort();
+                  Messaging.addMessage(fromUser.uid, toUser.uid, message._content, message._timestamp, function(err, messageReturn) {
+                    if (err || !messageReturn) {
+                      Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser
+                      + (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
+                      Importer.progress(count, total);
+                      return done();
+                    }
 
-										var _imported_content = message._content;
-										var timestamp = message._timestamp;
-										var timestampISO = (new Date(message._timestamp)).toISOString();
+                    imported++;
+                    var mid = messageReturn.mid;
+                    var uids =  [messageReturn.fromuid, messageReturn.touid].sort();
 
-										delete messageReturn._key;
-										delete messageReturn.toUser;
-										delete messageReturn.fromUser;
+                    var _imported_content = message._content;
 
-										async.parallel([
-											function(next) {
-												db.setObjectField('message:' + mid, '_imported_content', _imported_content, next);
-											},
-											function(next) {
-												db.setObjectField('message:' + mid, 'timestamp', timestamp, next);
-											},
-											function(next) {
-												db.setObjectField('message:' + mid, 'timestampISO', timestampISO, next);
-											},
-											function(next) {
-												db.sortedSetAdd('messages:uid:' + uids[0] + ':to:' + uids[1], timestamp, mid, next);
-											},
-											function(next) {
-												db.sortedSetAdd('uid:' + uids[0] + ':chats', timestamp, uids[1], next);
-											},
-											function(next) {
-												db.sortedSetAdd('uid:' + uids[1] + ':chats', timestamp, uids[0], next);
-											},
-											function(next) {
-												db.sortedSetRemove('uid:' + messageReturn.touid + ':chats:unread', messageReturn.fromuid, next);
-											}
-										], function(err) {
-											if (err) {
-												Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
-												return done();
-											}
+                    delete messageReturn._key;
+                    delete messageReturn.toUser;
+                    delete messageReturn.fromUser;
 
-											Importer.progress(count, total);
-											message = nodeExtend(true, {}, message, messageReturn);
-											Data.setMessageImported(_mid, mid, message, done);
-										});
-									};
+                    async.parallel([
+                      function(next) {
+                        db.setObjectField('message:' + mid, '_imported_content', _imported_content, next);
+                      },
+                      function(next) {
+                        db.sortedSetRemove('uid:' + messageReturn.touid + ':chats:unread', messageReturn.fromuid, next);
+                      }
+                    ], function(err) {
+                      if (err) {
+                        Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
+                        return done();
+                      }
 
-									Messaging.addMessage(fromUser.uid, toUser.uid, message._content, onAddMessage);
-								}
-							});
-						});
-					};
-
-					async.eachSeries(messagesArr, onEach, nextExportBatch);
+                      Importer.progress(count, total);
+                      message = nodeExtend(true, {}, message, messageReturn);
+                      Data.setMessageImported(_mid, mid, message, done);
+                    });
+                  });
+                }
+              });
+            });
+          }, nextExportBatch);
 
 				},
 				{
