@@ -592,7 +592,7 @@
 					_username: $wrapper.find('#importer-admin-take-ownership-username').val(),
 					_uid: $wrapper.find('#importer-admin-take-ownership-uid').val()
 				},
-				autoConfirmEmails: $('#importer-autoconfirm-emails').is('checked'),
+				autoConfirmEmails: $('#importer-autoconfirm-emails').is(':checked'),
 				userReputationMultiplier: parseInt($('#importer-user-reputation-multiplier').val(), 10),
 
 				categoriesTextColors: (($('#importer-categories-text-colors').val() || '')).replace(/ /g,'').split(','),
