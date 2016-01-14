@@ -1,265 +1,281 @@
 
 (function(module) {
-	var utils = require('../../public/js/utils.js');
+  var utils = require('../../public/js/utils.js');
 
-	var nbbpath = require('./nbbpath.js');
-	var Groups = require('./groups.js');
-	var file = require('./file.js');
+  var nbbpath = require('./nbbpath.js');
+  var Groups = require('./groups.js');
+  var file = require('./file.js');
 
-	var User = nbbpath.require('/src/user.js');
+  var User = nbbpath.require('/src/user.js');
 
-	User.import = function (data, options, callback) {
-		if (typeof callback == 'undefined') {
-			callback = options;
-			options = {};
-		}
+  User.import = function (data, options, callback) {
+    if (typeof callback == 'undefined') {
+      callback = options;
+      options = {};
+    }
 
-		var uid, createData;
+    var uid;
+    var createData;
+    var confirmEmail = options.autoConfirmEmails || options.autoConfirmEmail;
+    var flushed = options.flush || options.flushed;
 
-		async.series([
-			function(next) {
-				createData = {
-					username: pickNcleanUsername(data._username, data._alternativeUsername),
-					email: data._email,
-					password: options.passwordGen && options.passwordGen.enabled
-							? generateRandomPassword(options.passwordGen.len, options.passwordGen.chars)
-							: data._password
-				};
-				User.create(createData, function(err, userid) {
-					if (err) return next(err);
-					uid = userid;
-					data.userslug = data._userslug || utils.slugify(createData.username);
-				});
-			},
+    async.series([
+      function (next) {
+        if (!flushed) {
+          return User.getImported(data._uid, function(err, _imported) {
+            if (err || !_imported) {
+              return next();
+            }
+            callback(null, _imported);
+          });
+        }
 
-			function(next) {
-				if (data._picture) {
-					return User.setProfilePictureUrl(uid, data._picture, next);
-				}
-				if (data._pictureBlob) {
-					User.setProfilePictureBlob(uid, data._pictureBlob, {filename: data._pictureFilename}, function(err, ret) {
-						if (err) return next(err);
-						delete data._pictureBlob;
-						data._picture = ret.url;
-						next();
-					});
-				}
-			},
+        return next();
+      },
 
-			function(next) {
-				var fields = {
-					signature: data._signature || '',
-					website: data._website || '',
-					location: data._location || '',
-					joindate: data._joindate || +new Date(),
-					reputation: data._reputation || 0,
-					profileviews: data._profileviews || 0,
-					fullname: data._fullname || '',
-					birthday: data._birthday || '',
-					showemail: data._showemail ? 1 : 0,
-					lastposttime: data._lastposttime || 0,
+      function(next) {
+        createData = {
+          username: pickNcleanUsername(data._username, data._alternativeUsername),
+          email: data._email,
+          password: options.passwordGen && options.passwordGen.enabled
+            ? generateRandomPassword(options.passwordGen.len, options.passwordGen.chars)
+            : data._password
+        };
+        User.create(createData, function(err, userid) {
+          if (err) return next(err);
+          uid = userid;
+          data.userslug = data._userslug || utils.slugify(createData.username);
+        });
+      },
 
-					// we're importing, no one is online
-					status: 'offline',
-					// don't ban anyone now, ban them later
-					banned: 0,
-				};
+      function(next) {
+        if (data._picture) {
+          return User.setProfilePictureUrl(uid, data._picture, next);
+        }
+        if (data._pictureBlob) {
+          User.setProfilePictureBlob(uid, data._pictureBlob, {filename: data._pictureFilename}, function(err, ret) {
+            if (err) return next(err);
+            delete data._pictureBlob;
+            data._picture = ret.url;
+            next();
+          });
+        }
+      },
 
-				if (data._lastonline) {
-					fields.lastonline = data._lastonline;
-				}
+      function(next) {
+        var fields = {
+          signature: data._signature || '',
+          website: data._website || '',
+          location: data._location || '',
+          joindate: data._joindate || +new Date(),
+          reputation: data._reputation || 0,
+          profileviews: data._profileviews || 0,
+          fullname: data._fullname || '',
+          birthday: data._birthday || '',
+          showemail: data._showemail ? 1 : 0,
+          lastposttime: data._lastposttime || 0,
 
-				fields._imported_original_data = JSON.stringify(data);
+          'email:confirmed': confirmEmail ? 1 : 0,
 
-				User.setUserFields(uid, fields, next);
-			},
+          // we're importing, no one is online
+          status: 'offline',
+          // don't ban anyone now, ban them later
+          banned: 0,
+        };
 
-			function(next) {
+        if (data._lastonline) {
+          fields.lastonline = data._lastonline;
+        }
 
-				var isModerator = false;
-				var isAdministrator = false;
+        fields.__imported_original_data__ = JSON.stringify(data);
 
-				var _groupNames = [].concat(data._groupNames)
+        User.setUserFields(uid, fields, next);
+      },
 
-					// backward compatible level field
-					.concat((data._level || "").toLowerCase() == "administrator" ? "administrators" : [])
-					.concat((data._level || "").toLowerCase() == "moderator" ? "moderators" : [])
+      function(next) {
 
-					// filter out the moderator.
-					.reduce(function (_groupNames, _groupName, index, arr) {
-						if (_groupName.toLowerCase() == "moderators" && !isModerator) {
-							isModerator = true;
-							return _groupNames;
-						}
-						if (_groupName.toLowerCase() == "administrators" && !isAdministrator) {
-							isAdministrator = true;
-						}
-							_groupNames.push(_groupName);
-						return _groupNames;
-					}, []);
+        var isModerator = false;
+        var isAdministrator = false;
 
-				async.eachSeries(_groupNames, function (_groupName, next) {
-					Groups.joinAt(uid, _groupName, data._joindate, next);
-				}, next);
-			},
+        var _groupNames = [].concat(data._groupNames)
 
-			function(next) {
-				var _gids = [].concat(data._groups).concat(data._gids);
+          // backward compatible level field
+          .concat((data._level || "").toLowerCase() == "administrator" ? "administrators" : [])
+          .concat((data._level || "").toLowerCase() == "moderator" ? "moderators" : [])
 
-				async.eachSeries(_gids, function (_gid, next) {
-					Groups.getImported(_gid, function(err, group) {
-						if (err || !group) {
-							return;
-						}
-						Groups.joinAt(uid, group.name, data._joindate, next);
-					});
-				}, next);
-			},
+          // filter out the moderator.
+          .reduce(function (_groupNames, _groupName, index, arr) {
+            if (_groupName.toLowerCase() == "moderators" && !isModerator) {
+              isModerator = true;
+              return _groupNames;
+            }
+            if (_groupName.toLowerCase() == "administrators" && !isAdministrator) {
+              isAdministrator = true;
+            }
+            _groupNames.push(_groupName);
+            return _groupNames;
+          }, []);
 
-			function(next) {
-				if (options.autoConfirmEmails || options.autoConfirmEmail) {
-					return User.confirmEmail(uid, next);
-				}
-				next();
-			}
+        async.eachSeries(_groupNames, function (_groupName, next) {
+          Groups.joinAt(uid, _groupName, data._joindate, next);
+        }, next);
+      },
 
-		], function(err) {
-			if (err) return callback(err);
+      function(next) {
+        var _gids = [].concat(data._groups).concat(data._gids);
 
-			User.setImported(data._uid, uid, extend(true, {}, data), callback);
-		});
-	};
+        async.eachSeries(_gids, function (_gid, next) {
+          Groups.getImported(_gid, function(err, group) {
+            if (err || !group) {
+              return;
+            }
+            Groups.joinAt(uid, group.name, data._joindate, next);
+          });
+        }, next);
+      }
 
-	User.setImported = function (_uid, uid, user, callback) {
-		return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
-	};
+    ], function(err) {
+      if (err) return callback(err);
 
-	User.getImported = function (_uid, callback) {
-		return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
-	};
+      var d = extend(true, {}, data);
 
-	User.deleteImported = function (_uid, callback) {
-		return Data.deleteImported('_imported:_users', '_imported_user:', _uid, callback);
-	};
+      User.setImported(data._uid, uid, d, function(err) {
+        callback(err, d);
+      });
+    });
+  };
 
-	User.deleteEachImported = function(onProgress, callback) {
-		return Data.deleteEachImported('_imported:_users', '_imported_user:', onProgress, callback);
-	};
+  User.setImported = function (_uid, uid, user, callback) {
+    return Data.setImported('_imported:_users', '_imported_user:', _uid, uid, user, callback);
+  };
 
-	User.isImported = function (_uid, callback) {
-		return Data.isImported('_imported:_users', _uid, callback);
-	};
+  User.getImported = function (_uid, callback) {
+    return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
+  };
 
-	User.eachImported = function (iterator, options, callback) {
-		return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
-	};
+  User.deleteImported = function (_uid, callback) {
+    return Data.deleteImported('_imported:_users', '_imported_user:', _uid, callback);
+  };
 
-	// [potential-nodebb-core]
-	User.count = function (callback) {
-		Data.count('users:joindate', callback);
-	};
+  User.deleteEachImported = function(onProgress, callback) {
+    return Data.deleteEachImported('_imported:_users', '_imported_user:', onProgress, callback);
+  };
 
-	// [potential-nodebb-core]
-	User.each = function (iterator, options, callback) {
-		return Data.each('users:joindate', 'user:', iterator, options, callback);
-	};
+  User.isImported = function (_uid, callback) {
+    return Data.isImported('_imported:_users', _uid, callback);
+  };
 
-	// [potential-nodebb-core]
-	User.processUidsSet = function(process, options, callback) {
-		return Data.processIdsSet('users:joindate', process, options, callback);
-	};
+  User.eachImported = function (iterator, options, callback) {
+    return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
+  };
 
-	// [potential-nodebb-core]
-	User.processSet = function(process, options, callback) {
-		return Data.processSet('users:joindate', 'user:', process, options, callback);
-	};
+  // [potential-nodebb-core]
+  User.count = function (callback) {
+    Data.count('users:joindate', callback);
+  };
 
-	// [potential-nodebb-core]
-	User.confirmEmail = function (uid, callback) {
-		async.series([
-			async.apply(User.setUserField, uid, 'email:confirmed', 1)
-		], callback);
-	};
+  // [potential-nodebb-core]
+  User.each = function (iterator, options, callback) {
+    return Data.each('users:joindate', 'user:', iterator, options, callback);
+  };
 
-	// [potential-nodebb-core]
-	User.setReputation = function (uid, reputation, callback) {
-		async.series([
-			async.apply(db.sortedSetAdd, 'users:reputation', reputation, uid),
-			async.apply(User.setUserField, uid, 'reputation', reputation),
-		], callback);
-	};
+  // [potential-nodebb-core]
+  User.processUidsSet = function(process, options, callback) {
+    return Data.processIdsSet('users:joindate', process, options, callback);
+  };
 
-	// [potential-nodebb-core]
-	User.makeAdministrator = function (uid, joindate, callback) {
-		Groups.joinAt('administrators', uid, joindate, callback);
-	};
+  // [potential-nodebb-core]
+  User.processSet = function(process, options, callback) {
+    return Data.processSet('users:joindate', 'user:', process, options, callback);
+  };
 
-	// [potential-nodebb-core]
-	User.makeModerator = function (uid, cid, joindate) {
-		Groups.joinAt('cid:' + cid + ':privileges:mods:members', uid, joindate, callback);
-	};
+  // [potential-nodebb-core]
+  User.confirmEmail = function (uid, callback) {
+    // todo: gonna need to confirmation-code somehow and delete it from the set
+    async.series([
+      async.apply(User.setUserField, uid, 'email:confirmed', 1)
+    ], callback);
+  };
 
-	// [potential-nodebb-core]
-	User.setProfilePictureUrl = function (uid, url, callback) {
-		return User.setUserFields(uid, {uploadedpicture: url, picture: url}, callback);
-	};
+  // [potential-nodebb-core]
+  User.setReputation = function (uid, reputation, callback) {
+    async.series([
+      async.apply(db.sortedSetAdd, 'users:reputation', reputation, uid),
+      async.apply(User.setUserField, uid, 'reputation', reputation),
+    ], callback);
+  };
 
-	// [potential-nodebb-core]
-	User.setProfilePictureBlob = function (uid, blob, options, callback) {
-		callback = arguments[arguments.length - 1];
+  // [potential-nodebb-core]
+  User.makeAdministrator = function (uid, joindate, callback) {
+    Groups.joinAt('administrators', uid, joindate, callback);
+  };
 
-		var extension = options.extension || options.ext || '.png';
-		var filename = options.filename || 'profile_picture_' + uid + extension;
-		var folder = options.folder || 'profile_pictures';
+  // [potential-nodebb-core]
+  User.makeModerator = function (uid, cid, joindate) {
+    Groups.joinAt('cid:' + cid + ':privileges:mods:members', uid, joindate, callback);
+  };
 
-		File.saveBlobToLocal(filename, folder, blob, function(err, ret) {
-			if (err) return callback(err);
+  // [potential-nodebb-core]
+  User.setProfilePictureUrl = function (uid, url, callback) {
+    return User.setUserFields(uid, {uploadedpicture: url, picture: url}, callback);
+  };
 
-			User.setProfilePictureUrl(uid, ret.url, function(err) {
-				if (err) return callback(err);
-				callback(null, ret);
-			});
-		});
-	};
+  // [potential-nodebb-core]
+  User.setProfilePictureBlob = function (uid, blob, options, callback) {
+    callback = arguments[arguments.length - 1];
 
+    var extension = options.extension || options.ext || '.png';
+    var filename = options.filename || 'profile_picture_' + uid + extension;
+    var folder = options.folder || 'profile_pictures';
 
-	function pickNcleanUsername () {
-		var args = Array.prototype.slice(arguments, 0);
+    File.saveBlobToLocal(filename, folder, blob, function(err, ret) {
+      if (err) return callback(err);
 
-		if (!args.length) {
-			return '';
-		}
-
-		var username = args[0];
-		if (utils.isUserNameValid(username)) {
-			return username;
-		}
-
-		// todo: i don't know what I'm doing HALP
-		username = username
-				.replace(/[^\u00BF-\u1FFF\u2C00-\uD7FF\-.*\w\s]/gi, '')
-				.replace(/ /g,'')
-				.replace(/\*/g, '')
-				.replace(/æ/g, '')
-				.replace(/ø/g, '')
-				.replace(/å/g, '');
-
-		if (utils.isUserNameValid(username)) {
-			return username;
-		}
-
-		args.shift();
-
-		return pickNcleanUsername.apply(null, args);
-	}
-
-	function generateRandomPassword (len, chars) {
-		var index = (Math.random() * (chars.length - 1)).toFixed(0);
-		return len > 0 ? chars[index] + generateRandomPassword(len - 1, chars) : '';
-	}
+      User.setProfilePictureUrl(uid, ret.url, function(err) {
+        if (err) return callback(err);
+        callback(null, ret);
+      });
+    });
+  };
 
 
-	module.exports = User;
+  function pickNcleanUsername () {
+    var args = Array.prototype.slice(arguments, 0);
+
+    if (!args.length) {
+      return '';
+    }
+
+    var username = args[0];
+    if (utils.isUserNameValid(username)) {
+      return username;
+    }
+
+    // todo: i don't know what I'm doing HALP
+    username = username
+      .replace(/[^\u00BF-\u1FFF\u2C00-\uD7FF\-.*\w\s]/gi, '')
+      .replace(/ /g,'')
+      .replace(/\*/g, '')
+      .replace(/æ/g, '')
+      .replace(/ø/g, '')
+      .replace(/å/g, '');
+
+    if (utils.isUserNameValid(username)) {
+      return username;
+    }
+
+    args.shift();
+
+    return pickNcleanUsername.apply(null, args);
+  }
+
+  function generateRandomPassword (len, chars) {
+    var index = (Math.random() * (chars.length - 1)).toFixed(0);
+    return len > 0 ? chars[index] + generateRandomPassword(len - 1, chars) : '';
+  }
+
+
+  module.exports = User;
 
 }(module));
 
