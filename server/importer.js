@@ -797,7 +797,7 @@ var async = require('async'),
 													};
 
 													if (config.autoConfirmEmails) {
-														db.setObjectField('email:confirmed', user.email, '1', onEmailConfirmed);
+														User.setUserField(uid, 'email:confirmed', 1, onEmailConfirmed);
 													} else {
 														onEmailConfirmed();
 													}
