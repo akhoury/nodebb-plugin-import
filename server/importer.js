@@ -747,6 +747,8 @@ var async = require('async'),
 													showemail: user._showemail ? 1 : 0,
 													lastposttime: user._lastposttime || 0,
 
+													'email:confirmed': config.autoConfirmEmails ? 1 : 0,
+
 													// this is a migration script, no one is online
 													status: 'offline',
 
@@ -785,22 +787,13 @@ var async = require('async'),
 													users[_uid] = user;
 													Importer.progress(count, total);
 
-
-													var onEmailConfirmed = function() {
-														var series = [];
-														if (fields.reputation > 0) {
-															series.push(async.apply(db.sortedSetAdd, 'users:reputation', fields.reputation, uid));
-														}
-														async.series(series, function () {
-															Data.setUserImported(_uid, uid, user, done);
-														});
-													};
-
-													if (config.autoConfirmEmails) {
-														User.setUserField(uid, 'email:confirmed', 1, onEmailConfirmed);
-													} else {
-														onEmailConfirmed();
+													var series = [];
+													if (fields.reputation > 0) {
+														series.push(async.apply(db.sortedSetAdd, 'users:reputation', fields.reputation, uid));
 													}
+													async.series(series, function () {
+														Data.setUserImported(_uid, uid, user, done);
+													});
 												};
 
 												if (user._pictureBlob) {
