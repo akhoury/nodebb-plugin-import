@@ -1031,6 +1031,15 @@ var async = require('async'),
                         db.setObjectField('message:' + mid, '_imported_content', _imported_content, next);
                       },
                       function(next) {
+                        db.sortedSetAdd('uid:' + messageReturn.fromuid + ':chats', message._timestamp, messageReturn.touid, next);
+                      },
+                      function(next) {
+                        db.sortedSetAdd('uid:' + messageReturn.touid + ':chats', message._timestamp, messageReturn.fromuid, next);
+                      },
+                      function(next) {
+                        db.sortedSetRemove('uid:' + messageReturn.fromuid + ':chats:unread', messageReturn.touid, next);
+                      },
+                      function(next) {
                         db.sortedSetRemove('uid:' + messageReturn.touid + ':chats:unread', messageReturn.fromuid, next);
                       }
                     ], function(err) {
