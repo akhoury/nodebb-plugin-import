@@ -1521,7 +1521,7 @@ var async = require('async'),
 												};
 
 												// pinned = 1 not enough to float the topic to the top in it's category
-												if (topicFields.pinned) {
+												if (topic._pinned) {
 													db.sortedSetAdd('cid:' + category.cid + ':tids', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
 												}  else {
 													db.sortedSetAdd('cid:' + category.cid + ':tids', timestamp, returnTopic.topicData.tid, onPinned);
