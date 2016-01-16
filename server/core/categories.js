@@ -12,7 +12,9 @@
       function (record, next) {
         Categories.import(record, options, function(err, data) {
           progressCallback(err, {data: data, index: ++index});
-          // ignore errors
+
+          // ignore errors:
+          // let progressCallback throw an error or log a warning if it wants to.
           next();
         });
       },
@@ -52,6 +54,7 @@
 
           // force all categories Parent to be 0, then after the import is done, we can iterate again and fix them.
           parentCid: 0,
+
           // same deal with disabled
           disabled: 0,
 
