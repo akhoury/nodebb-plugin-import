@@ -1439,6 +1439,7 @@ var async = require('async'),
 											uid: !config.adminTakeOwnership.enable ? user.uid : parseInt(config.adminTakeOwnership._uid, 10) === parseInt(topic._uid, 10) ? LOGGEDIN_UID : user.uid,
 											title: topic._title,
 											content: topic._content,
+											timestamp: topic._timestamp,
 											cid: category.cid,
 											thumb: topic._thumb,
 											tags: topic._tags
@@ -1452,9 +1453,6 @@ var async = require('async'),
 												topic.imported = true;
 												imported++;
 
-												var timestamp = topic._timestamp || startTime;
-												var relativeTime = new Date(timestamp).toISOString();
-
 												var topicFields = {
 													viewcount: topic._viewcount || topic._viewscount || 0,
 
@@ -1466,8 +1464,6 @@ var async = require('async'),
 
 													// if pinned, we should set the db.sortedSetAdd('cid:' + cid + ':tids', Math.pow(2, 53), tid);
 													pinned: topic._pinned ? 1 : 0,
-													timestamp: timestamp,
-													lastposttime: timestamp,
 
 													_imported_tid: _tid,
 													_imported_uid: topic._uid || '',
@@ -1485,12 +1481,9 @@ var async = require('async'),
 												};
 
 												var postFields = {
-													timestamp: timestamp,
 													votes: topic._votes || 0,
 													reputation: topic._reputation || 0,
-													edited: topic._edited || 0,
-													// todo: not sure if I need this
-													relativeTime: relativeTime
+													edited: topic._edited || 0
 												};
 
 												// if (topic._edited) {
@@ -1694,9 +1687,6 @@ var async = require('async'),
 
 													edited: post._edited || 0,
 													deleted: post._deleted || 0,
-
-													// todo: not sure if I need this
-													relativeTime: new Date(post._timestamp || startTime).toISOString(),
 
 													_imported_pid: _pid,
 													_imported_uid: post._uid || '',
