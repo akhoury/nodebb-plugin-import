@@ -1510,7 +1510,7 @@ var async = require('async'),
 												if (topic._pinned) {
 													db.sortedSetAdd('cid:' + category.cid + ':tids', Math.pow(2, 53), returnTopic.topicData.tid, onPinned);
 												}  else {
-													db.sortedSetAdd('cid:' + category.cid + ':tids', timestamp, returnTopic.topicData.tid, onPinned);
+													db.sortedSetAdd('cid:' + category.cid + ':tids', topic._timestamp, returnTopic.topicData.tid, onPinned);
 												}
 											}
 										});
