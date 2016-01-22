@@ -1741,7 +1741,7 @@ var async = require('async'),
 
 					async.series([
 						function(nxt) {
-							fs.remove(DIRTY_TOPICS_FILE, nxt);
+							fs.remove(DIRTY_POSTS_FILE, nxt);
 						},
 						function(nxt) {
 							fs.remove(attachmentsTmpPath, nxt);
