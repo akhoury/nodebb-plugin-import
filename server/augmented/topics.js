@@ -3,8 +3,10 @@
 
 
 (function(module) {
-	var nbbpath = require('nbbpath');
-	var Topics = nbbpath.require('/src/topics.js');
+	var nbbpath = require('../helpers/nbbpath');
+
+  // nbb-core
+	var Topics = nbbpath.require('/src/topics');
 
   // use uid=1 assuming it's the main admin
 
