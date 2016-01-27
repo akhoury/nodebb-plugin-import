@@ -1,12 +1,14 @@
 
 (function(module) {
-	var nbbpath = require('nbbpath');
-	var fs = require('fs');
+	var nbbpath = require('../helpers/nbbpath.js');
+
+  var fs = require('fs');
 	var nconf = require('nconf');
 	var path = require('path');
 	var winston = require('winston');
-
 	var fileType = require('file-type');
+
+  // nbb-core
 	var file = nbbpath.require('/src/file.js');
 
 	// [potential-nodebb-core]
@@ -15,7 +17,6 @@
 		 * remarkable doesn't allow spaces in hyperlinks, once that's fixed, remove this.
 		 * same as file.saveFileToLocal()
 		 */
-
 		filename = filename.split('.').map(function(name) { return utils.slugify(name); }).join('.');
 
 		var uploadPath = path.join(nconf.get('base_dir'), nconf.get('upload_path'), folder, filename);

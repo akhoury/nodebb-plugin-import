@@ -1,7 +1,9 @@
 
 (function(module) {
-	var nbbpath = require('nbbpath');
-	var privileges = nbbpath.require('/src/privileges.js');
+	var nbbpath = require('../helpers/nbbpath');
+
+  // nbb-core
+  var privileges = nbbpath.require('/src/privileges');
 
 	privileges.categories.giveGuests = function (cid, callback) {
 		async.parallel([

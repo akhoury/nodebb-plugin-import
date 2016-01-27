@@ -1,9 +1,12 @@
 
 (function(module) {
-	var nbbpath = require('./nbbpath');
-	var db = require('./database');
+	var nbbpath = require('../helpers/nbbpath');
+  var db = require('../helpers/database');
+
 	var async = require('async');
-	var Categories = nbbpath.require('/src/categories.js');
+
+  // nbb-core
+	var Categories = nbbpath.require('/src/categories');
 
   Categories.batchImport = function (array, options, progressCallback, batchCallback) {
     var index = 0;
@@ -54,7 +57,6 @@
 
           // force all categories Parent to be 0, then after the import is done, we can iterate again and fix them.
           parentCid: 0,
-
           // same deal with disabled
           disabled: 0,
 
@@ -82,6 +84,50 @@
     ], function () {
 
     });
+  };
+
+  Categories.setImported = function (_cid, cid, category, callback) {
+    return Data.setImported('_imported:_categories', '_imported:_category:', _cid, cid, category, callback);
+  };
+
+  Categories.getImported = function (_cid, callback) {
+    return Data.getImported('_imported:_categories', '_imported:_category:', _cid, callback);
+  };
+
+  Categories.deleteImported = function (_cid, callback) {
+    return Data.deleteImported('_imported:_categories', '_imported:_category:', _cid, callback);
+  };
+
+  Categories.deleteEachImported = function(onProgress, callback) {
+    return Data.deleteEachImported('_imported:_categories', '_imported:_category:', onProgress, callback);
+  };
+
+  Categories.isImported = function (_cid, callback) {
+    return Data.isImported('_imported:_categories', _cid, callback);
+  };
+
+  Categories.eachImported = function (iterator, options, callback) {
+    return Data.each('_imported:_categories', '_imported:_category:', iterator, options, callback);
+  };
+
+  // [potential-nodebb-core]
+  Categories.count = function (callback) {
+    Data.count('users:joindate', callback);
+  };
+
+  // [potential-nodebb-core]
+  Categories.each = function (iterator, options, callback) {
+    return Data.each('users:joindate', 'user:', iterator, options, callback);
+  };
+
+  // [potential-nodebb-core]
+  Categories.processUidsSet = function(process, options, callback) {
+    return Data.processIdsSet('users:joindate', process, options, callback);
+  };
+
+  // [potential-nodebb-core]
+  Categories.processSet = function(process, options, callback) {
+    return Data.processSet('users:joindate', 'user:', process, options, callback);
   };
 
 	// [potential-nodebb-core]

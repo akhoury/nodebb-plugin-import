@@ -1,12 +1,33 @@
 
 (function(module) {
-  var utils = require('../../public/js/utils.js');
+  var nbbpath = require('../helpers/nbbpath.js');
+  var Data = require('../helpers/data.js');
 
-  var nbbpath = require('./nbbpath.js');
-  var Groups = require('./groups.js');
-  var file = require('./file.js');
+  // nbb-core
+  var utils = nbbpath.require('../public/js/utils');
+  var User = nbbpath.require('/src/user');
 
-  var User = nbbpath.require('/src/user.js');
+  // custom
+  var Groups = require('./groups');
+  var file = require('./file');
+
+  User.batchImport = function (array, options, progressCallback, batchCallback) {
+    var index = 0;
+    async.eachSeries(
+      array,
+      function (record, next) {
+        User.import(record, options, function(err, data) {
+          progressCallback(err, {data: data, index: ++index});
+
+          // ignore errors:
+          // let progressCallback throw an error or log a warning if it wants to.
+          next();
+        });
+      },
+      function (err) {
+        batchCallback(err);
+      });
+  };
 
   User.import = function (data, options, callback) {
     if (typeof callback == 'undefined') {
@@ -16,7 +37,7 @@
 
     var uid;
     var createData;
-    var confirmEmail = options.autoConfirmEmails || options.autoConfirmEmail;
+    var confirmEmail = options.autoConfirmEmails || data._emailConfirmed;
     var flushed = options.flush || options.flushed;
 
     async.series([
@@ -35,7 +56,7 @@
 
       function(next) {
         createData = {
-          username: pickNcleanUsername(data._username, data._alternativeUsername),
+          username: pickAndCleanUsername(data._username, data._alternativeUsername),
           email: data._email,
           password: options.passwordGen && options.passwordGen.enabled
             ? generateRandomPassword(options.passwordGen.len, options.passwordGen.chars)
@@ -55,7 +76,7 @@
         if (data._pictureBlob) {
           User.setProfilePictureBlob(uid, data._pictureBlob, {filename: data._pictureFilename}, function(err, ret) {
             if (err) return next(err);
-            delete data._pictureBlob;
+
             data._picture = ret.url;
             next();
           });
@@ -86,6 +107,9 @@
         if (data._lastonline) {
           fields.lastonline = data._lastonline;
         }
+
+        // aint gonna stringify blobs
+        delete data._pictureBlob;
 
         fields.__imported_original_data__ = JSON.stringify(data);
 
@@ -191,6 +215,7 @@
 
   // [potential-nodebb-core]
   User.confirmEmail = function (uid, callback) {
+
     // todo: gonna need to confirmation-code somehow and delete it from the set
     async.series([
       async.apply(User.setUserField, uid, 'email:confirmed', 1)
@@ -239,7 +264,7 @@
   };
 
 
-  function pickNcleanUsername () {
+  function pickAndCleanUsername () {
     var args = Array.prototype.slice(arguments, 0);
 
     if (!args.length) {
@@ -266,7 +291,7 @@
 
     args.shift();
 
-    return pickNcleanUsername.apply(null, args);
+    return pickAndCleanUsername.apply(null, args);
   }
 
   function generateRandomPassword (len, chars) {
