@@ -2,8 +2,8 @@ var async = require('async'),
 		_ = require('underscore'),
 		EventEmitter2 = require('eventemitter2').EventEmitter2,
 
-		COUNT_BATCH_SIZE = 500000,
-		DEFAULT_EXPORT_BATCH_SIZE = 500000,
+		COUNT_BATCH_SIZE = 600000,
+		DEFAULT_EXPORT_BATCH_SIZE = 600000,
 
 // mysql is terrible
 		MAX_MYSQL_INT = -1 >>> 1,
@@ -628,7 +628,8 @@ var async = require('async'),
 
 		// i.e. exporter.getPaginatedPosts
 		// will fallback to get[Type] is pagination is not supported
-		var fnName = 'getPaginated' + (type[0].toUpperCase() + type.substr(1).toLowerCase());
+    var Type = type[0].toUpperCase() + type.substr(1).toLowerCase();
+		var fnName = 'getPaginated' + Type;
 
 		var batch = Exporter.supportsPagination(null, type) ? options.batch || Exporter._exporter.DEFAULT_EXPORT_BATCH_SIZE || DEFAULT_EXPORT_BATCH_SIZE : MAX_MYSQL_INT;
 

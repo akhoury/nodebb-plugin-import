@@ -661,13 +661,13 @@ var async = require('async'),
 	var writeBlob = function(filepath, blob, callback) {
 		var buffer, ftype = {mime: "unknown/unkown", extension: ""};
 		try {
-			buffer = new Buffer(blob, 'binary');	
+			buffer = new Buffer(blob, 'binary');
 		}
 		catch (err) {
 		      err.filepath = filepath;
 		      return callback(err);
 		}
-		
+
 		ftype = fileType(buffer) || ftype;
 		ftype.filepath = filepath;
 
@@ -1619,7 +1619,7 @@ var async = require('async'),
 									done();
 								} else {
 
-									Importer.log('[process-count-at: ' + count + '] saving post: ' + _pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid);
+									// Importer.log('[process-count-at: ' + count + '] saving post: ' + _pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid);
 
 									if (post._attachmentsBlobs && post._attachmentsBlobs.length) {
 										var attachmentsIndex = 0;
