@@ -550,7 +550,7 @@
 		};
 
 		var onProgress = function(data) {
-			$progressPercentage.text((data.percentage || 0).toFixed(2));
+			$progressPercentage.text(data.count + '/' + data.total + ', ' + (data.percentage || 0).toFixed(7));
 		};
 
 		var onDownload = function(data) {
