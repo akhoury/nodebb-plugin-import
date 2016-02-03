@@ -590,7 +590,7 @@ var async = require('async'),
 	Importer.phasePercentage = 0;
 
 	Importer.progress = function(count, total, interval) {
-		interval = interval || 0.01;
+		interval = interval || 0.0000001;
 		var percentage = count / total * 100;
 		if (percentage === 0 || percentage >= 100 || (percentage - Importer.phasePercentage >= interval)) {
 			Importer.phasePercentage = percentage;
