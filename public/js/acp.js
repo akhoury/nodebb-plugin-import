@@ -587,11 +587,12 @@
 					chars: $('#importer-passwordgen-chars').val(),
 					len: parseInt($('#importer-passwordgen-len').val(), 10)
 				},
-				adminTakeOwnership: {
+        adminTakeOwnership: {
 					enable: $wrapper.find('#importer-admin-take-ownership').is(':checked'),
 					_username: $wrapper.find('#importer-admin-take-ownership-username').val(),
 					_uid: $wrapper.find('#importer-admin-take-ownership-uid').val()
 				},
+        importDuplicateEmails: $wrapper.find('#importer-import-duplicate-emails').is(':checked'),
 				autoConfirmEmails: $('#importer-autoconfirm-emails').is(':checked'),
 				userReputationMultiplier: parseInt($('#importer-user-reputation-multiplier').val(), 10),
 

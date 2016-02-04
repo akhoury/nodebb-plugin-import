@@ -159,6 +159,20 @@
 
             <div class="form-group">
                 <div class="checkbox">
+                    <label for="importer-import-duplicate-emails">
+                        <input type="checkbox" id="importer-import-duplicate-emails" name="importer-import-duplicate-emails"> Import duplicate emails
+                    </label>
+                    <p class="help-block">
+                       If a username with a duplicate email was found, the 2nd one's email will be updated, its username will be added to it, after a + sign.
+                       i.e. <code>john+username@gmail.com</code> - sending an email to that new address will work just fine (in most email systems) - however, the issue here
+                        is that these users won't be able to login via using the old email, they either must use the this new email to login or just use their usernames.
+                    </p>
+                </div>
+            </div>
+            <hr />
+
+            <div class="form-group">
+                <div class="checkbox">
                     <label for="importer-autoconfirm-emails">
                         <input type="checkbox" id="importer-autoconfirm-emails" name="importer-autoconfirm-emails"> Auto confirm user accounts
                     </label>

@@ -84,6 +84,8 @@ var async = require('async'),
 			_uid: null
 		},
 
+    importDuplicateEmails: true,
+
 		nbbTmpConfig: {
 			maximumPostLength: MAX_INT,
 			maximumChatMessageLength: MAX_INT,
@@ -685,6 +687,12 @@ var async = require('async'),
 		});
 	};
 
+  var plusValueToEmail = function (email, value) {
+    var parts = email.split("@");
+    parts[0] = parts[0] + "+" + value;
+    return parts.join("@");
+  };
+
 	Importer.importUsers = function(next) {
 		Importer._lastPercentage = 0;
 		Importer.phase('usersImportStart');
@@ -702,6 +710,7 @@ var async = require('async'),
 		fs.writeFileSync(DIRTY_USERS_FILE, +new Date(), {encoding: 'utf8'});
 		fs.ensureDirSync(picturesTmpPath);
 		fs.ensureDirSync(picturesPublicPath);
+
 
 		Importer.exporter.countUsers(function(err, total) {
 			Importer.success('Importing ' + total + ' users.');
@@ -727,6 +736,8 @@ var async = require('async'),
 									p = user._password;
 								}
 
+                var triedEmailUpdate = false;
+
 								var userData = {
 									username: u.username,
 									email: user._email,
@@ -741,7 +752,15 @@ var async = require('async'),
 								var onCreate = function(err, uid) {
 
 									if (err) {
-										Importer.warn('[process-count-at: ' + count + '] skipping username: "' + user._username + '" ' + err);
+
+										if (err.message === "[[error:email-taken]]" && config.importDuplicateEmails && !triedEmailUpdate) {
+                      userData.email = plusValueToEmail(userData.email, userData.username);
+                      triedEmailUpdate = true;
+                      User.create(userData, onCreate);
+                      return;
+                    }
+
+                    Importer.warn('[process-count-at: ' + count + '] skipping username: "' + user._username + '" ' + err);
 										Importer.progress(count, total);
 										done();
 									} else {
