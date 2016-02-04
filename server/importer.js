@@ -1727,7 +1727,6 @@ var async = require('async'),
 											content: post._content,
 											timestamp: post._timestamp || startTime,
 											handle: post._handle || post._guest,
-											toPid: post._toPid,
 											ip: post._ip
 										}, function(err, postReturn){
 											if (err) {
