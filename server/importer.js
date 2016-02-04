@@ -687,9 +687,26 @@ var async = require('async'),
 		});
 	};
 
-  var plusValueToEmail = function (email, value) {
+  var incrementEmail = function (email) {
     var parts = email.split("@");
-    parts[0] = parts[0] + "+" + value;
+    var parts2 = parts[0].split('+');
+
+    var first = parts2.shift();
+    var added = parts2.pop();
+
+    var nb = 1;
+    if (added) {
+      var match = added.match(/__imported_duplicate_email__(\d)+/);
+      if (match && match[1]) {
+        nb = parseInt(match[1], 10) + 1;
+      } else {
+        parts2.push(added);
+      }
+    }
+    parts2.push('__imported_duplicate_email__' + nb);
+    parts2.unshift(first);
+    parts[0] = parts2.join('+');
+
     return parts.join("@");
   };
 
@@ -736,13 +753,12 @@ var async = require('async'),
 									p = user._password;
 								}
 
-                var triedEmailUpdate = false;
-
 								var userData = {
 									username: u.username,
 									email: user._email,
 									password: p
 								};
+
 								if (!userData.username) {
 									Importer.warn('[process-count-at:' + count + '] skipping _username:' + user._username + ':_uid:' + user._uid + ', username is invalid.');
 									Importer.progress(count, total);
@@ -753,9 +769,8 @@ var async = require('async'),
 
 									if (err) {
 
-										if (err.message === "[[error:email-taken]]" && config.importDuplicateEmails && !triedEmailUpdate) {
-                      userData.email = plusValueToEmail(userData.email, userData.username);
-                      triedEmailUpdate = true;
+										if (err.message === "[[error:email-taken]]" && config.importDuplicateEmails) {
+                      userData.email = incrementEmail(userData.email);
                       User.create(userData, onCreate);
                       return;
                     }
