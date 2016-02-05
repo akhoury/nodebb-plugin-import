@@ -288,7 +288,11 @@ var async = require('async'),
 		return Data.each('posts:pid', 'post:', iterator, options, callback);
 	};
 
-	Data.eachImportedUser = function(iterator, options, callback) {
+  Data.eachOrphanedPost = function (iterator, options, callback) {
+    return Data.each('posts:pid', 'post:', iterator, nodeExtend(true, {where: {fields: {toPid: {exists: false }}}}, options), callback);
+  };
+
+  Data.eachImportedUser = function(iterator, options, callback) {
 		return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
 	};
 
@@ -409,14 +413,27 @@ var async = require('async'),
 				var keys = ids.map(function(id) {
 					return prefixEachId + id;
 				});
-				db.getObjects(keys, function(err, objects) {
-					process(err, objects, function(err) {
-						if (err) {
-							return next(err);
-						}
-						next();
-					});
-				});
+
+        if (options.where) {
+          options.where.keys = keys;
+          Data.getObjectsWhere(options.where, function(err, objects) {
+            process(err, objects, function(err) {
+              if (err) {
+                return next(err);
+              }
+              next();
+            });
+          });
+        } else {
+          db.getObjects(keys, function(err, objects) {
+            process(err, objects, function(err) {
+              if (err) {
+                return next(err);
+              }
+              next();
+            });
+          });
+        }
 			},
 			options,
 			callback);
@@ -540,8 +557,49 @@ var async = require('async'),
 				},
 				callback);
 		});
-
 	};
+
+  Data.getObjectsWhere = (function() {
+    return db.helpers.mongo ?
+      function (params, callback) {
+        var query = {};
+
+        if (params.keys && params.keys.length) {
+          query._key = {$in: keys};
+        }
+
+        if (params.fields) {
+          Object.keys(params.fields).forEach(function(field) {
+            var where = params.fields[field];
+            query[field] = {};
+            if (where && typeof where === "object") {
+              Object.keys(where).forEach(function(condition) {
+                query[field]['$' + condition] = where[condition];
+              });
+            } else {
+              query[field] = where;
+            }
+          });
+        }
+
+        db.collection('objects').find(query, {_id: 0}).toArray(function(err, data) {
+          if (err) {
+            return callback(err);
+          }
+          var map = db.helpers.mongo.toMap(data);
+          var returnData = [];
+
+          for (var i=0; i<keys.length; ++i) {
+            returnData.push(map[keys[i]]);
+          }
+
+          callback(null, returnData);
+        });
+      } :
+      function (params, callback) {
+        return db.getObjects(params.keys, callback);
+      }
+  })();
 
 	// only allows wildcards i.e. "user:*"
 	Data.keys = (function() {
