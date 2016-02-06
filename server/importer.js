@@ -107,6 +107,7 @@ var async = require('async'),
 			"registrationType": "normal",
 			"allowLocalLogin": 1,
 			"allowAccountDelete": 1,
+			"allowGuestHandles": 1,
 			"allowFileUploads": 1,
 			"allowUserHomePage": 1,
 			"maximumFileSize": MAX_INT,
@@ -1426,6 +1427,9 @@ var async = require('async'),
 									});
 								}
 							], function(err, results) {
+                if (err) {
+                  throw err;
+                }
 
 								var category = results[0];
 								var user = results[1] || {uid: '0'};
@@ -1500,7 +1504,8 @@ var async = require('async'),
 											thumb: topic._thumb,
 											tags: topic._tags
 										}, function (err, returnTopic) {
-											if (err) {
+
+                      if (err) {
 												Importer.warn('[process-count-at:' + count + '] skipping topic:_tid: ' + _tid + ':cid:' + category.cid + ':_cid:' + topic._cid + ':uid:' + user.uid +  ':_uid:' + topic._uid + ' err: ' + err);
 												Importer.progress(count, total);
 												done();
@@ -1542,22 +1547,19 @@ var async = require('async'),
 													edited: topic._edited || 0
 												};
 
-												// if (topic._edited) {
-												// 	postFields.edited = topic._edited;
-												// }
-
-												// console.log("Topic Edited:", postFields.edited, "type:", typeof postFields.edited);
-
 												var onPinned = function() {
 													db.setObject('topic:' + returnTopic.topicData.tid, topicFields, function(err, result) {
 														Importer.progress(count, total);
 														if (err) {
 															Importer.warn(err);
 														}
+
 														Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
 															topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
 															topics[_tid] = topic;
-															Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, done);
+															Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, function() {
+                                done();
+                              });
 														});
 													});
 												};
