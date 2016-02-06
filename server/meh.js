@@ -1,12 +1,19 @@
 var data = require('./data.js');
 
 setTimeout(function() {
-	data.db.getObject("message:1797", function(err, m) {
+	data.getObjectsWhere({fields: {
+    _imported_toPid: {exists: true, ne: ''},
+    _imported_pid: {exists: true},
+    pid: {exists: true},
+    toPid: {exists: false}
+  }}, function(err, m) {
+
 		console.log(m);
 	});
 }, 1000);
 
 return;
+
 var exporter  = require('./exporter.js');
 var async = require('async');
 

@@ -291,7 +291,7 @@ var async = require('async'),
 	};
 
   Data.eachOrphanedPost = function (iterator, options, callback) {
-    return Data.each('posts:pid', 'post:', iterator, nodeExtend(true, {where: {fields: {toPid: {exists: false }}}}, options), callback);
+    return Data.each('posts:pid', 'post:', iterator, nodeExtend(true, {where: {fields: {_imported_pid: {exists: true}, pid: {exists: true}, toPid: {exists: false }}}}, options), callback);
   };
 
   Data.eachImportedUser = function(iterator, options, callback) {
@@ -566,7 +566,8 @@ var async = require('async'),
       function (params, callback) {
         var query = {};
 
-        if (params.keys && params.keys.length) {
+        var keys = params.keys;
+        if (keys && keys.length) {
           query._key = {$in: keys};
         }
 
@@ -583,20 +584,7 @@ var async = require('async'),
             }
           });
         }
-
-        db.collection('objects').find(query, {_id: 0}).toArray(function(err, data) {
-          if (err) {
-            return callback(err);
-          }
-          var map = db.helpers.mongo.toMap(data);
-          var returnData = [];
-
-          for (var i=0; i<keys.length; ++i) {
-            returnData.push(map[keys[i]]);
-          }
-
-          callback(null, returnData);
-        });
+        db.client.collection('objects').find(query, {_id: 0, _key: 0}).toArray(callback);
       } :
       function (params, callback) {
         return db.getObjects(params.keys, callback);
