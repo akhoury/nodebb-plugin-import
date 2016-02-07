@@ -271,17 +271,17 @@ var async = require('async'),
 			Importer.warn('alreadyImportedAllBookmarks=true, skipping importBookmarks Phase');
 		}
 
-		series.concat([
-			Importer.fixCategoriesParentsAndAbilities,
-			Importer.fixPostsToPids,
-			Importer.fixGroupsOwners,
-			Importer.relockUnlockedTopics,
-			Importer.rebanAndMarkReadForUsers,
-			Importer.fixTopicTimestamps,
-			Importer.restoreConfig,
-			Importer.disallowGuestsWriteOnAllCategories,
-			Importer.teardown
-		]);
+		
+		series.push(Importer.fixCategoriesParentsAndAbilities);
+		series.push(Importer.fixPostsToPids);
+		series.push(Importer.fixGroupsOwners);
+		series.push(Importer.relockUnlockedTopics);
+		series.push(Importer.rebanAndMarkReadForUsers);
+		series.push(Importer.fixTopicTimestamps);
+		series.push(Importer.restoreConfig);
+		series.push(Importer.disallowGuestsWriteOnAllCategories);
+		series.push(Importer.teardown);
+		
 
 		async.series(series, callback);
 	};
