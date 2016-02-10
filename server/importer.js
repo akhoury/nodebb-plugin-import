@@ -2072,13 +2072,13 @@ var async = require('async'),
 		Importer.phase('rebanAndMarkReadForUsersStart');
 		Importer.progress(0, 1);
 
-		Data.countImportedUsers(function(err, total) {
-			Data.eachImportedUser(function(user, done) {
+		Data.countUsers(function(err, total) {
+			Data.eachUser(function(user, done) {
 					Importer.progress(count++, total);
 
 					async.parallel([
 						function(nxt) {
-							if (!user || !parseInt(user._banned, 10)) {
+							if (!user || !parseInt(user._imported_banned, 10)) {
 								return nxt();
 							}
 							User.ban(user.uid, function() {
@@ -2182,7 +2182,7 @@ var async = require('async'),
 
           async.parallel({
             locking: function (done) {
-              if (!topic || !parseInt(topic._locked, 10)) {
+              if (!topic || !parseInt(topic._imported_locked, 10)) {
                 return done();
               }
               db.setObjectField('topic:' + topic.tid, 'locked', 1, function(err) {
