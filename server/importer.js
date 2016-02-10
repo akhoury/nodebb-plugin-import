@@ -24,8 +24,7 @@ var async = require('async'),
 	Categories = require('../../../src/categories.js'),
 	db = module.parent.require('../../../src/database.js'),
 
-	IMPORT_BATCH_SIZE = 10,
-	FLUSH_BATCH_SIZE = 10,
+	EACH_LIMIT_BATCH_SIZE = 10,
 
 //todo use the real one
 	LOGGEDIN_UID = 1,
@@ -202,11 +201,10 @@ var async = require('async'),
 			Importer.importVotes,
 			Importer.importBookmarks,
 			Importer.fixCategoriesParentsAndAbilities,
-			Importer.fixPostsToPids,
-			Importer.fixGroupsOwners,
-			Importer.relockUnlockedTopics,
-			Importer.rebanAndMarkReadForUsers,
-			Importer.fixTopicTimestamps,
+      Importer.fixGroupsOwners,
+      Importer.rebanAndMarkReadForUsers,
+      Importer.fixTopicTimestampsAndRelockLockedTopics,
+      Importer.fixPostsToPids,
 			Importer.restoreConfig,
 			Importer.disallowGuestsWriteOnAllCategories,
 			Importer.teardown
@@ -271,17 +269,16 @@ var async = require('async'),
 			Importer.warn('alreadyImportedAllBookmarks=true, skipping importBookmarks Phase');
 		}
 
-		
+
 		series.push(Importer.fixCategoriesParentsAndAbilities);
-		series.push(Importer.fixPostsToPids);
-		series.push(Importer.fixGroupsOwners);
-		series.push(Importer.relockUnlockedTopics);
-		series.push(Importer.rebanAndMarkReadForUsers);
-		series.push(Importer.fixTopicTimestamps);
+    series.push(Importer.fixGroupsOwners);
+    series.push(Importer.rebanAndMarkReadForUsers);
+    series.push(Importer.fixTopicTimestampsAndRelockLockedTopics);
+    series.push(Importer.fixPostsToPids);
 		series.push(Importer.restoreConfig);
 		series.push(Importer.disallowGuestsWriteOnAllCategories);
 		series.push(Importer.teardown);
-		
+
 
 		async.series(series, callback);
 	};
@@ -423,7 +420,7 @@ var async = require('async'),
 					var index = 0;
 					Data.processCategoriesCidsSet(
 						function (err, ids, nextBatch) {
-							async.mapLimit(ids, FLUSH_BATCH_SIZE, function(id, cb) {
+							async.mapLimit(ids, EACH_LIMIT_BATCH_SIZE, function(id, cb) {
 								Importer.progress(index++, total);
 								Categories.purge(id, cb);
 							}, nextBatch);
@@ -448,7 +445,7 @@ var async = require('async'),
 					var index = 0; var count = 0;
 					Data.processUsersUidsSet(
 						function(err, ids, nextBatch) {
-							async.mapLimit(ids, FLUSH_BATCH_SIZE, function(uid, cb) {
+							async.mapLimit(ids, EACH_LIMIT_BATCH_SIZE, function(uid, cb) {
 								Importer.progress(index++, total);
 								if (parseInt(uid, 10) === 1) {
 									return cb();
@@ -482,7 +479,7 @@ var async = require('async'),
 					var index = 0; var count = 0;
 					Data.processGroupsNamesSet(
 						function(err, names, nextBatch) {
-							async.mapLimit(names, FLUSH_BATCH_SIZE, function(name, cb) {
+							async.mapLimit(names, EACH_LIMIT_BATCH_SIZE, function(name, cb) {
 								Importer.progress(index++, total);
 
 								// skip if system group
@@ -590,6 +587,12 @@ var async = require('async'),
 		});
 	};
 
+  function replacelog (msg) {
+    process.stdout.clearLine();
+    process.stdout.cursorTo(0);
+    process.stdout.write(msg);
+  }
+
 	Importer.phasePercentage = 0;
 
 	Importer.progress = function(count, total, interval) {
@@ -597,14 +600,16 @@ var async = require('async'),
 		var percentage = count / total * 100;
 		if (percentage === 0 || percentage >= 100 || (percentage - Importer.phasePercentage >= interval)) {
 			Importer.phasePercentage = percentage;
-			Importer.emit('importer.progress', {count: count, total: total, percentage: percentage});
+      replacelog(Importer._phase + ' ::: ' + count + '/' + total + ', ' + percentage + '%');
+      Importer.emit('importer.progress', {count: count, total: total, percentage: percentage});
 		}
 	};
 
 	Importer.phase = function(phase, data) {
 		Importer.phasePercentage = 0;
 		Importer._phase = phase;
-		Importer.emit('importer.phase', {phase: phase, data: data, timestamp: +new Date()});
+    replacelog('Phase ::: ' + phase + '\n');
+    Importer.emit('importer.phase', {phase: phase, data: data, timestamp: +new Date()});
 	};
 
 	var recoverImportedGroup = function(_gid, callback) {
@@ -2059,38 +2064,6 @@ var async = require('async'),
 		next();
 	};
 
-	Importer.relockUnlockedTopics = function(next) {
-		var count = 0;
-
-		Importer.phase('relockingTopicsStart');
-		Importer.progress(0, 1);
-
-		Data.countImportedTopics(function(err, total) {
-			Data.eachImportedTopic(function(topic, done) {
-					Importer.progress(count++, total);
-
-					if (!topic || !parseInt(topic._locked, 10)) {
-						return done();
-					}
-					db.setObjectField('topic:' + topic.tid, 'locked', 1, function(err) {
-						if (err) {
-							Importer.warn(err);
-						} else {
-							Importer.log('[process-count-at: ' + count + '] locked topic:' + topic.tid + ' back');
-						}
-						done();
-					});
-				},
-				{async: true, eachLimit: IMPORT_BATCH_SIZE},
-				function(err) {
-					if (err) throw err;
-					Importer.progress(1, 1);
-					Importer.phase('relockingTopicsDone');
-					next();
-				});
-		});
-	};
-
 	Importer.rebanAndMarkReadForUsers = function(next) {
 		var count = 0;
 
@@ -2185,7 +2158,7 @@ var async = require('async'),
 						}
 					], done);
 				},
-				{async: true, eachLimit: IMPORT_BATCH_SIZE},
+				{async: true, eachLimit: EACH_LIMIT_BATCH_SIZE},
 				function(err) {
 					if (err) throw err;
 					Importer.progress(1, 1);
@@ -2195,49 +2168,67 @@ var async = require('async'),
 		});
 	};
 
-	Importer.fixTopicTimestamps = function(next) {
+	Importer.fixTopicTimestampsAndRelockLockedTopics = function(next) {
 		var count = 0;
 
-		Importer.phase('fixTopicTimestampsStart');
+		Importer.phase('fixTopicTimestampsAndRelockLockedTopicsStart');
 		Importer.progress(0, 1);
 
 		Data.countTopics(function(err, total) {
 			Data.eachTopic(function(topic, done) {
 					Importer.progress(count++, total);
 
-					if (!topic || !topic.tid)
-						return done();
+          async.parallel({
+            locking: function (done) {
+              if (!topic || !parseInt(topic._locked, 10)) {
+                return done();
+              }
+              db.setObjectField('topic:' + topic.tid, 'locked', 1, function(err) {
+                if (err) {
+                  Importer.warn(err);
+                } else {
+                  Importer.log('[process-count-at: ' + count + '] locked topic:' + topic.tid + ' back');
+                }
+                done();
+              });
+            },
 
-					// todo paginate this as well
-					db.getSortedSetRevRange('tid:' + topic.tid + ':posts', 0, -1, function(err, pids) {
-						if (err) {
-							return done(err);
-						}
+            timestamps: function (done) {
+              if (!topic || !topic.tid)
+                return done();
 
-						if (!Array.isArray(pids) || !pids.length) {
-							return done();
-						}
-						async.parallel({
-							cid: function(next) {
-								db.getObjectField('topic:' + topic.tid, 'cid', next);
-							},
-							lastPostTimestamp: function(next) {
-								db.getObjectField('post:' + pids[0], 'timestamp', next);
-							}
-						}, function(err, results) {
-							if (err) {
-								return done(err);
-							}
+              // todo paginate this as well
+              db.getSortedSetRevRange('tid:' + topic.tid + ':posts', 0, 0, function(err, pids) {
+                if (err) {
+                  return done(err);
+                }
 
-							db.sortedSetAdd('cid:' + results.cid + ':tids', results.lastPostTimestamp, topic.tid, done);
-						});
-					});
+                if (!Array.isArray(pids) || !pids.length) {
+                  return done();
+                }
+
+                async.parallel({
+                  cid: function(next) {
+                    db.getObjectField('topic:' + topic.tid, 'cid', next);
+                  },
+                  lastPostTimestamp: function(next) {
+                    db.getObjectField('post:' + pids[0], 'timestamp', next);
+                  }
+                }, function(err, results) {
+                  if (err) {
+                    return done(err);
+                  }
+                  db.sortedSetAdd('cid:' + results.cid + ':tids', results.lastPostTimestamp, topic.tid, done);
+                });
+              });
+            }
+          }, done);
 				},
-				{async: true, eachLimit: IMPORT_BATCH_SIZE},
+				{async: true, eachLimit: EACH_LIMIT_BATCH_SIZE},
 				function(err) {
 					if (err) throw err;
 					Importer.progress(1, 1);
-					Importer.phase('fixTopicTimestampsDone');
+					Importer.phase('fixTopicTimestampsAndRelockLockedTopicsDone');
 					next();
 				});
 		});
@@ -2249,19 +2240,19 @@ var async = require('async'),
 		Importer.progress(0, 1);
 
 		Data.countPosts(function(err, total) {
-			Data.eachPost(function(post, done) {
+			Data.eachOrphanedPost(function(post, done) {
 					Importer.progress(count++, total);
-					if (!post || !post._imported_toPid || !post.pid || post._imported_toPid_fixed) {
+					if (!post || !post._imported_toPid || !post.pid || post.toPid) {
 						return done();
 					}
 					Data.getImportedPost(post._imported_toPid, function(err, toPost) {
 						if (err || !toPost) {
 							return done();
 						}
-						Posts.setPostFields(post.pid, {'toPid': toPost.pid, '_imported_toPid_fixed': 1}, done);
+						db.setObjectField('post:' + post.pid, 'toPid', toPost.pid, done);
 					});
 				},
-				{async: true, eachLimit: IMPORT_BATCH_SIZE},
+				{async: true, eachLimit: EACH_LIMIT_BATCH_SIZE},
 				function(err) {
 					if (err) throw err;
 					Importer.progress(1, 1);
@@ -2291,7 +2282,7 @@ var async = require('async'),
 						});
 					});
 				},
-				{async: true, eachLimit: IMPORT_BATCH_SIZE},
+				{async: true, eachLimit: EACH_LIMIT_BATCH_SIZE},
 				function(err) {
 					if (err) throw err;
 					Importer.progress(1, 1);
@@ -2344,7 +2335,7 @@ var async = require('async'),
 							} else {
 								done();
 							}
-						}
+						};
 
 						if (parseInt(category._imported_disabled, 10)) {
 							disabled = 1;
@@ -2544,7 +2535,7 @@ var async = require('async'),
 
 	Importer.warn = function() {
 		var args = _.toArray(arguments);
-		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
+		args[0] = '\n[' + (new Date()).toISOString() + '] ' + args[0];
 
 		args.unshift('importer.warn');
 		args.push('logged');
@@ -2561,7 +2552,7 @@ var async = require('async'),
 		}
 
 		var args = _.toArray(arguments);
-		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
+		args[0] = '\n[' + (new Date()).toISOString() + '] ' + args[0];
 
 		args.unshift('importer.log');
 		args.push('logged');
@@ -2578,7 +2569,7 @@ var async = require('async'),
 
 	Importer.success = function() {
 		var args = _.toArray(arguments);
-		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
+		args[0] = '\n[' + (new Date()).toISOString() + '] ' + args[0];
 		args.unshift('importer.success');
 		args.push('logged');
 		Importer.emit.apply(Importer, args);
@@ -2591,7 +2582,7 @@ var async = require('async'),
 	Importer.error = function() {
 		var args = _.toArray(arguments);
 		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
-		args.unshift('importer.error');
+		args.unshift('\nimporter.error');
 		args.push('logged');
 		Importer.emit.apply(Importer, args);
 		args.unshift(logPrefix);
