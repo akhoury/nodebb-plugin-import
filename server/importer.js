@@ -1742,7 +1742,6 @@ var async = require('async'),
 												done();
 											} else {
 
-										
 												imported++;
 
 												var fields = {
@@ -1769,14 +1768,10 @@ var async = require('async'),
 													_imported_path: post._path || ''
 												};
 
-												// if (post._edited) {
-												// 	fields.edited = post._edited;
-												// }
-
 												post = nodeExtend(true, {}, post, fields, postReturn);
 												post.imported = true;
-												
-												async.parallel([
+
+												async.series([
 													function (next) {
 														Posts.setPostFields(postReturn.pid, fields, next);
 													},
@@ -1784,9 +1779,7 @@ var async = require('async'),
 														Data.setPostImported(_pid, post.pid, post, next);
 													}
 												], function(err) {
-													if (count % 1000 === 0) {
 														Importer.progress(count, total);
-													}
 													done();
 												});
 											}
