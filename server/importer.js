@@ -1737,7 +1737,7 @@ var async = require('async'),
 												done();
 											} else {
 
-												post.imported = true;
+										
 												imported++;
 
 												var fields = {
@@ -1768,12 +1768,21 @@ var async = require('async'),
 												// 	fields.edited = post._edited;
 												// }
 
-												Posts.setPostFields(postReturn.pid, fields, function() {
-													Importer.progress(count, total);
-													post = nodeExtend(true, {}, post, fields, postReturn);
-													post.imported = true;
-													posts[_pid] = post;
-													Data.setPostImported(_pid, post.pid, post, done);
+												post = nodeExtend(true, {}, post, fields, postReturn);
+												post.imported = true;
+												
+												async.parallel([
+													function (next) {
+														Posts.setPostFields(postReturn.pid, fields, next);
+													},
+													function (next) {
+														Data.setPostImported(_pid, post.pid, post, next);
+													}
+												], function(err) {
+													if (count % 1000 === 0) {
+														Importer.progress(count, total);
+													}
+													done();
 												});
 											}
 										});
