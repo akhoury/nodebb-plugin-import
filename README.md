@@ -74,7 +74,27 @@ but you need to submit an issue with all the details (NodeBB version, issue etc.
 Once the importer is done, 4 Files will be available for you to download *(depending on your config, they may not be persisted for too long, so download them as soon as the import is done)*
 
 * `redirect.map.json` Which is a map (which you would have configured beforhand  [snapshot](https://camo.githubusercontent.com/c9c4a2ffb0ae0e82a9367a3463f62bb12a7d8a0a/687474703a2f2f692e696d6775722e636f6d2f75487a507667642e706e67)) of all the old URLs and their corresponding new URLs if you want to redirect them correctly. This map is designed to work with [RedirectBB](https://github.com/akhoury/RedirectBB) which I wrote specifically for this purpose, but theoretically, you can write your own, or use an [nginx Map Module](http://wiki.nginx.org/HttpMapModule) or whatever else.
-* `redirect.map.csv` same data as the json, but in csv, probably what you need for the nginx map module, (example [here](http://serverfault.com/a/441517), you probably need to find/replace all commas with a space)
+* `redirect.map.csv` same data as the json, but in csv, probably what you need for the nginx map module, (example [here](http://serverfault.com/a/441517), you probably need to find/replace all commas with a space and add a semi-colon at the end of each line, the latter you can just do when you setup the redirection template, just add the semicolon there, before downloading)
+```
+cp redirect.map.csv redirect.map
+sed -i -e 's/,/    /g' redirect.map # replace each comma by 4 spaces
+# you might also need to add a semi-colon ';' at the end of each line
+# if you didn't do it when you setup the redirect templates
+```
+set up you nginx config
+```
+ map $request_uri $new {
+       include /usr/share/nginx/html/redirect.map;
+ }
+```
+Depending on how large your map file is, you might need to increase the limit
+```
+ server {
+       # ....
+      map_hash_max_size 123456789; # bytes
+       # ....
+ }
+ ```
 * `users.csv`, which is just list of of all of the imported users, emails, oldId, newId, joindateTimeStamp, and most importantly, their new passwords (if you have configured the importer to generate passwords for you - i highly recommend against that, let them reset their passwords). Anyways, you can use this CSV file with this tool to blast an email to all of your users telling them what happened. http://akhoury.github.io/pages/mandrill-blast
 * `users.json` same data as the csv, but in a json format.
 
