@@ -75,6 +75,10 @@ Once the importer is done, 4 Files will be available for you to download *(depen
 
 * `redirect.map.json` Which is a map (which you would have configured beforhand  [snapshot](https://camo.githubusercontent.com/c9c4a2ffb0ae0e82a9367a3463f62bb12a7d8a0a/687474703a2f2f692e696d6775722e636f6d2f75487a507667642e706e67)) of all the old URLs and their corresponding new URLs if you want to redirect them correctly. This map is designed to work with [RedirectBB](https://github.com/akhoury/RedirectBB) which I wrote specifically for this purpose, but theoretically, you can write your own, or use an [nginx Map Module](http://wiki.nginx.org/HttpMapModule) or whatever else.
 * `redirect.map.csv` same data as the json, but in csv, probably what you need for the nginx map module, (example [here](http://serverfault.com/a/441517), you probably need to find/replace all commas with a space and add a semi-colon at the end of each line, the latter you can just do when you setup the redirection template, just add the semicolon there, before downloading)
+
+here's a sample **regexy** template setup that works with nginx, (still gotta replace commas with space(s))
+![screen shot 2016-02-12 at 5 14 22 pm](https://cloud.githubusercontent.com/assets/1398375/13021971/27fd3ec8-d1ac-11e5-8d56-264707719ef4.png)
+
 ```
 cp redirect.map.csv redirect.map
 sed -i -e 's/,/    /g' redirect.map # replace each comma by 4 spaces
