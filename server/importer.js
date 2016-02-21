@@ -29,7 +29,7 @@ var async = require('async'),
 //todo use the real one
 	LOGGEDIN_UID = 1,
 
-	logPrefix = '[nodebb-plugin-import]',
+	logPrefix = '\n[nodebb-plugin-import]',
 
 	BACKUP_CONFIG_FILE = path.join(__dirname, '/tmp/importer.nbb.backedConfig.json'),
 
@@ -608,7 +608,7 @@ var async = require('async'),
 	Importer.phase = function(phase, data) {
 		Importer.phasePercentage = 0;
 		Importer._phase = phase;
-    replacelog('Phase ::: ' + phase + '\n');
+    Importer.success('Phase ::: ' + phase + '\n');
     Importer.emit('importer.phase', {phase: phase, data: data, timestamp: +new Date()});
 	};
 
@@ -1600,7 +1600,7 @@ var async = require('async'),
 						},
 						function(nxt) {
 							fs.remove(attachmentsTmpPath, nxt);
-						},
+						}
 					], next);
 
 				});
@@ -1771,9 +1771,9 @@ var async = require('async'),
 												post = nodeExtend(true, {}, post, fields, postReturn);
 												post.imported = true;
 
-												async.series([
+												async.parallel([
 													function (next) {
-														Posts.setPostFields(postReturn.pid, fields, next);
+														db.setObject('post:' + postReturn.pid, fields, next);
 													},
 													function (next) {
 														Data.setPostImported(_pid, post.pid, post, next);
@@ -1804,7 +1804,7 @@ var async = require('async'),
 						},
 						function(nxt) {
 							fs.remove(attachmentsTmpPath, nxt);
-						},
+						}
 					], next);
 
 				});
@@ -2176,6 +2176,9 @@ var async = require('async'),
 		Importer.phase('fixTopicTimestampsAndRelockLockedTopicsStart');
 		Importer.progress(0, 1);
 
+    var lprinted = 0;
+    var tprinted = 0;
+
 		Data.countTopics(function(err, total) {
 			Data.eachTopic(function(topic, done) {
 					Importer.progress(count++, total);
@@ -2185,6 +2188,11 @@ var async = require('async'),
               if (!topic || !parseInt(topic._imported_locked, 10)) {
                 return done();
               }
+
+              if (lprinted++ < 10) {
+                console.log('locking', count, topic);
+              }
+
               db.setObjectField('topic:' + topic.tid, 'locked', 1, function(err) {
                 if (err) {
                   Importer.warn(err);
@@ -2201,6 +2209,10 @@ var async = require('async'),
 
               // todo paginate this as well
               db.getSortedSetRevRange('tid:' + topic.tid + ':posts', 0, 0, function(err, pids) {
+                if (tprinted++ < 10) {
+                  console.log('timestamp', count, pids);
+                }
+
                 if (err) {
                   return done(err);
                 }
@@ -2241,9 +2253,16 @@ var async = require('async'),
 		Importer.phase('fixPostsToPidsStart');
 		Importer.progress(0, 1);
 
+    var printed = 0;
+
 		Data.countPosts(function(err, total) {
 			Data.eachOrphanedPost(function(post, done) {
 					Importer.progress(count++, total);
+
+          if (printed++ < 10) {
+            console.log('fixPostsToPids', count, post);
+          }
+
 					if (!post || !post._imported_toPid || !post.pid || post.toPid) {
 						return done();
 					}
@@ -2537,7 +2556,7 @@ var async = require('async'),
 
 	Importer.warn = function() {
 		var args = _.toArray(arguments);
-		args[0] = '\n[' + (new Date()).toISOString() + '] ' + args[0];
+		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 
 		args.unshift('importer.warn');
 		args.push('logged');
@@ -2554,7 +2573,7 @@ var async = require('async'),
 		}
 
 		var args = _.toArray(arguments);
-		args[0] = '\n[' + (new Date()).toISOString() + '] ' + args[0];
+		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 
 		args.unshift('importer.log');
 		args.push('logged');
@@ -2571,7 +2590,7 @@ var async = require('async'),
 
 	Importer.success = function() {
 		var args = _.toArray(arguments);
-		args[0] = '\n[' + (new Date()).toISOString() + '] ' + args[0];
+		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
 		args.unshift('importer.success');
 		args.push('logged');
 		Importer.emit.apply(Importer, args);
@@ -2584,7 +2603,7 @@ var async = require('async'),
 	Importer.error = function() {
 		var args = _.toArray(arguments);
 		args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
-		args.unshift('\nimporter.error');
+		args.unshift('importer.error');
 		args.push('logged');
 		Importer.emit.apply(Importer, args);
 		args.unshift(logPrefix);
