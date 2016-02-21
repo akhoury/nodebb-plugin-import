@@ -1173,13 +1173,13 @@ var async = require('async'),
 							};
 
 							if (config.categoriesIcons && config.categoriesIcons.length) {
-								categoryData.icon = config.categoriesIcons[Math.floor(Math.random() * config.categoriesIcons.length)];
+								categoryData.icon = category._icon || config.categoriesIcons[Math.floor(Math.random() * config.categoriesIcons.length)];
 							}
 							if (config.categoriesBgColors && config.categoriesBgColors.length) {
-								categoryData.bgColor = config.categoriesBgColors[Math.floor(Math.random() * config.categoriesBgColors.length)];
+								categoryData.bgColor = category._bgColor || config.categoriesBgColors[Math.floor(Math.random() * config.categoriesBgColors.length)];
 							}
 							if (config.categoriesTextColors && config.categoriesTextColors.length) {
-								categoryData.color = config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)];
+								categoryData.color = category._color || config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)];
 							}
 
 							var onCreate = function(err, categoryReturn) {

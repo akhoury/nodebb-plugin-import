@@ -175,6 +175,12 @@ Each record should look like this:
         "_parentCid": 1, // OPTIONAL, parent category _cid defaults to null
 
         "_skip": 0, // OPTIONAL, if you want to intentionally skip that record
+
+	"_color": "#FFFFFF", // OPTIONAL, text color, defaults to random
+
+	"_bgColor": "#123ABC", // OPTIONAL, background color, defaults to random
+
+	"_icon": "comment", // OPTIONAL, Font Awesome icon, defaults to random
 }
 ```
 
