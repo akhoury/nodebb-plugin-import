@@ -1535,6 +1535,7 @@ var async = require('async'),
 													_imported_uid: topic._uid || '',
 													_imported_cid: topic._cid,
 													_imported_slug: topic._slug || '',
+													_imported_locked: topic._locked || 0,
 													_imported_path: topic._path || '',
 													_imported_title: topic._title || '',
 													_imported_content: topic._content || '',
@@ -2176,9 +2177,6 @@ var async = require('async'),
 		Importer.phase('fixTopicTimestampsAndRelockLockedTopicsStart');
 		Importer.progress(0, 1);
 
-    var lprinted = 0;
-    var tprinted = 0;
-
 		Data.countTopics(function(err, total) {
 			Data.eachTopic(function(topic, done) {
 					Importer.progress(count++, total);
@@ -2187,10 +2185,6 @@ var async = require('async'),
             locking: function (done) {
               if (!topic || !parseInt(topic._imported_locked, 10)) {
                 return done();
-              }
-
-              if (lprinted++ < 10) {
-                console.log('locking', count, topic);
               }
 
               db.setObjectField('topic:' + topic.tid, 'locked', 1, function(err) {
@@ -2209,9 +2203,6 @@ var async = require('async'),
 
               // todo paginate this as well
               db.getSortedSetRevRange('tid:' + topic.tid + ':posts', 0, 0, function(err, pids) {
-                if (tprinted++ < 10) {
-                  console.log('timestamp', count, pids);
-                }
 
                 if (err) {
                   return done(err);
@@ -2253,16 +2244,9 @@ var async = require('async'),
 		Importer.phase('fixPostsToPidsStart');
 		Importer.progress(0, 1);
 
-    var printed = 0;
-
 		Data.countPosts(function(err, total) {
 			Data.eachOrphanedPost(function(post, done) {
 					Importer.progress(count++, total);
-
-          if (printed++ < 10) {
-            console.log('fixPostsToPids', count, post);
-          }
-
 					if (!post || !post._imported_toPid || !post.pid || post.toPid) {
 						return done();
 					}
