@@ -588,6 +588,9 @@ var async = require('async'),
 	};
 
   function replacelog (msg) {
+    if (!process.stdout.isTTY) {
+    	return;
+    }
     process.stdout.clearLine();
     process.stdout.cursorTo(0);
     process.stdout.write(msg);
