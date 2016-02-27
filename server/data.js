@@ -290,18 +290,6 @@ var async = require('async'),
 		return Data.each('posts:pid', 'post:', iterator, options, callback);
 	};
 
-  Data.eachOrphanedPost = function (iterator, options, callback) {
-    return Data.each('posts:pid', 'post:', iterator, nodeExtend(true,
-      {where: {
-        fields: {
-          _imported_toPid: {exists: true, ne: ''},
-          _imported_pid: {exists: true, ne: ''},
-          pid: {exists: true},
-          toPid: {exists: false}
-        }
-      }}, options), callback);
-  };
-
   Data.eachImportedUser = function(iterator, options, callback) {
 		return Data.each('_imported:_users', '_imported_user:', iterator, options, callback);
 	};

@@ -204,7 +204,6 @@ var async = require('async'),
       Importer.fixGroupsOwners,
       Importer.rebanAndMarkReadForUsers,
       Importer.fixTopicTimestampsAndRelockLockedTopics,
-      Importer.fixPostsToPids,
 			Importer.restoreConfig,
 			Importer.disallowGuestsWriteOnAllCategories,
 			Importer.teardown
@@ -274,7 +273,6 @@ var async = require('async'),
     series.push(Importer.fixGroupsOwners);
     series.push(Importer.rebanAndMarkReadForUsers);
     series.push(Importer.fixTopicTimestampsAndRelockLockedTopics);
-    series.push(Importer.fixPostsToPids);
 		series.push(Importer.restoreConfig);
 		series.push(Importer.disallowGuestsWriteOnAllCategories);
 		series.push(Importer.teardown);
@@ -1669,10 +1667,22 @@ var async = require('async'),
 										}
 										cb(null, usr);
 									});
+								},
+								function(cb) {
+									if (!post._toPid) {
+										return cb(null, null);
+									}
+									Data.getImportedPost(post._toPid, function(err, toPost) {
+										if (err) {
+											Importer.warn('getImportedPost: ' + post._toPid + ' err: ' + err);
+										}
+										cb(null, toPost);
+									});
 								}
 							], function(err, results) {
 								var topic = results[0];
 								var user = results[1] || {uid: 0};
+								var toPost = results[2] || {pid: null};
 
 								if (!topic) {
 									Importer.warn('[process-count-at: ' + count + '] skipping post:_pid: ' + _pid + ' _tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' imported: ' + !!topic);
@@ -1738,7 +1748,8 @@ var async = require('async'),
 											content: post._content,
 											timestamp: post._timestamp || startTime,
 											handle: post._handle || post._guest,
-											ip: post._ip
+											ip: post._ip,
+											toPid: toPost.pid,
 										}, function(err, postReturn){
 											if (err) {
 												Importer.warn('[process-count-at: ' + count + '] skipping post: ' + post._pid + ':tid:' + topic.tid + ':_tid:' + post._tid + ':uid:' + user.uid + ':_uid:' + post._uid + ' ' + err);
@@ -2237,34 +2248,6 @@ var async = require('async'),
 					if (err) throw err;
 					Importer.progress(1, 1);
 					Importer.phase('fixTopicTimestampsAndRelockLockedTopicsDone');
-					next();
-				});
-		});
-	};
-
-	Importer.fixPostsToPids = function(next) {
-		var count = 0;
-		Importer.phase('fixPostsToPidsStart');
-		Importer.progress(0, 1);
-
-		Data.countPosts(function(err, total) {
-			Data.eachOrphanedPost(function(post, done) {
-					Importer.progress(count++, total);
-					if (!post || !post._imported_toPid || !post.pid || post.toPid) {
-						return done();
-					}
-					Data.getImportedPost(post._imported_toPid, function(err, toPost) {
-						if (err || !toPost) {
-							return done();
-						}
-						db.setObjectField('post:' + post.pid, 'toPid', toPost.pid, done);
-					});
-				},
-				{async: true, eachLimit: EACH_LIMIT_BATCH_SIZE},
-				function(err) {
-					if (err) throw err;
-					Importer.progress(1, 1);
-					Importer.phase('fixPostsToPidsDone');
 					next();
 				});
 		});
