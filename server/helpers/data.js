@@ -7,6 +7,7 @@
 
   // nbb-core
   var utils = nbbpath.require('../public/js/utils');
+  var utils = nbbpath.require('./batch');
 
   var DEFAULT_BATCH_SIZE = 100;
 
@@ -45,7 +46,7 @@
   };
 
   Data.processSet = function(setKey, prefixEachId, process, options, callback) {
-    return Data.processIdsSet(
+    return batch.processSortedSet(
       setKey,
       function(err, ids, next) {
         var keys = ids.map(function(id) {
@@ -62,60 +63,6 @@
       },
       options,
       callback);
-  };
-
-  Data.processIdsSet = function(setKey, process, options, callback) {
-    if (typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-
-    callback = typeof callback === 'function' ? callback : function(){};
-    options = options || {};
-
-    if (typeof process !== 'function') {
-      throw new Error(process + ' is not a function');
-    }
-
-    // custom done condition
-    options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function(){};
-
-    // always start at, useful when deleting all records
-    // options.alwaysStartAt
-
-    var batch = options.batch || DEFAULT_BATCH_SIZE;
-    var start = 0;
-    var end = batch;
-    var done = false;
-
-    async.whilst(
-      function(err) {
-        if (err) {
-          return true;
-        }
-        return !done;
-      },
-      function(next) {
-        db.getSortedSetRange(setKey, start, end, function(err, ids) {
-          if (err) {
-            return next(err);
-          }
-          if (!ids.length || options.doneIf(start, end, ids)) {
-            done = true;
-            return next();
-          }
-          process(err, ids, function(err) {
-            if (err) {
-              return next(err);
-            }
-            start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
-            end = start + batch;
-            next();
-          });
-        })
-      },
-      callback
-    );
   };
 
   Data.isImported = function(setKey, _id, callback) {
@@ -168,7 +115,7 @@
   Data.deleteEachImported = function(setKey, objPrefix, onProgress, callback) {
     Data.count(setKey, function(err, total) {
       var count = 1;
-      Data.processIdsSet(setKey,
+      batch.processSortedSet(setKey,
         function(err, ids, nextBatch) {
           async.mapLimit(ids, DEFAULT_BATCH_SIZE, function(_id, cb) {
             Data.deleteImported(setKey, objPrefix, _id, function(err, response) {
