@@ -911,8 +911,8 @@ var async = require('async'),
 										};
 
 										if (('' + user._level).toLowerCase() == 'moderator') {
-											Importer.makeModeratorOnAllCategories(uid, user._joindate || startTime, function () {
-												Importer.warn(userData.username + ' just became a moderator on all categories');
+											groupsJoin('Global Moderators', uid, user._joindate || startTime, function () {
+												Importer.warn(userData.username + ' just became a Global Moderator');
 												onLevel();
 											});
 										} else if (('' + user._level).toLowerCase() == 'administrator') {
@@ -2421,22 +2421,6 @@ var async = require('async'),
 			Importer.warn('Could not restore NodeBB tmp configs, because ' + BACKUP_CONFIG_FILE + ' does not exist');
 			next();
 		}
-	};
-
-	// aka forums
-	Importer.makeModeratorOnAllCategories = function(uid, timestamp, done) {
-		Data.eachCategory(function(category, next) {
-				async.parallel([
-					function (next) {
-						groupsJoin('cid:' + category.cid + ':privileges:mods', uid, timestamp, next);
-					},
-					function (next) {
-						groupsJoin('cid:' + category.cid + ':privileges:groups:moderate', uid, timestamp, next);
-					}
-				], next);
-			},
-			{async: true, eachLimit: 10},
-			done);
 	};
 
 	// which of the values is falsy
