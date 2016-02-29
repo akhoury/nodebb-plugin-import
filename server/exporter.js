@@ -86,6 +86,7 @@ var async = require('async'),
 			Exporter.countCategories,
 			Exporter.countTopics,
 			Exporter.countPosts,
+			Exporter.countRooms,
 			Exporter.countMessages,
 			Exporter.countVotes,
 			Exporter.countBookmarks
@@ -132,6 +133,21 @@ var async = require('async'),
 					batch: COUNT_BATCH_SIZE
 				},
 				function(err) {
+					cb(err, count);
+				});
+	};
+
+	Exporter.countRooms = function(cb) {
+		if (Exporter._exporter.countRooms) {
+			return Exporter._exporter.countRooms(cb);
+		}
+		var count = 0;
+		Exporter.exportRooms(function(err, map, arr, nextBatch) {
+					count += arr.length;
+					nextBatch();
+				}, {
+					batch: COUNT_BATCH_SIZE
+				}, function(err) {
 					cb(err, count);
 				});
 	};
@@ -355,6 +371,33 @@ var async = require('async'),
 		});
 	};
 
+	var onRooms = function(err, arg1, arg2, cb) {
+		if (err) return cb(err);
+		if (_.isObject(arg1)) {
+			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+		}
+		if (_.isArray(arg1)) {
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_mid'), arg1);
+		}
+	};
+	Exporter.getRooms = function(cb) {
+		if (!Exporter._exporter.getRooms) {
+			Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getRooms function, skipping...'});
+			return onRooms(null, {}, [], cb);
+		}
+		Exporter._exporter.getRooms(function(err, arg1, arg2) {
+			onRooms(err, arg1, arg2, cb);
+		});
+	};
+	Exporter.getPaginatedRooms = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedRooms) {
+			return Exporter.getRooms(cb);
+		}
+		Exporter._exporter.getPaginatedRooms(start, end, function(err, arg1, arg2) {
+			onRooms(err, arg1, arg2, cb);
+		});
+	};
+
 	var onMessages = function(err, arg1, arg2, cb) {
 		if (err) return cb(err);
 		if (_.isObject(arg1)) {
@@ -555,6 +598,9 @@ var async = require('async'),
 							break;
 
 						// optional interfaces
+						case 'rooms':
+							return _.isFunction(exporter.getPaginatedRooms);
+							break;
 						case 'messages':
 							return _.isFunction(exporter.getPaginatedMessages);
 							break;
@@ -581,6 +627,10 @@ var async = require('async'),
 
 	Exporter.exportUsers = function(process, options, callback) {
 		return Exporter.exportType('users', process, options, callback);
+	};
+
+	Exporter.exportRooms = function(process, options, callback) {
+		return Exporter.exportType('rooms', process, options, callback);
 	};
 
 	Exporter.exportMessages = function(process, options, callback) {

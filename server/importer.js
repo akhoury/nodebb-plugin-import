@@ -35,6 +35,7 @@ var async = require('async'),
 
 	DIRTY_GROUPS_FILE = path.join(__dirname, '/tmp/importer.dirty.groups'),
 	DIRTY_USERS_FILE = path.join(__dirname, '/tmp/importer.dirty.users'),
+	DIRTY_ROOMS_FILE = path.join(__dirname, '/tmp/importer.dirty.rooms'),
 	DIRTY_MESSAGES_FILE = path.join(__dirname, '/tmp/importer.dirty.messages'),
 	DIRTY_CATEGORIES_FILE = path.join(__dirname, '/tmp/importer.dirty.categories'),
 	DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
@@ -44,6 +45,7 @@ var async = require('async'),
 
 	areGroupsDirty,
 	areUsersDirty,
+	areRoomsDirty,
 	areMessagesDirty,
 	areCategoriesDirty,
 	areTopicsDirty,
@@ -55,6 +57,7 @@ var async = require('async'),
 
 	alreadyImportedAllGroups = false,
 	alreadyImportedAllUsers = false,
+	alreadyImportedAllRooms = false,
 	alreadyImportedAllMessages = false,
 	alreadyImportedAllCategories = false,
 	alreadyImportedAllTopics = false,
@@ -195,15 +198,16 @@ var async = require('async'),
 			Importer.importCategories,
 			Importer.allowGuestsOnAllCategories,
 			Importer.importUsers,
+			Importer.importRooms,
 			Importer.importMessages,
 			Importer.importTopics,
 			Importer.importPosts,
 			Importer.importVotes,
 			Importer.importBookmarks,
 			Importer.fixCategoriesParentsAndAbilities,
-      Importer.fixGroupsOwners,
-      Importer.rebanAndMarkReadForUsers,
-      Importer.fixTopicTimestampsAndRelockLockedTopics,
+			Importer.fixGroupsOwners,
+			Importer.rebanAndMarkReadForUsers,
+			Importer.fixTopicTimestampsAndRelockLockedTopics,
 			Importer.restoreConfig,
 			Importer.disallowGuestsWriteOnAllCategories,
 			Importer.teardown
@@ -238,6 +242,11 @@ var async = require('async'),
 			series.push(Importer.importUsers);
 		} else {
 			Importer.warn('alreadyImportedAllUsers=true, skipping importUsers Phase');
+		}
+		if (! alreadyImportedAllRooms) {
+			series.push(Importer.importRooms);
+		} else {
+			Importer.warn('alreadyImportedAllRooms=true, skipping importRooms Phase');
 		}
 		if (! alreadyImportedAllMessages) {
 			series.push(Importer.importMessages);
@@ -285,6 +294,7 @@ var async = require('async'),
 
 		areGroupsDirty = true;
 		areUsersDirty = true;
+		areRoomsDirty = true;
 		areMessagesDirty = true;
 		areCategoriesDirty = true;
 		areTopicsDirty = true;
@@ -295,6 +305,7 @@ var async = require('async'),
 
 		alreadyImportedAllGroups = false;
 		alreadyImportedAllUsers = false;
+		alreadyImportedAllRooms = false;
 		alreadyImportedAllMessages = false;
 		alreadyImportedAllCategories = false;
 		alreadyImportedAllTopics = false;
@@ -313,6 +324,7 @@ var async = require('async'),
 		areGroupsDirty = !! fs.existsSync(DIRTY_GROUPS_FILE);
 		areVotesDirty = !! fs.existsSync(DIRTY_VOTES_FILE);
 		areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
+		areRoomsDirty = !! fs.existsSync(DIRTY_ROOMS_FILE);
 		areMessagesDirty = !! fs.existsSync(DIRTY_MESSAGES_FILE);
 		areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
 		areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
@@ -320,20 +332,22 @@ var async = require('async'),
 		areBookmarksDirty = !! fs.existsSync(DIRTY_BOOKMARKS_FILE);
 
 		isAnythingDirty =
-			areGroupsDirty
-			|| areVotesDirty
-			|| areUsersDirty
-			|| areCategoriesDirty
-			|| areTopicsDirty
-			|| arePostsDirty
-			|| areMessagesDirty
-			|| areBookmarksDirty;
+			areGroupsDirty ||
+			areVotesDirty ||
+			areUsersDirty ||
+			areCategoriesDirty ||
+			areTopicsDirty ||
+			arePostsDirty ||
+			areRoomsDirty ||
+			areMessagesDirty ||
+			areBookmarksDirty;
 
 		// order in start() and resume() matters and must be in sync
 		if (areGroupsDirty) {
 			alreadyImportedAllGroups = false;
 			alreadyImportedAllCategories = false;
 			alreadyImportedAllUsers = false;
+			alreadyImportedAllRooms = false;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
@@ -343,6 +357,7 @@ var async = require('async'),
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = false;
 			alreadyImportedAllUsers = false;
+			alreadyImportedAllRooms = false;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
@@ -352,6 +367,17 @@ var async = require('async'),
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = false;
+			alreadyImportedAllRooms = false;
+			alreadyImportedAllMessages = false;
+			alreadyImportedAllTopics = false;
+			alreadyImportedAllPosts = false;
+			alreadyImportedAllVotes = false;
+			alreadyImportedAllBookmarks = false;
+		} else if (areRoomsDirty) {
+			alreadyImportedAllGroups = true;
+			alreadyImportedAllCategories = true;
+			alreadyImportedAllUsers = true;
+			alreadyImportedAllRooms = false;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
@@ -361,6 +387,7 @@ var async = require('async'),
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
+			alreadyImportedAllRooms = true;
 			alreadyImportedAllMessages = false;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
@@ -370,6 +397,7 @@ var async = require('async'),
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
+			alreadyImportedAllRooms = true;
 			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = false;
 			alreadyImportedAllPosts = false;
@@ -379,6 +407,7 @@ var async = require('async'),
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
+			alreadyImportedAllRooms = true;
 			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = true;
 			alreadyImportedAllPosts = false;
@@ -388,6 +417,7 @@ var async = require('async'),
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
+			alreadyImportedAllRooms = true;
 			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = true;
 			alreadyImportedAllPosts = true;
@@ -397,6 +427,7 @@ var async = require('async'),
 			alreadyImportedAllGroups = true;
 			alreadyImportedAllCategories = true;
 			alreadyImportedAllUsers = true;
+			alreadyImportedAllRooms = true;
 			alreadyImportedAllMessages = true;
 			alreadyImportedAllTopics = true;
 			alreadyImportedAllPosts = true;
@@ -507,6 +538,36 @@ var async = require('async'),
 				});
 			},
 			function(done) {
+				Importer.phase('purgeRoomsStart');
+				Importer.progress(0, 1);
+
+				Data.countRooms(function(err, total) {
+					var index = 0;
+					Data.eachRoom(
+						function(room, next) {
+							Importer.progress(index++, total);
+							async.waterfall([
+								function(nxt) {
+									Messaging.getUidsInRoom(room.roomId, 0, -1, nxt);
+								},
+								function(uids, nxt) {
+									Messaging.leaveRoom(uids, room.roomId, nxt);
+								},
+								function(nxt) {
+									db.deleteObject('chat:room:' + room.roomId);
+								},
+							], next);
+						},
+						{},
+						function(err) {
+							Importer.progress(1, 1);
+							Importer.phase('purgeRoomsDone');
+							done(err)
+						}
+					);
+				});
+			},
+			function(done) {
 				Importer.phase('purgeMessagesStart');
 				Importer.progress(0, 1);
 
@@ -555,6 +616,7 @@ var async = require('async'),
 					userCount: 1,
 					nextGid: 1,
 					groupCount: 1,
+					nextChatRoomId: 1,
 					nextMid: 1,
 					nextCid: 1,
 					categoryCount: 1,
@@ -623,6 +685,13 @@ var async = require('async'),
 	var recoverImportedUser = function(_uid, callback) {
 		if (! flushed && (alreadyImportedAllUsers || areUsersDirty)) {
 			return Data.getImportedUser(_uid, callback);
+		}
+		return callback(null, null);
+	};
+
+	var recoverImportedRoom = function(_roomId, callback) {
+		if (! flushed && (alreadyImportedAllRooms || areRoomsDirty)) {
+			return Data.getImportedRoom(_roomId, callback);
 		}
 		return callback(null, null);
 	};
@@ -999,6 +1068,112 @@ var async = require('async'),
 	};
 
 
+	Importer.importRooms = function(next) {
+		Importer.phase('roomsImportStart');
+		Importer.progress(0, 1);
+
+		Importer._lastPercentage = 0;
+		var count = 0,
+			imported = 0,
+			alreadyImported = 0,
+			startTime = +new Date();
+
+		fs.writeFileSync(DIRTY_ROOMS_FILE, +new Date(), {encoding: 'utf8'});
+		Importer.exporter.countRooms(function(err, total) {
+			Importer.success('Importing ' + total + ' rooms.');
+			Importer.exporter.exportRooms(
+				function(err, rooms, roomsArr, nextExportBatch) {
+
+					async.eachSeries(roomsArr, function(room, done) {
+						count++;
+						var _roomId = room._roomId;
+
+						recoverImportedRoom(_roomId, function(err, _room) {
+							if (_room) {
+								Importer.progress(count, total);
+								imported++;
+								alreadyImported++;
+								return done();
+							}
+
+							async.parallel([
+								function(cb) {
+									Data.getImportedUser(room._fromuid, function(err, fromUser) {
+										if (err) {
+											Importer.warn('getImportedUser:_fromuid:' + room._fromuid + ' err: ' + err.message);
+										}
+										cb(null, fromUser);
+									});
+								},
+								function(cb) {
+									async.map(room._touids, function(id, cb_) {
+											Data.getImportedUser(id, function(err, toUser) {
+												if (err) {
+													Importer.warn('getImportedUser:_touids:' + id + ' err: ' + err.message);
+												}
+												cb_(null, toUser);
+											});
+										}, cb);
+							], function(err, results) {
+								var fromUser = results[0];
+								var toUsers = results[1].filter(function(u) {
+									return !!u;
+								});
+
+								if (!fromUser || !toUsers.length) {
+									Importer.warn('[process-count-at: ' + count + '] skipping room:_roomId: ' + _roomId + ' _fromuid:' + room._fromuid + ':imported: ' + !!fromUser + ', _touids:' + room._touids + ':imported: ' + !!toUsers.length);
+									Importer.progress(count, total);
+									done();
+								} else {
+									Importer.log('[process-count-at: ' + count + '] saving room:_roomId: ' + _roomIid + ' _fromuid:' + room._fromuid + ', _touids:' + room._touids);
+
+									Messaging.newRoom(fromUser.uid, toUsers.map(function(u) { return u.uid; }), function(err, roomId) {
+										if (err) {
+											Importer.warn('[process-count-at: ' + count + '] skipping room:_roomId: ' + _roomId + ' _fromuid:' + room._fromuid + ':imported: ' + !!fromUser + ', _touids:' + room._touids + ':imported: ' + !!toUsers.length + ' err: ' + err.message);
+											Importer.progress(count, total);
+											return done();
+										}
+										
+										imported++;
+										var uids = [fromUser.uid].concat(toUsers.map(function(u) { return u.uid; })).sort();
+
+										var now = new Date();
+										async.parallel([
+												function(next) {
+													db.sortedSetAdd('chat:room:' + roomId + 'uids', uids.map(function() { return room._timestamp || now; }), uids, next);
+												},
+												function(next) {
+			db.sortedSetsAdd(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms'; }), room._timestamp || now, roomId, next);
+												},
+										], function(err) {
+											if (err) {
+												Importer.warn('[process-count-at: ' + count + '] room creation error room:_roomId: ' + _roomId + ':roomId:' + roomId, err);
+												return done();
+											}
+
+											Importer.progress(count, total);
+											room.roomId = roomId;
+											Data.setRoomImported(_roomId, roomId, room, done);
+										});
+									});
+								}
+							});
+						});
+					}, nextExportBatch);
+				},
+				{
+					// options
+				},
+				function() {
+					Importer.progress(1, 1);
+					Importer.phase('roomsImportDone');
+					Importer.success('Imported ' + imported + '/' + total + ' rooms' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
+					fs.remove(DIRTY_MESSAGES_FILE, next);
+				});
+		});
+	};
+
+
 	Importer.importMessages = function(next) {
 		Importer.phase('messagesImportStart');
 		Importer.progress(0, 1);
@@ -1016,101 +1191,88 @@ var async = require('async'),
 				function(err, messages, messagesArr, nextExportBatch) {
 
 					async.eachSeries(messagesArr, function(message, done) {
-            count++;
-            var _mid = message._mid;
+						count++;
+						var _mid = message._mid;
 
-            recoverImportedMessage(_mid, function(err, _message) {
-              if (_message) {
-                Importer.progress(count, total);
-                imported++;
-                alreadyImported++;
-                return done();
-              }
+						recoverImportedMessage(_mid, function(err, _message) {
+							if (_message) {
+								Importer.progress(count, total);
+								imported++;
+								alreadyImported++;
+								return done();
+							}
 
-              if (message._fromuid == message._touid) {
-                Importer.warn('[process-count-at:' + count + '] skipping message:_mid: ' + _mid + ', because it was send to self');
-                Importer.progress(count, total);
-                return done();
-              }
+							async.parallel([
+								function(cb) {
+									Data.getImportedUser(message._fromuid, function(err, toUser) {
+										if (err) {
+											Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
+										}
+										cb(null, toUser);
+									});
+								},
+								function(cb) {
+									Data.getImportedRoom(message._roomId, function(err, toRoom) {
+										if (err) {
+											Importer.warn('getImportedRoom:_roomId:' + message._roomId + ' err: ' + err.message);
+										}
+										cb(null, toRoom);
+									});
+								}
+							], function(err, results) {
+								var fromUser = results[0];
+								var toRoom = results[1];
 
-              async.parallel([
-                function(cb) {
-                  Data.getImportedUser(message._fromuid, function(err, toUser) {
-                    if (err) {
-                      Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
-                    }
-                    cb(null, toUser);
-                  });
-                },
-                function(cb) {
-                  Data.getImportedUser(message._touid, function(err, toUser) {
-                    if (err) {
-                      Importer.warn('getImportedUser:_touid:' + message._touid + ' err: ' + err.message);
-                    }
-                    cb(null, toUser);
-                  });
-                }
-              ], function(err, results) {
-                var fromUser = results[0];
-                var toUser = results[1];
+								if (!fromUser || !toRoom) {
+									Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom);
+									Importer.progress(count, total);
+									done();
+								} else {
+									Importer.log('[process-count-at: ' + count + '] saving message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ', _roomId:' + message._roomId);
 
-                if (!fromUser || !toUser) {
-                  Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser);
-                  Importer.progress(count, total);
-                  done();
-                } else {
-
-                  Importer.log('[process-count-at: ' + count + '] saving message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ', _touid:' + message._touid);
-
-                  Messaging.addMessage(fromUser.uid, toUser.uid, message._content, message._timestamp, function(err, messageReturn) {
-                    if (err || !messageReturn) {
-                      Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _touid:' + message._touid + ':imported: ' + !!toUser
-                      + (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
+									Messaging.addMessage(fromUser.uid, toRoom.roomId, message._content, message._timestamp, function(err, messageReturn) {
+										if (err || !messageReturn) {
+											Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom + (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
                       Importer.progress(count, total);
                       return done();
-                    }
+										}
 
-                    imported++;
-                    var mid = messageReturn.mid;
-                    var uids =  [messageReturn.fromuid, messageReturn.touid].sort();
+										imported++;
+										var mid = messageReturn.mid;
+										var roomId = messageReturn.roomId;
 
-                    var _imported_content = message._content;
+										var _imported_content = message._content;
 
-                    delete messageReturn._key;
-                    delete messageReturn.toUser;
-                    delete messageReturn.fromUser;
+										delete messageReturn._key;
 
-                    async.parallel([
-                      function(next) {
-                        db.setObjectField('message:' + mid, '_imported_content', _imported_content, next);
-                      },
-                      function(next) {
-                        db.sortedSetAdd('uid:' + messageReturn.fromuid + ':chats', message._timestamp, messageReturn.touid, next);
-                      },
-                      function(next) {
-                        db.sortedSetAdd('uid:' + messageReturn.touid + ':chats', message._timestamp, messageReturn.fromuid, next);
-                      },
-                      function(next) {
-                        db.sortedSetRemove('uid:' + messageReturn.fromuid + ':chats:unread', messageReturn.touid, next);
-                      },
-                      function(next) {
-                        db.sortedSetRemove('uid:' + messageReturn.touid + ':chats:unread', messageReturn.fromuid, next);
-                      }
-                    ], function(err) {
-                      if (err) {
-                        Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
-                        return done();
-                      }
+										async.parallel([
+											function(next) {
+												db.setObjectField('message:' + mid, '_imported_content', _imported_content, next);
+											},
+											function(next) {
+												Messaging.getUidsInRoom(roomId, 0, -1, function(err, uids) {
+													if (err) {
+														return next(err);
+													}
 
-                      Importer.progress(count, total);
-                      message = nodeExtend(true, {}, message, messageReturn);
-                      Data.setMessageImported(_mid, mid, message, done);
-                    });
-                  });
-                }
-              });
-            });
-          }, nextExportBatch);
+													db.sortedSetsRemove(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms:unread'; }), roomId, next);
+												});
+											},
+										], function(err) {
+											if (err) {
+												Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
+												return done();
+											}
+
+											Importer.progress(count, total);
+											message = nodeExtend(true, {}, message, messageReturn);
+											Data.setMessageImported(_mid, mid, message, done);
+										});
+									});
+								}
+							});
+						});
+					}, nextExportBatch);
 
 				},
 				{

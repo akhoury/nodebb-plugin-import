@@ -37,6 +37,10 @@ var async = require('async'),
 		return Data.setImported('_imported:_groups', '_imported_group:', _gid, gidOrGname, group, callback);
 	};
 
+	Data.setRoomImported = function(_roomId, roomId, room, callback) {
+		return Data.setImported('_imported:_rooms', '_imported_room:', _roomId, roomId, room, callback);
+	};
+
 	Data.setMessageImported = function(_mid, mid, message, callback) {
 		return Data.setImported('_imported:_messages', '_imported_message:', _mid, mid, message, callback);
 	};
@@ -67,6 +71,10 @@ var async = require('async'),
 
 	Data.isUserImported = function(_uid, callback) {
 		return Data.isImported('_imported:_users', _uid, callback);
+	};
+
+	Data.isRoomImported = function(_roomId, callback) {
+		return Data.isImported('_imported:_rooms', _roomId, callback);
 	};
 
 	Data.isMessageImported = function(_mid, callback) {
@@ -101,6 +109,10 @@ var async = require('async'),
 		return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
 	};
 
+	Data.getImportedRoom = function(_roomId, callback) {
+		return Data.getImported('_imported:_rooms', '_imported_room:', _roomId, callback);
+	};
+
 	Data.getImportedMessage = function(_mid, callback) {
 		return Data.getImported('_imported:_messages', '_imported_message:', _mid, callback);
 	};
@@ -131,6 +143,10 @@ var async = require('async'),
 
 	Data.deleteImportedGroup = function(_gid, callback) {
 		return Data.deleteImported('_imported:_groups', '_imported_group:', _gid, callback);
+	};
+
+	Data.deleteImportedRoom = function(_roomId, callback) {
+		return Data.deleteImported('_imported:_rooms', '_imported_room:', _roomId, callback);
 	};
 
 	Data.deleteImportedMessage = function(_mid, callback) {
@@ -165,6 +181,10 @@ var async = require('async'),
 		return Data.deleteEachImported('_imported:_groups', '_imported_group:', onProgress, callback);
 	};
 
+	Data.deleteImportedRooms = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_rooms', '_imported_room:', onProgress, callback);
+	};
+
 	Data.deleteImportedMessages = function(onProgress, callback) {
 		return Data.deleteEachImported('_imported:_messages', '_imported_message:', onProgress, callback);
 	};
@@ -195,6 +215,10 @@ var async = require('async'),
 
 	Data.countImportedUsers = function(callback) {
 		Data.count('_imported:_users', callback);
+	};
+
+	Data.countImportedRooms = function(callback) {
+		Data.count('_imported:_rooms', callback);
 	};
 
 	Data.countImportedMessages = function(callback) {
@@ -231,6 +255,15 @@ var async = require('async'),
 		Data.count('groups:createtime', callback);
 	};
 
+	Data.countRooms = function(callback) {
+		Data.keys('chat:room:*', function(err, keys) {
+			if (err) {
+				callback(err);
+			}
+			callback(err, keys.length)
+		});
+	};
+
 	Data.countMessages = function(callback) {
 		Data.keys('message:*', function(err, keys) {
 			if (err) {
@@ -258,6 +291,24 @@ var async = require('async'),
 
 	Data.eachGroup = function(iterator, options, callback) {
 		return Data.each('groups:createtime', 'group:', iterator, options, callback);
+	};
+
+	Data.eachRoom = function(iterator, options, callback) {
+		options = options || {};
+		var prefix = 'chat:room:';
+		Data.keys(prefix + '*', function(err, keys) {
+			if (err) {
+				return callback(err);
+			}
+			async.mapLimit(keys, options.batch || DEFAULT_BATCH_SIZE, function(key, next) {
+				db.getObject(key, function(err, room) {
+					if (room) {
+						room.roomId = key.replace(prefix, '');
+					}
+					iterator(room, next);
+				});
+			}, callback);
+		});
 	};
 
 	Data.eachMessage = function(iterator, options, callback) {
@@ -296,6 +347,10 @@ var async = require('async'),
 
 	Data.eachImportedGroup = function(iterator, options, callback) {
 		return Data.each('_imported:_groups', '_imported_group:', iterator, options, callback);
+	};
+
+	Data.eachImportedRoom = function(iterator, options, callback) {
+		return Data.each('_imported:_rooms', '_imported_room:', iterator, options, callback);
 	};
 
 	Data.eachImportedMessage = function(iterator, options, callback) {
