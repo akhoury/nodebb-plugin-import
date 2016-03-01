@@ -1098,18 +1098,18 @@ var async = require('async'),
 
 							async.parallel([
 								function(cb) {
-									Data.getImportedUser(room._fromuid, function(err, fromUser) {
+									Data.getImportedUser(room._uid, function(err, fromUser) {
 										if (err) {
-											Importer.warn('getImportedUser:_fromuid:' + room._fromuid + ' err: ' + err.message);
+											Importer.warn('getImportedUser:_uid:' + room._uid + ' err: ' + err.message);
 										}
 										cb(null, fromUser);
 									});
 								},
 								function(cb) {
-									async.map(room._touids, function(id, cb_) {
+									async.map(room._uids, function(id, cb_) {
 											Data.getImportedUser(id, function(err, toUser) {
 												if (err) {
-													Importer.warn('getImportedUser:_touids:' + id + ' err: ' + err.message);
+													Importer.warn('getImportedUser:_uids:' + id + ' err: ' + err.message);
 												}
 												cb_(null, toUser);
 											});
@@ -1121,15 +1121,15 @@ var async = require('async'),
 								});
 
 								if (!fromUser || !toUsers.length) {
-									Importer.warn('[process-count-at: ' + count + '] skipping room:_roomId: ' + _roomId + ' _fromuid:' + room._fromuid + ':imported: ' + !!fromUser + ', _touids:' + room._touids + ':imported: ' + !!toUsers.length);
+									Importer.warn('[process-count-at: ' + count + '] skipping room:_roomId: ' + _roomId + ' _uid:' + room._uid + ':imported: ' + !!fromUser + ', _uids:' + room._uids + ':imported: ' + !!toUsers.length);
 									Importer.progress(count, total);
 									done();
 								} else {
-									Importer.log('[process-count-at: ' + count + '] saving room:_roomId: ' + _roomIid + ' _fromuid:' + room._fromuid + ', _touids:' + room._touids);
+									Importer.log('[process-count-at: ' + count + '] saving room:_roomId: ' + _roomIid + ' _uid:' + room._uid + ', _uids:' + room._uids);
 
 									Messaging.newRoom(fromUser.uid, toUsers.map(function(u) { return u.uid; }), function(err, roomId) {
 										if (err) {
-											Importer.warn('[process-count-at: ' + count + '] skipping room:_roomId: ' + _roomId + ' _fromuid:' + room._fromuid + ':imported: ' + !!fromUser + ', _touids:' + room._touids + ':imported: ' + !!toUsers.length + ' err: ' + err.message);
+											Importer.warn('[process-count-at: ' + count + '] skipping room:_roomId: ' + _roomId + ' _uid:' + room._uid + ':imported: ' + !!fromUser + ', _uids:' + room._uids + ':imported: ' + !!toUsers.length + ' err: ' + err.message);
 											Importer.progress(count, total);
 											return done();
 										}
