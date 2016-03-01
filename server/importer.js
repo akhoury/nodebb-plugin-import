@@ -1133,27 +1133,32 @@ var async = require('async'),
 											Importer.progress(count, total);
 											return done();
 										}
-										
-										imported++;
-										var uids = [fromUser.uid].concat(toUsers.map(function(u) { return u.uid; })).sort();
 
-										var now = new Date();
-										async.parallel([
+										Messaging.renameRoom(fromUser.uid, roomId, room._roomName, function() {
+											imported++;
+											var uids = [fromUser.uid].concat(toUsers.map(function(u) { return u.uid; })).sort();
+
+											var now = new Date();
+											async.parallel([
 												function(next) {
 													db.sortedSetAdd('chat:room:' + roomId + 'uids', uids.map(function() { return room._timestamp || now; }), uids, next);
 												},
 												function(next) {
 			db.sortedSetsAdd(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms'; }), room._timestamp || now, roomId, next);
 												},
-										], function(err) {
-											if (err) {
-												Importer.warn('[process-count-at: ' + count + '] room creation error room:_roomId: ' + _roomId + ':roomId:' + roomId, err);
-												return done();
-											}
+												function(next) {
+													Messaging.getRoomData(roomId, next);
+												},
+											], function(err, results) {
+												if (err) {
+													Importer.warn('[process-count-at: ' + count + '] room creation error room:_roomId: ' + _roomId + ':roomId:' + roomId, err);
+													return done();
+												}
 
-											Importer.progress(count, total);
-											room.roomId = roomId;
-											Data.setRoomImported(_roomId, roomId, room, done);
+												Importer.progress(count, total);
+												room = nodeExtend(true, {}, room, results[2]);
+												Data.setRoomImported(_roomId, roomId, room, done);
+											});
 										});
 									});
 								}

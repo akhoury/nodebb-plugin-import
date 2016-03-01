@@ -329,6 +329,8 @@ Each record should look like this:
 
 	"_roomId": 45, // REQUIRED
 
+	"_roomName": "import planning", // OPTIONAL, name of room
+
 	"_uid": 10, // REQUIRED, owner of the room
 
 	"_uids": [20, 25, 32], // REQUIRED, other users in the room
