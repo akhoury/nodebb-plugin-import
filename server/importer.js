@@ -1126,7 +1126,7 @@ var async = require('async'),
 									Importer.progress(count, total);
 									done();
 								} else {
-									Importer.log('[process-count-at: ' + count + '] saving room:_roomId: ' + _roomIid + ' _uid:' + room._uid + ', _uids:' + room._uids);
+									Importer.log('[process-count-at: ' + count + '] saving room:_roomId: ' + _roomId + ' _uid:' + room._uid + ', _uids:' + room._uids);
 
 									Messaging.newRoom(fromUser.uid, toUsers.map(function(u) { return u.uid; }), function(err, roomId) {
 										if (err) {
