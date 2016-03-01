@@ -1107,13 +1107,14 @@ var async = require('async'),
 								},
 								function(cb) {
 									async.map(room._uids, function(id, cb_) {
-											Data.getImportedUser(id, function(err, toUser) {
-												if (err) {
-													Importer.warn('getImportedUser:_uids:' + id + ' err: ' + err.message);
-												}
-												cb_(null, toUser);
-											});
-										}, cb);
+										Data.getImportedUser(id, function(err, toUser) {
+											if (err) {
+												Importer.warn('getImportedUser:_uids:' + id + ' err: ' + err.message);
+											}
+											cb_(null, toUser);
+										});
+									}, cb);
+								}
 							], function(err, results) {
 								var fromUser = results[0];
 								var toUsers = results[1].filter(function(u) {
