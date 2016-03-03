@@ -657,8 +657,7 @@
 						categoriesDescriptions: $wrapper.find('#content-convert-categories-descriptions').is(':checked'),
 						topicsTitle: $wrapper.find('#content-convert-topics-titles').is(':checked'),
 						topicsContent: $wrapper.find('#content-convert-topics-content').is(':checked'),
-						postsContent: $wrapper.find('#content-convert-posts-content').is(':checked'),
-						messagesContent: $wrapper.find('#content-convert-messages-content').is(':checked')
+						postsContent: $wrapper.find('#content-convert-posts-content').is(':checked')
 					}
 				}
 			};

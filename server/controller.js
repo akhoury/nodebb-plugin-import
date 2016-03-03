@@ -1393,35 +1393,6 @@ var fs = require('fs-extra'),
 					} else {
 						done();
 					}
-				},
-				function(done) {
-					if (rconf.messagesContent) {
-						Controller.phase('convertMessagesStart');
-						Controller.progress(0, 0);
-						Data.countMessages(function(err, total) {
-							var index = 0;
-							Data.eachMessage(
-									function(message, next) {
-										var nxt = function(err) {
-											Controller.progress(index++, total);
-											next(err);
-										};
-										if (message && message._imported_mid && message._imported_content) {
-											db.setObjectField('message:' + message.mid, 'content', Controller.convert(message._imported_content, 'post', message.mid), nxt);
-										} else {
-											nxt();
-										}
-									},
-									{async: true, eachLimit: CONVERT_BATCH_LIMIT},
-									function(err) {
-										Controller.progress(1, 1);
-										Controller.phase('convertMessagesDone');
-										done(err);
-									});
-						});
-					} else {
-						done();
-					}
 				}
 			], function(err, results) {
 

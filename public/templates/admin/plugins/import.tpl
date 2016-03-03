@@ -359,11 +359,6 @@
                 <input checked type="checkbox" id="content-convert-posts-content" name="content-convert-posts-content"> Posts content
             </label>
         </div>
-        <div class="checkbox">
-            <label for="content-convert-messages-content">
-                <input checked type="checkbox" id="content-convert-messages-content" name="content-convert-messages-content"> Messages content
-            </label>
-        </div>
     </div>
 
     <button
