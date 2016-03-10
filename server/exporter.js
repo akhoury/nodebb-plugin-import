@@ -89,7 +89,8 @@ var async = require('async'),
 			Exporter.countRooms,
 			Exporter.countMessages,
 			Exporter.countVotes,
-			Exporter.countBookmarks
+			Exporter.countBookmarks,
+			Exporter.countFavourites
 		], function(err, results) {
 			if (err) return cb(err);
 			cb({
@@ -98,9 +99,11 @@ var async = require('async'),
 				categories: results[2],
 				topics: results[3],
 				posts: results[4],
-				messages: results[5],
-				votes: results[6],
-				bookmarks: results[7]
+				rooms: results[5],
+				messages: results[6],
+				votes: results[7],
+				bookmarks: results[8],
+				favourites: results[9]
 			});
 		});
 	};
@@ -239,6 +242,22 @@ var async = require('async'),
 		}
 		var count = 0;
 		Exporter.exportBookmarks(function(err, map, arr, nextBatch) {
+					count += arr.length;
+					nextBatch();
+				},
+				{
+					batch: COUNT_BATCH_SIZE
+				},
+				function(err) {
+					cb(err, count);
+				});
+	};
+	Exporter.countFavourites = function(cb) {
+		if (Exporter._exporter.countFavourites) {
+			return Exporter._exporter.countFavourites(cb);
+		}
+		var count = 0;
+		Exporter.exportFavourites(function(err, map, arr, nextBatch) {
 					count += arr.length;
 					nextBatch();
 				},
@@ -483,6 +502,35 @@ var async = require('async'),
 		});
 	};
 
+	// Favourites getters
+	var onFavourites = function(err, arg1, arg2, cb) {
+		if (err) return cb(err);
+
+		if (_.isObject(arg1)) {
+			return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
+		}
+		if (_.isArray(arg1)) {
+			return cb(null, _.isObject(arg2) ? arg2 : _.indexBy(arg1, '_bid'), arg1);
+		}
+	};
+	Exporter.getFavourites = function(cb) {
+		if (!Exporter._exporter.getFavourites) { // favourites are an optional feature
+			Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getFavourites function, skipping...'});
+			return onFavourites(null, {}, [], cb);
+		}
+		Exporter._exporter.getFavourites(function(err, arg1, arg2) {
+			onFavourites(err, arg1, arg2, cb);
+		});
+	};
+	Exporter.getPaginatedFavourites = function(start, end, cb) {
+		if (!Exporter._exporter.getPaginatedFavourites) {
+			return Exporter.getFavourites(cb);
+		}
+		Exporter._exporter.getPaginatedFavourites(start, end, function(err, arg1, arg2) {
+			onFavourites(err, arg1, arg2, cb);
+		});
+	};
+
 
 	Exporter.teardown = function(cb) {
 		Exporter._exporter.teardown(cb);
@@ -610,6 +658,9 @@ var async = require('async'),
 						case 'bookmarks':
 							return _.isFunction(exporter.getPaginatedBookmarks);
 							break;
+						case 'favourites':
+							return _.isFunction(exporter.getPaginatedFavourites);
+							break;
 
 						// if just checking if in general pagination is supported, then don't check the optional ones
 						default:
@@ -655,6 +706,10 @@ var async = require('async'),
 
 	Exporter.exportBookmarks = function(process, options, callback) {
 		return Exporter.exportType('bookmarks', process, options, callback);
+	};
+
+	Exporter.exportFavourites = function(process, options, callback) {
+		return Exporter.exportType('favourites', process, options, callback);
 	};
 
 	Exporter.exportType = function(type, process, options, callback) {

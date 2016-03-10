@@ -23,6 +23,7 @@ This section is up here because it's very important for you to read it, so let's
 * `_gid` --> old group id
 * `_vid` --> old vote id
 * `_bid` --> old bookmark id
+* `_fid` --> old favourite id
 * `cid` --> new category id
 * `uid` --> new user id
 * `tid` --> new topic id
@@ -32,6 +33,7 @@ This section is up here because it's very important for you to read it, so let's
 * `gid` --> new group id
 * `vid` --> new vote id
 * `bid` --> new bookmark id
+* `fid` --> new favourite id
 
 ## Required
 You need a node module that has the following interface.
@@ -467,6 +469,33 @@ Each record should look like this:
         "_uid": 789, // REQUIRED, old user id
 
         "_index": 2 // REQUIRED, the index of the bookmarked-post, i.e. 5 if the 6'sh post of that topic was the bookmarked post
+}
+```
+
+### YourModule.getFavourites(callback) [deprecated]
+
+### YourModule.getPaginatedFavourites(start, limit, callback) [OPTIONAL FUNCTION]
+* `start` of the query row
+* `limit` of the query results
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+
+```
+  - err: if truthy the export process will throw the error and stop
+  - map: a hashmap of all the favourites ready to import
+```
+In the `map`, the `keys` are the favourites `_fid` (or the old favourite Id).
+
+Each record should look like this:
+```javascript
+{
+       // notice how all the old variables start with an _
+       // if any of the required variables fails, the record will be skipped
+
+        "_fid": 987, // REQUIRED, old favourite id
+
+        "_pid": 123, // REQUIRED, old post id
+
+        "_uid": 789 // REQUIRED, old user id
 }
 ```
 

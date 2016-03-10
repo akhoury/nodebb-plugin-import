@@ -65,6 +65,10 @@ var async = require('async'),
 		return Data.setImported('_imported:_bookmarks', '_imported_bookmark:', _bid, bid, bookmark, callback);
 	};
 
+	Data.setFavouriteImported = function(_fid, fid, favourite, callback){
+		return Data.setImported('_imported:_favourites', '_imported_favourite:', _fid, fid, favourite, callback);
+	};
+
 	Data.isGroupImported = function(_gid, callback) {
 		return Data.isImported('_imported:_groups', _gid, callback);
 	};
@@ -99,6 +103,10 @@ var async = require('async'),
 
 	Data.isBookmarkImported = function(_bid, callback) {
 		return Data.isImported('_imported:_bookmarks', _bid, callback);
+	};
+
+	Data.isFavouriteImported = function(_fid, callback) {
+		return Data.isImported('_imported:_favourites', _fid, callback);
 	};
 
 	Data.getImportedGroup = function(_gid, callback) {
@@ -137,6 +145,10 @@ var async = require('async'),
 		return Data.getImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
 	};
 
+	Data.getImportedFavourite = function(_fid, callback) {
+		return Data.getImported('_imported:_favourites', '_imported_favourite:', _fid, callback);
+	};
+
 	Data.deleteImportedUser = function(_uid, callback) {
 		return Data.deleteImported('_imported:_users', '_imported_user:', _uid, callback);
 	};
@@ -171,6 +183,10 @@ var async = require('async'),
 
 	Data.deleteImportedBookmark = function(_bid, callback) {
 		return Data.deleteImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
+	};
+
+	Data.deleteImportedFavourite = function(_fid, callback) {
+		return Data.deleteImported('_imported:_favourites', '_imported_favourite:', _fid, callback);
 	};
 
 	Data.deleteImportedUsers = function(onProgress, callback) {
@@ -209,6 +225,10 @@ var async = require('async'),
 		return Data.deleteEachImported('_imported:_bookmarks', '_imported_bookmark:', onProgress, callback);
 	};
 
+	Data.deleteImportedFavourites = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_favourites', '_imported_favourite:', onProgress, callback);
+	};
+
 	Data.countImportedGroups = function(callback) {
 		Data.count('_imported:_groups', callback);
 	};
@@ -243,6 +263,10 @@ var async = require('async'),
 
 	Data.countImportedBookmarks = function(callback) {
 		Data.count('_imported:_bookmarks', callback);
+	};
+
+	Data.countImportedFavourites = function(callback) {
+		Data.count('_imported:_favourites', callback);
 	};
 
 	/* NodeBB Core records operations */
@@ -375,6 +399,10 @@ var async = require('async'),
 
 	Data.eachImportedBookmark = function(iterator, options, callback) {
 		return Data.each('_imported:_bookmarks', '_imported_bookmark:', iterator, options, callback);
+	};
+
+	Data.eachImportedFavourite = function(iterator, options, callback) {
+		return Data.each('_imported:_favourites', '_imported_favourite:', iterator, options, callback);
 	};
 
 	Data.processUsersSet = function(process, options, callback) {
