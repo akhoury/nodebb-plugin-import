@@ -366,9 +366,12 @@ var fs = require('fs-extra'),
 
 		Controller.convert = function(s, type, id) {
 			s = s || '';
-			var ns = s;
-			ns = parseAfter(parseMain(parseBefore(s, encoding)), encoding);
-			return ns;
+			try {
+        s = parseAfter(parseMain(parseBefore(s, encoding)), encoding);
+      } catch (e) {
+        console.warn(type + " with id=`" + id + "` and content=`" + s + "`, threw an error during convert, so it was skipped, error= `" + e + "`");
+      }
+			return s;
 		};
 	};
 
