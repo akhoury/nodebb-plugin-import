@@ -5,33 +5,38 @@
   var async  = require('async');
   var path  = require('path');
   var nconf = require('nconf');
+  var dispatcher = require('./dispatcher');
 
-  nconf.file({file: path.join(nbbpath, '/config.json') });
+  nconf.file({file: path.join(nbbpath.fullpath, '/config.json') });
 
   var dbType = nconf.get('database');
   var productionDbConfig = nconf.get(dbType);
 
   var db = nbbpath.require('/src/database');
+  dispatcher(db);
 
   if (! db.client) {
-    // init was not called (yet), most likely running import-standlone
-    // todo: potential race condition here if it nodebb was in fact started, but its db.init() was too slow to be called
-    // todo: db.init() needs a wrapper here and a callback in it
     nconf.set(dbType, productionDbConfig);
-    db.init();
+    db.init(function() {
+      db.emit("ready");
+    });
+  } else {
+    setImmediate(function () {
+      db.emit("ready");
+    });
   }
 
   // only allows wildcards i.e. "user:*"
   db.keys = db.keys || (function() {
-    switch (dbType) {
-      case "mongo":
-            return mongoKeys;
-      case "redis":
-            return redisKeys;
-      case "level":
-            return levelKeys;
-    }
-  })();
+      switch (dbType) {
+        case "mongo":
+          return mongoKeys;
+        case "redis":
+          return redisKeys;
+        case "level":
+          return levelKeys;
+      }
+    })();
 
   function redisKeys (key, callback) {
     return db.client.keys(key, callback);
@@ -53,19 +58,6 @@
           return v._key;
         }) : []);
       });
-    });
-  }
-
-  // todo: untested
-  // https://github.com/Level/levelup/issues/285
-  function levelKeys (key, callback) {
-    var stream = db.client.createKeyStream({gte: key.replace(/\*/, '!'), lte: key.replace(/\*/, '~')});
-    var keys = [];
-    stream.on('data', function(key) {
-      keys.push(key);
-    });
-    stream.on('end', function() {
-      callback(null, keys);
     });
   }
 

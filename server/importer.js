@@ -10,7 +10,7 @@ var async = require('async'),
 	utils = require('../public/js/utils.js'),
 	Data = require('./data.js'),
 
-	MAX_INT = -1 >>> 1,
+	MAX_INT = Number.MAX_VALUE,
 
 	Groups = require('../../../src/groups.js'),
 	Favourites = require('../../../src/favourites.js'),
@@ -26,7 +26,7 @@ var async = require('async'),
 
 	EACH_LIMIT_BATCH_SIZE = 10,
 
-//todo use the real one
+ //todo use the real one
 	LOGGEDIN_UID = 1,
 
 	logPrefix = '\n[nodebb-plugin-import]',
@@ -268,7 +268,6 @@ var async = require('async'),
 			Importer.warn('alreadyImportedAllBookmarks=true, skipping importBookmarks Phase');
 		}
 
-
 		series.push(Importer.fixCategoriesParentsAndAbilities);
     series.push(Importer.fixGroupsOwners);
     series.push(Importer.rebanAndMarkReadForUsers);
@@ -276,7 +275,6 @@ var async = require('async'),
 		series.push(Importer.restoreConfig);
 		series.push(Importer.disallowGuestsWriteOnAllCategories);
 		series.push(Importer.teardown);
-
 
 		async.series(series, callback);
 	};
@@ -433,7 +431,6 @@ var async = require('async'),
 							done()
 						});
 				});
-
 			},
 			function(done) {
 				Importer.phase('purgeUsersStart');
@@ -734,7 +731,6 @@ var async = require('async'),
 		fs.writeFileSync(DIRTY_USERS_FILE, +new Date(), {encoding: 'utf8'});
 		fs.ensureDirSync(picturesTmpPath);
 		fs.ensureDirSync(picturesPublicPath);
-
 
 		Importer.exporter.countUsers(function(err, total) {
 			Importer.success('Importing ' + total + ' users.');

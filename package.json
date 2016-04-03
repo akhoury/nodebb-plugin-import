@@ -4,7 +4,7 @@
   "description": "Import your forum data to nodebb",
   "main": "./server/importer.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./node_modules/mocha/bin/mocha tests/mocha.js"
   },
   "repository": {
     "type": "git",
@@ -51,12 +51,17 @@
     "bbcode-to-markdown": "^0.1.0",
     "encoding": "^0.1.11",
     "eventemitter2": "~0.4.14",
+    "extend": "^3.0.0",
     "file-type": "^3.4.0",
     "fs-extra": "~0.11.0",
     "iconv": "^2.1.11",
     "node.extend": "~1.0.10",
     "npm": "^1.4.6",
     "underscore": "~1.5.2"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5"
   },
   "nbbpm": {
     "compatibility": "~0.9.1"

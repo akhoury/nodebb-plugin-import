@@ -263,7 +263,6 @@
     });
   };
 
-
   function pickAndCleanUsername () {
     var args = Array.prototype.slice(arguments, 0);
 

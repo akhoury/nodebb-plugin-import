@@ -1,16 +1,20 @@
 (function(module) {
 
   var nbbpath = require('../helpers/nbbpath.js');
-  var db = require('../helpers/database');
+  var db = require('../augmented/database');
+  var dispatcher = require('../helpers/dispatcher');
 
   var async = require('async');
-
-  // nbb-core
-  var utils = nbbpath.require('../public/js/utils');
+  var util = require('util');
 
   var DEFAULT_BATCH_SIZE = 100;
 
   var Data = {};
+  dispatcher(Data);
+
+  db.on("ready", function() {
+    Data.emit("ready");
+  });
 
   Data.count = function(setKey, callback) {
     db.sortedSetCard(setKey, callback);
@@ -80,10 +84,35 @@
     // custom done condition
     options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function(){};
 
+    var batch = options.batch || DEFAULT_BATCH_SIZE;
+
+    if (db.helpers.mongo && !utils.isNumber(options.alwaysStartAt)) {
+      var cursor = db.client.collection('objects').find({'_key': setKey}).sort({'score': 1}).project({'_id': 0, 'value': 1}).batchSize(batch);
+      var ids = [];
+
+      cursor.forEach(function(doc) {
+        ids.push(doc.value);
+        if (ids.length >= batch) {
+          process(null, ids, function(err) {
+            // do nothing
+          });
+          ids = [];
+        }
+      }, function(err) {
+        if (err) {
+          return callback(err);
+        }
+        if (ids.length) {
+          return process(null, ids, callback);
+        }
+        callback(null);
+      });
+
+      return;
+    }
+
     // always start at, useful when deleting all records
     // options.alwaysStartAt
-
-    var batch = options.batch || DEFAULT_BATCH_SIZE;
     var start = 0;
     var end = batch;
     var done = false;
@@ -108,7 +137,7 @@
             if (err) {
               return next(err);
             }
-            start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
+            start += util.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
             end = start + batch;
             next();
           });
@@ -117,6 +146,7 @@
       callback
     );
   };
+
 
   Data.isImported = function(setKey, _id, callback) {
     return db.isSortedSetMember(setKey, _id, function(err, result) {
