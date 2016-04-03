@@ -64,6 +64,6 @@
     "mocha": "^2.4.5"
   },
   "nbbpm": {
-    "compatibility": "~0.9.1"
+    "compatibility": "~1.0.0"
   }
 }

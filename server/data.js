@@ -37,6 +37,10 @@ var async = require('async'),
 		return Data.setImported('_imported:_groups', '_imported_group:', _gid, gidOrGname, group, callback);
 	};
 
+	Data.setRoomImported = function(_roomId, roomId, room, callback) {
+		return Data.setImported('_imported:_rooms', '_imported_room:', _roomId, roomId, room, callback);
+	};
+
 	Data.setMessageImported = function(_mid, mid, message, callback) {
 		return Data.setImported('_imported:_messages', '_imported_message:', _mid, mid, message, callback);
 	};
@@ -61,12 +65,20 @@ var async = require('async'),
 		return Data.setImported('_imported:_bookmarks', '_imported_bookmark:', _bid, bid, bookmark, callback);
 	};
 
+	Data.setFavouriteImported = function(_fid, fid, favourite, callback){
+		return Data.setImported('_imported:_favourites', '_imported_favourite:', _fid, fid, favourite, callback);
+	};
+
 	Data.isGroupImported = function(_gid, callback) {
 		return Data.isImported('_imported:_groups', _gid, callback);
 	};
 
 	Data.isUserImported = function(_uid, callback) {
 		return Data.isImported('_imported:_users', _uid, callback);
+	};
+
+	Data.isRoomImported = function(_roomId, callback) {
+		return Data.isImported('_imported:_rooms', _roomId, callback);
 	};
 
 	Data.isMessageImported = function(_mid, callback) {
@@ -93,12 +105,20 @@ var async = require('async'),
 		return Data.isImported('_imported:_bookmarks', _bid, callback);
 	};
 
+	Data.isFavouriteImported = function(_fid, callback) {
+		return Data.isImported('_imported:_favourites', _fid, callback);
+	};
+
 	Data.getImportedGroup = function(_gid, callback) {
 		return Data.getImported('_imported:_groups', '_imported_group:', _gid, callback);
 	};
 
 	Data.getImportedUser = function(_uid, callback) {
 		return Data.getImported('_imported:_users', '_imported_user:', _uid, callback);
+	};
+
+	Data.getImportedRoom = function(_roomId, callback) {
+		return Data.getImported('_imported:_rooms', '_imported_room:', _roomId, callback);
 	};
 
 	Data.getImportedMessage = function(_mid, callback) {
@@ -125,12 +145,20 @@ var async = require('async'),
 		return Data.getImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
 	};
 
+	Data.getImportedFavourite = function(_fid, callback) {
+		return Data.getImported('_imported:_favourites', '_imported_favourite:', _fid, callback);
+	};
+
 	Data.deleteImportedUser = function(_uid, callback) {
 		return Data.deleteImported('_imported:_users', '_imported_user:', _uid, callback);
 	};
 
 	Data.deleteImportedGroup = function(_gid, callback) {
 		return Data.deleteImported('_imported:_groups', '_imported_group:', _gid, callback);
+	};
+
+	Data.deleteImportedRoom = function(_roomId, callback) {
+		return Data.deleteImported('_imported:_rooms', '_imported_room:', _roomId, callback);
 	};
 
 	Data.deleteImportedMessage = function(_mid, callback) {
@@ -157,12 +185,20 @@ var async = require('async'),
 		return Data.deleteImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
 	};
 
+	Data.deleteImportedFavourite = function(_fid, callback) {
+		return Data.deleteImported('_imported:_favourites', '_imported_favourite:', _fid, callback);
+	};
+
 	Data.deleteImportedUsers = function(onProgress, callback) {
 		return Data.deleteEachImported('_imported:_users', '_imported_user:', onProgress, callback);
 	};
 
 	Data.deleteImportedGroups = function(onProgress, callback) {
 		return Data.deleteEachImported('_imported:_groups', '_imported_group:', onProgress, callback);
+	};
+
+	Data.deleteImportedRooms = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_rooms', '_imported_room:', onProgress, callback);
 	};
 
 	Data.deleteImportedMessages = function(onProgress, callback) {
@@ -189,12 +225,20 @@ var async = require('async'),
 		return Data.deleteEachImported('_imported:_bookmarks', '_imported_bookmark:', onProgress, callback);
 	};
 
+	Data.deleteImportedFavourites = function(onProgress, callback) {
+		return Data.deleteEachImported('_imported:_favourites', '_imported_favourite:', onProgress, callback);
+	};
+
 	Data.countImportedGroups = function(callback) {
 		Data.count('_imported:_groups', callback);
 	};
 
 	Data.countImportedUsers = function(callback) {
 		Data.count('_imported:_users', callback);
+	};
+
+	Data.countImportedRooms = function(callback) {
+		Data.count('_imported:_rooms', callback);
 	};
 
 	Data.countImportedMessages = function(callback) {
@@ -221,6 +265,10 @@ var async = require('async'),
 		Data.count('_imported:_bookmarks', callback);
 	};
 
+	Data.countImportedFavourites = function(callback) {
+		Data.count('_imported:_favourites', callback);
+	};
+
 	/* NodeBB Core records operations */
 
 	Data.countUsers = function(callback) {
@@ -229,6 +277,15 @@ var async = require('async'),
 
 	Data.countGroups = function(callback) {
 		Data.count('groups:createtime', callback);
+	};
+
+	Data.countRooms = function(callback) {
+		Data.keys('chat:room:*', function(err, keys) {
+			if (err) {
+				callback(err);
+			}
+			callback(err, keys.length)
+		});
 	};
 
 	Data.countMessages = function(callback) {
@@ -258,6 +315,24 @@ var async = require('async'),
 
 	Data.eachGroup = function(iterator, options, callback) {
 		return Data.each('groups:createtime', 'group:', iterator, options, callback);
+	};
+
+	Data.eachRoom = function(iterator, options, callback) {
+		options = options || {};
+		var prefix = 'chat:room:';
+		Data.keys(prefix + '*', function(err, keys) {
+			if (err) {
+				return callback(err);
+			}
+			async.mapLimit(keys, options.batch || DEFAULT_BATCH_SIZE, function(key, next) {
+				db.getObject(key, function(err, room) {
+					if (room) {
+						room.roomId = key.replace(prefix, '');
+					}
+					iterator(room, next);
+				});
+			}, callback);
+		});
 	};
 
 	Data.eachMessage = function(iterator, options, callback) {
@@ -298,6 +373,10 @@ var async = require('async'),
 		return Data.each('_imported:_groups', '_imported_group:', iterator, options, callback);
 	};
 
+	Data.eachImportedRoom = function(iterator, options, callback) {
+		return Data.each('_imported:_rooms', '_imported_room:', iterator, options, callback);
+	};
+
 	Data.eachImportedMessage = function(iterator, options, callback) {
 		return Data.each('_imported:_messages', '_imported_message:', iterator, options, callback);
 	};
@@ -320,6 +399,10 @@ var async = require('async'),
 
 	Data.eachImportedBookmark = function(iterator, options, callback) {
 		return Data.each('_imported:_bookmarks', '_imported_bookmark:', iterator, options, callback);
+	};
+
+	Data.eachImportedFavourite = function(iterator, options, callback) {
+		return Data.each('_imported:_favourites', '_imported_favourite:', iterator, options, callback);
 	};
 
 	Data.processUsersSet = function(process, options, callback) {

@@ -18,18 +18,22 @@ This section is up here because it's very important for you to read it, so let's
 * `_uid` --> old user id
 * `_tid` --> old topic id, some forum software use different terms for topics, such as __threads__
 * `_pid` --> old post id
+* `_roomId` --> old chatroom id
 * `_mid` --> old message id
 * `_gid` --> old group id
 * `_vid` --> old vote id
 * `_bid` --> old bookmark id
+* `_fid` --> old favourite id
 * `cid` --> new category id
 * `uid` --> new user id
 * `tid` --> new topic id
 * `pid` --> new post id
+* `roomId` --> new chatroom id
 * `mid` --> new message id
 * `gid` --> new group id
 * `vid` --> new vote id
 * `bid` --> new bookmark id
+* `fid` --> new favourite id
 
 ## Required
 You need a node module that has the following interface.
@@ -306,6 +310,37 @@ Each record should look like this:
 }
 ```
 
+### YourModule.getRooms(callback) [deprecated]
+
+### YourModule.getPaginatedRooms(start, limit, callback) [OPTIONAL FUNCTION]
+* `start` of the query row
+* `limit` of the query results
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+
+```
+  - err: if truthy the export process will throw the error and stop
+  - map: a hashmap of all the chatrooms ready to import
+```
+In the `map`, the `keys` are the rooms `_rid` (or the old chatroom id).
+
+Each record should look like this:
+```javascript
+{
+	// notice how all the old variables start with an _
+	// if any of the required variables fails, the record will be skipped
+
+	"_roomId": 45, // REQUIRED
+
+	"_roomName": "import planning", // OPTIONAL, name of room
+
+	"_uid": 10, // REQUIRED, owner of the room
+
+	"_uids": [20, 25, 32], // REQUIRED, other users in the room
+
+	"_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+}
+```
+
 ### YourModule.getMessages(callback) [deprecated]
 
 ### YourModule.getPaginatedMessages(start, limit, callback) [OPTIONAL FUNCTION]
@@ -322,18 +357,18 @@ In the `map`, the `keys` are the messages `_mid` (or the old message id).
 Each record should look like this:
 ```javascript
 {
-       // notice how all the old variables start with an _
-      // if any of the required variables fails, the record will be skipped
+	// notice how all the old variables start with an _
+	// if any of the required variables fails, the record will be skipped
 
-        "_mid": 45, // REQUIRED
+	"_mid": 45, // REQUIRED
 
-        "_fromuid": 10, // REQUIRED
+	"_fromuid": 10, // REQUIRED
 
-        "_touid": 20, // REQUIRED
+	"_roomId": 20, // REQUIRED
 
-        "_content": "Hello there!", // REQUIRED
+	"_content": "Hello there!", // REQUIRED
 
-        "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+	"_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
 }
 ```
 
@@ -434,6 +469,33 @@ Each record should look like this:
         "_uid": 789, // REQUIRED, old user id
 
         "_index": 2 // REQUIRED, the index of the bookmarked-post, i.e. 5 if the 6'sh post of that topic was the bookmarked post
+}
+```
+
+### YourModule.getFavourites(callback) [deprecated]
+
+### YourModule.getPaginatedFavourites(start, limit, callback) [OPTIONAL FUNCTION]
+* `start` of the query row
+* `limit` of the query results
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+
+```
+  - err: if truthy the export process will throw the error and stop
+  - map: a hashmap of all the favourites ready to import
+```
+In the `map`, the `keys` are the favourites `_fid` (or the old favourite Id).
+
+Each record should look like this:
+```javascript
+{
+       // notice how all the old variables start with an _
+       // if any of the required variables fails, the record will be skipped
+
+        "_fid": 987, // REQUIRED, old favourite id
+
+        "_pid": 123, // REQUIRED, old post id
+
+        "_uid": 789 // REQUIRED, old user id
 }
 ```
 

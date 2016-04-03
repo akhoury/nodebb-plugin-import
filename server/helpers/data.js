@@ -7,6 +7,8 @@
   var async = require('async');
   var util = require('util');
 
+  var batch = nbbpath.require('/src/batch');
+
   var DEFAULT_BATCH_SIZE = 100;
 
   var Data = {};
@@ -49,7 +51,7 @@
   };
 
   Data.processSet = function(setKey, prefixEachId, process, options, callback) {
-    return Data.processIdsSet(
+    return batch.processSortedSet(
       setKey,
       function(err, ids, next) {
         var keys = ids.map(function(id) {
@@ -147,7 +149,6 @@
     );
   };
 
-
   Data.isImported = function(setKey, _id, callback) {
     return db.isSortedSetMember(setKey, _id, function(err, result) {
       callback(err, result);
@@ -198,7 +199,7 @@
   Data.deleteEachImported = function(setKey, objPrefix, onProgress, callback) {
     Data.count(setKey, function(err, total) {
       var count = 1;
-      Data.processIdsSet(setKey,
+      batch.processSortedSet(setKey,
         function(err, ids, nextBatch) {
           async.mapLimit(ids, DEFAULT_BATCH_SIZE, function(_id, cb) {
             Data.deleteImported(setKey, objPrefix, _id, function(err, response) {
