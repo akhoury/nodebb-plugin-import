@@ -1,7 +1,7 @@
 
 var nconf = require('nconf');
 var primaryDBName = nconf.get('database');
-var nodeExtend = require('node.extend');
+var extend = require('extend');
 
 
 var db;

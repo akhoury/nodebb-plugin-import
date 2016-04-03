@@ -139,7 +139,7 @@ Each record should look like this:
         "_lastposttime": 1386475817370, // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
 
         "_level": "administrator" // OPTIONAL, [OPTIONS: 'administrator' or 'moderator'], defaults to '', also note that a moderator will become a NodeBB Moderator on ALL categories at the moment.
-        
+
         "_lastonline": 1386475827370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to undefined
 }
 ```
@@ -364,7 +364,8 @@ Each record should look like this:
 
 	"_fromuid": 10, // REQUIRED
 
-	"_roomId": 20, // REQUIRED
+	"_roomId": 20, // PREFERRED
+	"_touid": 20, // DEPRECATED
 
 	"_content": "Hello there!", // REQUIRED
 

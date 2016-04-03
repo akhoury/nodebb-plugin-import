@@ -4,7 +4,7 @@ var fs = require('fs-extra'),
 		_ = require('underscore'),
 		async = require('async'),
 		EventEmitter2 = require('eventemitter2').EventEmitter2,
-		nodeExtend = require('node.extend'),
+		extend = require('extend'),
 		noop = function(s) { return s;},
 		db = module.parent.require('../../../src/database.js'),
 		Data = require('./data.js'),
@@ -319,7 +319,7 @@ var fs = require('fs-extra'),
 		if (config != null) {
 			if (typeof config === 'object') {
 				utils.recursiveIteration(config);
-				Controller._config = nodeExtend(true, {}, defaults, config);
+				Controller._config = extend(true, {}, defaults, config);
 				Controller.emit('controller.config', Controller._config);
 			} else if (typeof config === 'string') {
 				if (val != null) {

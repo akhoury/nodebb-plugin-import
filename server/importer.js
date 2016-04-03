@@ -2,7 +2,7 @@ var async = require('async'),
   fileType = require('file-type'),
   EventEmitter2 = require('eventemitter2').EventEmitter2,
   _ = require('underscore'),
-  nodeExtend = require('node.extend'),
+  extend = require('extend'),
   fs = require('fs-extra'),
   path = require('path'),
   nconf = require('nconf'),
@@ -164,7 +164,7 @@ var async = require('async'),
   Importer.setup = function(exporter, config, callback) {
     Importer.exporter = exporter;
 
-    Importer._config = nodeExtend(true, {}, defaults, config && config.importer ? config.importer : config || {});
+    Importer._config = extend(true, {}, defaults, config && config.importer ? config.importer : config || {});
 
     //todo I don't like this
     Importer._config.serverLog = !!config.log.server;
@@ -947,7 +947,7 @@ var async = require('async'),
                           imported++;
 
                           fields.uid = uid;
-                          user = nodeExtend(true, {}, user, fields);
+                          user = extend(true, {}, user, fields);
                           user.keptPicture = keptPicture;
                           user.userslug = u.userslug;
                           users[_uid] = user;
@@ -1192,7 +1192,7 @@ var async = require('async'),
                         }
 
                         Importer.progress(count, total);
-                        room = nodeExtend(true, {}, room, results[2]);
+                        room = extend(true, {}, room, results[2]);
                         Data.setRoomImported(_roomId, roomId, room, done);
                       });
                     });
@@ -1253,63 +1253,94 @@ var async = require('async'),
                   });
                 },
                 function(cb) {
-                  Data.getImportedRoom(message._roomId, function(err, toRoom) {
-                    if (err) {
-                      Importer.warn('getImportedRoom:_roomId:' + message._roomId + ' err: ' + err.message);
-                    }
-                    cb(null, toRoom);
-                  });
+
+                  // support for backward compatible way to import messages the old way.
+
+                  if (!message._roomId && message._touid) {
+                    Data.getImportedUser(message._touid, function(err, toUser) {
+                      if (err) {
+                        Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
+                      }
+                      cb(null, toUser);
+                    });
+                  } else {
+                    cb(null, null);
+                  }
+                },
+                function(cb) {
+                  if (message._roomId) {
+                    Data.getImportedRoom(message._roomId, function(err, toRoom) {
+                      if (err) {
+                        Importer.warn('getImportedRoom:_roomId:' + message._roomId + ' err: ' + err.message);
+                      }
+                      cb(null, toRoom);
+                    });
+                  }
                 }
               ], function(err, results) {
+
                 var fromUser = results[0];
-                var toRoom = results[1];
+                var toUser = results[1];
+                var toRoom = results[2];
 
-                if (!fromUser || !toRoom) {
-                  Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom);
-                  Importer.progress(count, total);
-                  done();
-                } else {
-                  Importer.log('[process-count-at: ' + count + '] saving message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ', _roomId:' + message._roomId);
+                var addMessage = function (err, toRoom) {
 
-                  Messaging.addMessage(fromUser.uid, toRoom.roomId, message._content, message._timestamp, function(err, messageReturn) {
-                    if (err || !messageReturn) {
-                      Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom + (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
-                      Importer.progress(count, total);
-                      return done();
-                    }
+                  if (!fromUser || !toRoom) {
+                    Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom);
+                    Importer.progress(count, total);
+                    done();
+                  } else {
+                    Importer.log('[process-count-at: ' + count + '] saving message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ', _roomId:' + message._roomId);
 
-                    imported++;
-                    var mid = messageReturn.mid;
-                    var roomId = messageReturn.roomId;
+                    Messaging.addMessage(fromUser.uid, toRoom.roomId, message._content, message._timestamp, function(err, messageReturn) {
 
-                    var _imported_content = message._content;
-
-                    delete messageReturn._key;
-
-                    async.parallel([
-                      function(next) {
-                        db.setObjectField('message:' + mid, '_imported_content', _imported_content, next);
-                      },
-                      function(next) {
-                        Messaging.getUidsInRoom(roomId, 0, -1, function(err, uids) {
-                          if (err) {
-                            return next(err);
-                          }
-
-                          db.sortedSetsRemove(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms:unread'; }), roomId, next);
-                        });
-                      },
-                    ], function(err) {
-                      if (err) {
-                        Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
+                      if (err || !messageReturn) {
+                        Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom + (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
+                        Importer.progress(count, total);
                         return done();
                       }
 
-                      Importer.progress(count, total);
-                      message = nodeExtend(true, {}, message, messageReturn);
-                      Data.setMessageImported(_mid, mid, message, done);
+                      imported++;
+                      var mid = messageReturn.mid;
+                      var roomId = messageReturn.roomId;
+
+                      var _imported_content = message._content;
+
+                      delete messageReturn._key;
+
+                      async.parallel([
+                        function(next) {
+                          db.setObjectField('message:' + mid, '_imported_content', _imported_content, next);
+                        },
+                        function(next) {
+                          Messaging.getUidsInRoom(roomId, 0, -1, function(err, uids) {
+                            if (err) {
+                              return next(err);
+                            }
+
+                            db.sortedSetsRemove(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms:unread'; }), roomId, next);
+                          });
+                        }
+                      ], function(err) {
+                        if (err) {
+                          Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
+                          return done();
+                        }
+
+                        Importer.progress(count, total);
+                        message = extend(true, {}, message, messageReturn);
+                        Data.setMessageImported(_mid, mid, message, done);
+                      });
                     });
+                  }
+                };
+
+                if (toUser) {
+                  Messaging.newRoom(fromUser.uid, [toUser.uid], function(err, roomId) {
+                    addMessage(err, roomId ? {roomId: roomId} : null);
                   });
+                } else {
+                  addMessage(null, toRoom);
                 }
               });
             });
@@ -1402,7 +1433,7 @@ var async = require('async'),
 
                   category.imported = true;
                   imported++;
-                  category = nodeExtend(true, {}, category, categoryReturn, fields);
+                  category = extend(true, {}, category, categoryReturn, fields);
                   categories[_cid] = category;
 
                   Data.setCategoryImported(_cid, categoryReturn.cid, category, done);
@@ -1497,7 +1528,7 @@ var async = require('async'),
 
                     group.imported = true;
                     imported++;
-                    group = nodeExtend(true, {}, group, groupReturn, fields);
+                    group = extend(true, {}, group, groupReturn, fields);
                     groups[_gid] = group;
 
                     Data.setGroupImported(_gid, 0, group, done);
@@ -1765,7 +1796,7 @@ var async = require('async'),
                             }
 
                             Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
-                              topic = nodeExtend(true, {}, topic, topicFields, returnTopic.topicData);
+                              topic = extend(true, {}, topic, topicFields, returnTopic.topicData);
                               topics[_tid] = topic;
                               Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, function() {
                                 done();
@@ -1986,7 +2017,7 @@ var async = require('async'),
                           _imported_path: post._path || ''
                         };
 
-                        post = nodeExtend(true, {}, post, fields, postReturn);
+                        post = extend(true, {}, post, fields, postReturn);
                         post.imported = true;
 
                         async.parallel([
@@ -2135,7 +2166,7 @@ var async = require('async'),
 
                       vote.imported = true;
                       imported++;
-                      vote = nodeExtend(true, {}, vote, voteReturn);
+                      vote = extend(true, {}, vote, voteReturn);
                       votes[_vid] = vote;
                       Data.setVoteImported(_vid, +new Date(), vote, done);
                     };
@@ -2246,7 +2277,7 @@ var async = require('async'),
 
                       bookmark.imported = true;
                       imported++;
-                      bookmark = nodeExtend(true, {}, bookmark, bookmarkReturn);
+                      bookmark = extend(true, {}, bookmark, bookmarkReturn);
                       bookmarks[_bid] = bookmark;
 
                       Data.setBookmarkImported(_bid, +new Date, bookmark, done);
@@ -2353,7 +2384,7 @@ var async = require('async'),
 
                       favourite.imported = true;
                       imported++;
-                      favourite = nodeExtend(true, {}, favourite, favouriteReturn);
+                      favourite = extend(true, {}, favourite, favouriteReturn);
                       favourites[_fid] = favourite;
 
                       Data.setFavouriteImported(_fid, +new Date, favourite, done);
@@ -2686,7 +2717,7 @@ var async = require('async'),
     // get the nbb backedConfigs, change them, then set them back to the db
     // just to make the transition a little less flexible
     // yea.. i dont know .. i have a bad feeling about this
-    var config = nodeExtend(true, {}, Importer.config().backedConfig, Importer.config().nbbTmpConfig);
+    var config = extend(true, {}, Importer.config().backedConfig, Importer.config().nbbTmpConfig);
 
     // if you want to auto confirm email, set the host to null, if there is any
     // this will prevent User.sendConfirmationEmail from setting expiration time on the email address
