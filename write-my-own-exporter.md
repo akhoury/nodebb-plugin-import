@@ -364,8 +364,11 @@ Each record should look like this:
 
 	"_fromuid": 10, // REQUIRED
 
-	"_roomId": 20, // PREFERRED
-	"_touid": 20, // DEPRECATED
+	"_roomId": 20, // PREFERRED, the _roomId if you are using get(Pagianted)Rooms
+	"_touid": 20, // DEPRECATED, if you're not using getPaginatedRooms, you can just pass the _touid value here.
+
+	// note: I know the camelcasing is weird here, but can't break backward compatible exporters yet.
+
 
 	"_content": "Hello there!", // REQUIRED
 

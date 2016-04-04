@@ -10,7 +10,7 @@ var async = require('async'),
   utils = require('../public/js/utils.js'),
   Data = require('./data.js'),
 
-  MAX_INT = Number.MAX_VALUE,
+  MAX_INT = Number.MAX_SAFE_INTEGER,
 
   Groups = require('../../../src/groups.js'),
   Favourites = require('../../../src/favourites.js'),
@@ -210,6 +210,7 @@ var async = require('async'),
       Importer.importFavourites,
       Importer.fixCategoriesParentsAndAbilities,
       Importer.fixGroupsOwners,
+      Importer.fixTopicsTeasers,
       Importer.rebanAndMarkReadForUsers,
       Importer.fixTopicTimestampsAndRelockLockedTopics,
       Importer.restoreConfig,
@@ -289,6 +290,7 @@ var async = require('async'),
 
     series.push(Importer.fixCategoriesParentsAndAbilities);
     series.push(Importer.fixGroupsOwners);
+    series.push(Importer.fixTopicsTeasers);
     series.push(Importer.rebanAndMarkReadForUsers);
     series.push(Importer.fixTopicTimestampsAndRelockLockedTopics);
     series.push(Importer.restoreConfig);
@@ -481,9 +483,9 @@ var async = require('async'),
           var index = 0;
           Data.processCategoriesCidsSet(
             function (err, ids, nextBatch) {
-              async.mapLimit(ids, EACH_LIMIT_BATCH_SIZE, function(id, cb) {
+              async.eachSeries(ids, function(id, cb) {
                 Importer.progress(index++, total);
-                Categories.purge(id, cb);
+                Categories.purge(id, LOGGEDIN_UID, cb);
               }, nextBatch);
             },
             {alwaysStartAt: 0},
@@ -505,7 +507,7 @@ var async = require('async'),
           var index = 0; var count = 0;
           Data.processUsersUidsSet(
             function(err, ids, nextBatch) {
-              async.mapLimit(ids, EACH_LIMIT_BATCH_SIZE, function(uid, cb) {
+              async.eachSeries(ids, function(uid, cb) {
                 Importer.progress(index++, total);
                 if (parseInt(uid, 10) === 1) {
                   return cb();
@@ -539,7 +541,7 @@ var async = require('async'),
           var index = 0; var count = 0;
           Data.processGroupsNamesSet(
             function(err, names, nextBatch) {
-              async.mapLimit(names, EACH_LIMIT_BATCH_SIZE, function(name, cb) {
+              async.eachSeries(names, function(name, cb) {
                 Importer.progress(index++, total);
 
                 // skip if system group
@@ -1226,6 +1228,7 @@ var async = require('async'),
       startTime = +new Date();
 
     fs.writeFileSync(DIRTY_MESSAGES_FILE, +new Date(), {encoding: 'utf8'});
+
     Importer.exporter.countMessages(function(err, total) {
       Importer.success('Importing ' + total + ' messages.');
       Importer.exporter.exportMessages(
@@ -1275,6 +1278,8 @@ var async = require('async'),
                       }
                       cb(null, toRoom);
                     });
+                  } else {
+                    cb(null, null);
                   }
                 }
               ], function(err, results) {
@@ -1283,12 +1288,12 @@ var async = require('async'),
                 var toUser = results[1];
                 var toRoom = results[2];
 
-                var addMessage = function (err, toRoom) {
+                var addMessage = function (err, toRoom, callback) {
 
                   if (!fromUser || !toRoom) {
                     Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom);
                     Importer.progress(count, total);
-                    done();
+                    callback();
                   } else {
                     Importer.log('[process-count-at: ' + count + '] saving message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ', _roomId:' + message._roomId);
 
@@ -1297,7 +1302,7 @@ var async = require('async'),
                       if (err || !messageReturn) {
                         Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom + (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
                         Importer.progress(count, total);
-                        return done();
+                        return callback();
                       }
 
                       imported++;
@@ -1324,23 +1329,36 @@ var async = require('async'),
                       ], function(err) {
                         if (err) {
                           Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
-                          return done();
+                          return callback();
                         }
 
                         Importer.progress(count, total);
                         message = extend(true, {}, message, messageReturn);
-                        Data.setMessageImported(_mid, mid, message, done);
+                        Data.setMessageImported(_mid, mid, message, callback);
                       });
                     });
                   }
                 };
 
                 if (toUser) {
-                  Messaging.newRoom(fromUser.uid, [toUser.uid], function(err, roomId) {
-                    addMessage(err, roomId ? {roomId: roomId} : null);
+                  var pairPrefix = '_imported_message_pair:';
+                  var pairID = [parseInt(fromUser.uid, 10), parseInt(toUser.uid, 10)].sort().join(':');
+
+                  db.getObject(pairPrefix + pairID, function(err, pairData) {
+                    if (err || !pairData || !pairData.roomId) {
+                      Messaging.newRoom(fromUser.uid, [toUser.uid], function(err, roomId) {
+                        addMessage(err, roomId ? {roomId: roomId} : null, function(err) {
+                          db.setObject(pairPrefix + pairID, {roomId: roomId}, function(err) {
+                            done(err);
+                          });
+                        });
+                      });
+                    } else {
+                      addMessage(err, {roomId: pairData.roomId}, done);
+                    }
                   });
                 } else {
-                  addMessage(null, toRoom);
+                  addMessage(null, toRoom, done);
                 }
               });
             });
@@ -1868,6 +1886,12 @@ var async = require('async'),
     fs.ensureDirSync(attachmentsTmpPath);
     fs.ensureDirSync(attachmentsPublicPath);
 
+    // this is too slow if we run it once per post, so we fake it here and then we run it 1 per topic after all imports are done,in fixTopicsTeasers()
+    var oldUpdateTeaser = Topics.updateTeaser;
+    Topics.updateTeaser = function (tid, callback) {
+      return callback();
+    };
+
     Importer.exporter.countPosts(function(err, total) {
       Importer.success('Importing ' + total + ' posts.');
       Importer.exporter.exportPosts(
@@ -2046,6 +2070,8 @@ var async = require('async'),
           Importer.progress(1, 1);
           Importer.phase('postsImportDone');
           Importer.success('Imported ' + imported + '/' + total + ' posts' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
+
+          Topics.updateTeaser = oldUpdateTeaser;
 
           async.series([
             function(nxt) {
@@ -2418,6 +2444,7 @@ var async = require('async'),
     Importer.phase('importerTeardownStart');
     Importer.phase('importerTeardownDone');
     Importer.phase('importerComplete');
+    Importer.progress(1, 1);
 
     Importer.emit('importer.complete');
     next();
@@ -2620,6 +2647,26 @@ var async = require('async'),
           if (err) throw err;
           Importer.progress(1, 1);
           Importer.phase('fixGroupsOwnersDone');
+          next();
+        });
+    });
+  };
+
+  Importer.fixTopicsTeasers = function(next) {
+    var count = 0;
+    Importer.phase('fixTopicsTeasersStart');
+    Importer.progress(0, 1);
+
+    Data.countTopics(function(err, total) {
+      Data.eachTopic(function(topic, done) {
+          Importer.progress(count++, total);
+          Topics.updateTeaser(topic.tid, done);
+        },
+        {async: true, eachLimit: EACH_LIMIT_BATCH_SIZE},
+        function(err) {
+          if (err) throw err;
+          Importer.progress(1, 1);
+          Importer.phase('fixTopicsTeasersDone');
           next();
         });
     });

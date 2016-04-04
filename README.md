@@ -2,25 +2,21 @@ nodebb-plugin-import
 =========
 Import your old forum data to nodebb | a one time use plugin
 
-# DOES NOT SUPPORT NODEBB V0.9.3+ YET!
-
-you can import to 0.9.2, then __when you're done and happy__
-```
-git checkout v0.9.3
-./nodebb upgrade
-```
-
-### Works with NodeBB stable [v0.9.2](https://github.com/NodeBB/NodeBB/tree/v0.9.2)
+# LATEST VERSION ONLY SUPPORTS NODEBB V1.0.0
 
 ```
 git clone https://github.com/NodeBB/NodeBB.git
 cd NodeBB
-git checkout v0.9.2
+git checkout v1.0.0
 npm install
-node app --setup
+node app --setup # i receommend using mongo over redis.
+./nodebb start
 
-# I recommend using mongo instead of redis
+# .. do the import...
+# .. then when you're done and happy
 
+git checkout v1.0.2 # or some higher version.
+./nodebb upgrade
 ```
 
 
@@ -151,4 +147,4 @@ NodeBB prefers using Markdown as the *content language format*, and since most W
 
 ### Test
 
-pfffffft
+~~pfffffft~~ soon.

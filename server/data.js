@@ -539,11 +539,13 @@ var async = require('async'),
 		var batch = options.batch || DEFAULT_BATCH_SIZE;
 
 		if (db.helpers.mongo && !utils.isNumber(options.alwaysStartAt)) {
-			var cursor = db.client.collection('objects').
-				find({'_key': setKey}).
-				sort({'score': 1}).
-				project({'_id': 0, 'value': 1}).
-				batchSize(batch);
+			var cursor = db.client
+        .collection('objects')
+				.find({'_key': setKey})
+				.sort({'score': 1})
+				.project({'_id': 0, 'value': 1})
+				.batchSize(batch);
+
 			var ids = [];
 			cursor.forEach(function(doc) {
 				ids.push(doc.value);
