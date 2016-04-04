@@ -2,7 +2,8 @@ nodebb-plugin-import
 =========
 Import your old forum data to nodebb | a one time use plugin
 
-# LATEST VERSION ONLY SUPPORTS NODEBB V1.0.0
+# LATEST VERSION ONLY SUPPORTS:
+## [NodeBB v1.0.0](https://github.com/NodeBB/NodeBB/tree/v1.0.0)
 
 ```
 git clone https://github.com/NodeBB/NodeBB.git
