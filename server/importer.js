@@ -1698,12 +1698,26 @@ var async = require('async'),
                   });
                 },
                 function(cb) {
-                  Data.getImportedUser(topic._uid, function(err, usr) {
-                    if (err) {
-                      Importer.warn('getImportedUser: ' + topic._uid + ' err: ' + err);
-                    }
-                    cb(null, usr);
-                  });
+                  if (topic._uemail) {
+                    User.getUidByEmail(post._uemail, function(err, uid) {
+                      if (err || !uid) {
+                        return cb(null, null);
+                      }
+                      User.getUserData(uid, function(err, data) {
+                        if (err || !uid) {
+                          return cb(null, null);
+                        }
+                        cb(null, data);
+                      });
+                    });
+                  } else {
+                    Data.getImportedUser(topic._uid, function(err, usr) {
+                      if (err) {
+                        Importer.warn('getImportedUser: ' + topic._uid + ' err: ' + err);
+                      }
+                      cb(null, usr);
+                    });
+                  }
                 }
               ], function(err, results) {
                 if (err) {
