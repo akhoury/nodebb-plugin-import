@@ -848,6 +848,13 @@ var async = require('async'),
       Importer.exporter.exportUsers(function(err, users, usersArr, nextExportBatch) {
           async.eachSeries(usersArr, function(user, done) {
               count++;
+
+              // todo: hack for disqus importer with users already imported, and wanting to import just the comments as Posts
+              if (user.uid) {
+                Importer.progress(count, total);
+                return Data.setUserImported(user._uid, user.uid, user, done);
+              }
+
               var _uid = user._uid;
               recoverImportedUser(_uid, function(err, _user) {
                 if (_user) {
@@ -1398,6 +1405,13 @@ var async = require('async'),
         function(err, categories, categoriesArr, nextExportBatch) {
           var onEach = function(category, done) {
             count++;
+
+            // hack for disqus importer with categories already imported
+            if (category.cid) {
+              Importer.progress(count, total);
+              return Data.setCategoryImported(category._cid, category.cid, category, done);
+            }
+
             var _cid = category._cid;
 
             recoverImportedCategory(_cid, function(err, _category) {
@@ -1657,6 +1671,13 @@ var async = require('async'),
 
           async.eachSeries(topicsArr, function(topic, done) {
             count++;
+
+            // todo: hack for disqus importer with topics already imported.
+            if (topic.tid) {
+              Importer.progress(count, total);
+              return Data.setCategoryImported(topic._tid, topic.tid, topic, done);
+            }
+
             var _tid = topic._tid;
 
             recoverImportedTopic(_tid, function(err, _topic) {
@@ -1899,6 +1920,7 @@ var async = require('async'),
 
           async.eachSeries(postsArr, function(post, done) {
             count++;
+
             var _pid = post._pid;
 
             recoverImportedPost(_pid, function(err, _post) {
@@ -1919,12 +1941,26 @@ var async = require('async'),
                   });
                 },
                 function(cb) {
-                  Data.getImportedUser(post._uid, function(err, usr) {
-                    if (err) {
-                      Importer.warn('getImportedUser: ' + post._uid + ' err: ' + err);
-                    }
-                    cb(null, usr);
-                  });
+                  if (post._uemail) {
+                      User.getUidByEmail(post._uemail, function(err, uid) {
+                        if (err || !uid) {
+                          return cb(null, null);
+                        }
+                        User.getUserData(uid, function(err, data) {
+                          if (err || !uid) {
+                            return cb(null, null);
+                          }
+                          cb(null, data);
+                        });
+                      });
+                  } else {
+                    Data.getImportedUser(post._uid, function(err, usr) {
+                      if (err) {
+                        Importer.warn('getImportedUser: ' + post._uid + ' err: ' + err);
+                      }
+                      cb(null, usr);
+                    });
+                  }
                 },
                 function(cb) {
                   if (!post._toPid) {
