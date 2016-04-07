@@ -1699,7 +1699,7 @@ var async = require('async'),
                 },
                 function(cb) {
                   if (topic._uemail) {
-                    User.getUidByEmail(post._uemail, function(err, uid) {
+                    User.getUidByEmail(topic._uemail, function(err, uid) {
                       if (err || !uid) {
                         return cb(null, null);
                       }
