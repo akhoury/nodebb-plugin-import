@@ -1673,9 +1673,9 @@ var async = require('async'),
             count++;
 
             // todo: hack for disqus importer with topics already imported.
-            if (topic.tid) {
+            if (topic.tid && parseInt(topic.tid, 10) === 1) {
               Importer.progress(count, total);
-              return Data.setCategoryImported(topic._tid, topic.tid, topic, done);
+              return Data.setTopicImported(topic._tid, topic.tid, topic, done);
             }
 
             var _tid = topic._tid;
