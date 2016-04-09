@@ -1,5 +1,9 @@
 
+
+// todo: how to warn?
+
 (function(module) {
+
   var nbbpath = require('../helpers/nbbpath.js');
   var Data = require('../helpers/data.js');
 
@@ -7,16 +11,24 @@
   var utils = nbbpath.require('../public/js/utils');
   var User = nbbpath.require('/src/user');
 
+  var async = nbbpath.require('async');
+  var extend = nbbpath.require('extend');
+
   // custom
   var Groups = require('./groups');
-  var file = require('./file');
+  var File = require('./file');
 
   User.batchImport = function (array, options, progressCallback, batchCallback) {
     var index = 0;
+    options = extend(true, {}, options);
+
     async.eachSeries(
       array,
       function (record, next) {
         User.import(record, options, function(err, data) {
+          if (data._claimedOwnership) {
+            options.adminTakeOwnership = false;
+          }
           progressCallback(err, {data: data, index: ++index});
 
           // ignore errors:
@@ -36,37 +48,74 @@
     }
 
     var uid;
-    var createData;
+    var createData = {};
     var confirmEmail = options.autoConfirmEmails || data._emailConfirmed;
     var flushed = options.flush || options.flushed;
 
+    var done = function (uid, data, callback) {
+      var d = extend(true, {}, data);
+      User.setImported(data._uid, uid, d, function(err) {
+        callback(err, d);
+      });
+    };
+
     async.series([
+      function (next) {
+        if (!data.uid) {
+          return next();
+        }
+        done(uid, data, callback);
+      },
       function (next) {
         if (!flushed) {
           return User.getImported(data._uid, function(err, _imported) {
             if (err || !_imported) {
               return next();
             }
-            callback(null, _imported);
+            return callback(null, _imported);
           });
         }
-
         return next();
       },
 
+      function (next) {
+        if (options.adminTakeOwnership && (parseInt(data._uid, 10) === parseInt(options.adminTakeOwnership._uid, 10) || (data._username || '').toLowerCase() === options.adminTakeOwnership._username.toLowerCase())) {
+          options.adminTakeOwnership = false;
+          data._claimedOwnership = true;
+          uid = 1;
+          next();
+        }
+        next();
+      },
+
       function(next) {
+        if (uid) {
+          return next();
+        }
+
         createData = {
-          username: pickAndCleanUsername(data._username, data._alternativeUsername),
+          username: pickAndCleanUsername(data._username, data._alternativeUsername) || data._email,
           email: data._email,
           password: options.passwordGen && options.passwordGen.enabled
-            ? generateRandomPassword(options.passwordGen.len, options.passwordGen.chars)
+            ? generateRandomString(options.passwordGen.len, options.passwordGen.chars)
             : data._password
         };
-        User.create(createData, function(err, userid) {
-          if (err) return next(err);
-          uid = userid;
-          data.userslug = data._userslug || utils.slugify(createData.username);
-        });
+
+        var onCreate = function(err, newUid) {
+          if (err && err.message === "[[error:email-taken]]" && options.importDuplicateEmails) {
+            createData.email = User.incrementEmail(createData.email);
+            User.create(createData, onCreate);
+            return;
+          }
+          uid = newUid;
+          next(err);
+        };
+        User.create(createData, onCreate);
+      },
+
+      function (next) {
+          data.userslug = data._userslug || utils.slugify(createData.username || "");
+          next();
       },
 
       function(next) {
@@ -89,7 +138,7 @@
           website: data._website || '',
           location: data._location || '',
           joindate: data._joindate || +new Date(),
-          reputation: data._reputation || 0,
+          reputation: (data._reputation || 0) * (options.userReputationMultiplier || 1),
           profileviews: data._profileviews || 0,
           fullname: data._fullname || '',
           birthday: data._birthday || '',
@@ -101,7 +150,7 @@
           // we're importing, no one is online
           status: 'offline',
           // don't ban anyone now, ban them later
-          banned: 0,
+          banned: 0
         };
 
         if (data._lastonline) {
@@ -110,10 +159,16 @@
 
         // aint gonna stringify blobs
         delete data._pictureBlob;
-
         fields.__imported_original_data__ = JSON.stringify(data);
 
         User.setUserFields(uid, fields, next);
+      },
+
+      function (next) {
+        if (data._reputation > 0) {
+          return User.setReputation(uid, data._reputation, next);
+        }
+        next();
       },
 
       function(next) {
@@ -159,13 +214,10 @@
       }
 
     ], function(err) {
-      if (err) return callback(err);
-
-      var d = extend(true, {}, data);
-
-      User.setImported(data._uid, uid, d, function(err) {
-        callback(err, d);
-      });
+      if (err) {
+        return callback(err);
+      }
+      done(uid, data, callback);
     });
   };
 
@@ -293,9 +345,9 @@
     return pickAndCleanUsername.apply(null, args);
   }
 
-  function generateRandomPassword (len, chars) {
+  function generateRandomString (len, chars) {
     var index = (Math.random() * (chars.length - 1)).toFixed(0);
-    return len > 0 ? chars[index] + generateRandomPassword(len - 1, chars) : '';
+    return len > 0 ? chars[index] + generateRandomString(len - 1, chars) : '';
   }
 
 
