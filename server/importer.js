@@ -579,6 +579,9 @@ var async = require('async'),
           Data.eachRoom(
             function(room, next) {
               Importer.progress(index++, total);
+              if (!room) { // room is undefined? nothing to do
+                return next()
+              }
               async.waterfall([
                 function(nxt) {
                   Messaging.getUidsInRoom(room.roomId, 0, -1, nxt);
@@ -587,7 +590,7 @@ var async = require('async'),
                   Messaging.leaveRoom(uids, room.roomId, nxt);
                 },
                 function(nxt) {
-                  db.deleteObject('chat:room:' + room.roomId);
+                  db.delete('chat:room:' + room.roomId, nxt);
                 }
               ], next);
             },
@@ -1186,7 +1189,7 @@ var async = require('async'),
                       var now = new Date();
                       async.parallel([
                         function(next) {
-                          db.sortedSetAdd('chat:room:' + roomId + 'uids', uids.map(function() { return room._timestamp || now; }), uids, next);
+                          db.sortedSetAdd('chat:room:' + roomId + ':uids', uids.map(function() { return room._timestamp || now; }), uids, next);
                         },
                         function(next) {
                           db.sortedSetsAdd(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms'; }), room._timestamp || now, roomId, next);
