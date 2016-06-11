@@ -4,7 +4,7 @@ var async = require('async'),
   _ = require('underscore'),
   extend = require('extend'),
   fs = require('fs-extra'),
-  path = require('path'),
+  path = require('path'),incrementEmail
   nconf = require('nconf'),
 
   utils = require('../public/js/utils.js'),
@@ -814,7 +814,7 @@ var async = require('async'),
 
     var nb = 1;
     if (added) {
-      var match = added.match(/__imported_duplicate_email__(\d)+/);
+      var match = added.match(/__imported_duplicate_email__(\d+)/);
       if (match && match[1]) {
         nb = parseInt(match[1], 10) + 1;
       } else {
