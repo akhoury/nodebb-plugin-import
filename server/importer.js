@@ -814,7 +814,7 @@ var async = require('async'),
 
     var nb = 1;
     if (added) {
-      var match = added.match(/__imported_duplicate_email__(\d)+/);
+      var match = added.match(/__imported_duplicate_email__(\d+)/);
       if (match && match[1]) {
         nb = parseInt(match[1], 10) + 1;
       } else {
@@ -920,6 +920,7 @@ var async = require('async'),
                           birthday: user._birthday || '',
                           showemail: user._showemail ? 1 : 0,
                           lastposttime: user._lastposttime || 0,
+                          lastonline: user._lastonline,
 
                           'email:confirmed': config.autoConfirmEmails ? 1 : 0,
 
@@ -945,9 +946,7 @@ var async = require('async'),
                           _imported_signature: user._signature
                         };
 
-                        if (user._lastonline) {
-                          fields.lastonline = user._lastonline;
-                        }
+                        utils.deleteNullUndefined(fields);
 
                         var keptPicture = false;
                         var onUserFields = function(err, result) {
@@ -1452,6 +1451,8 @@ var async = require('async'),
                 categoryData.color = category._color || config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)];
               }
 
+              utils.deleteNullUndefined(categoryData);
+
               var onCreate = function(err, categoryReturn) {
                 if (err) {
                   Importer.warn('skipping category:_cid: ' + _cid + ' : ' + err);
@@ -1590,6 +1591,8 @@ var async = require('async'),
                 if (group._createtime || group._timestamp) {
                   fields.createtime = group._createtime || group._timestamp;
                 }
+
+                utils.deleteNullUndefined(fields);
 
                 db.setObject('group:' + groupReturn.name, fields, onFields);
               };
@@ -1844,6 +1847,9 @@ var async = require('async'),
                           edited: topic._edited || 0
                         };
 
+                        utils.deleteNullUndefined(topicFields);
+                        utils.deleteNullUndefined(postFields);
+
                         var onPinned = function() {
                           db.setObject('topic:' + returnTopic.topicData.tid, topicFields, function(err, result) {
                             Importer.progress(count, total);
@@ -2093,6 +2099,8 @@ var async = require('async'),
                           _imported_category_slug: topic._imported_category_slug || '',
                           _imported_path: post._path || ''
                         };
+
+                        utils.deleteNullUndefined(fields);
 
                         post = extend(true, {}, post, fields, postReturn);
                         post.imported = true;
