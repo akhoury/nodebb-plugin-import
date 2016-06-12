@@ -4,7 +4,7 @@ var async = require('async'),
   _ = require('underscore'),
   extend = require('extend'),
   fs = require('fs-extra'),
-  path = require('path'),incrementEmail
+  path = require('path'),
   nconf = require('nconf'),
 
   utils = require('../public/js/utils.js'),
