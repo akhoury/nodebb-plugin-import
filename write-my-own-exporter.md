@@ -5,6 +5,7 @@
 * https://github.com/psychobunny/nodebb-plugin-import-phpbb
 * https://github.com/akhoury/nodebb-plugin-import-ipboard
 * https://github.com/akhoury/nodebb-plugin-import-punbb
+* https://github.com/xidui/nodebb-plugin-import-q2a
 
 
 ## Terminology

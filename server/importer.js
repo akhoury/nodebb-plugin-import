@@ -2210,12 +2210,26 @@ var async = require('async'),
                     });
                   },
                   function(cb) {
-                    Data.getImportedUser(vote._uid, function(err, user) {
-                      if (err) {
-                        Importer.warn('getImportedUser: ' + vote._uid + ' err: ' + err);
-                      }
-                      cb(null, user);
-                    });
+                    if (vote._uemail) {
+                      User.getUidByEmail(vote._uemail, function(err, uid) {
+                        if (err || !uid) {
+                          return cb(null, null);
+                        }
+                        User.getUserData(uid, function(err, data) {
+                          if (err || !uid) {
+                            return cb(null, null);
+                          }
+                          cb(null, data);
+                        });
+                      });
+                    } else {
+                      Data.getImportedUser(vote._uid, function (err, user) {
+                        if (err) {
+                          Importer.warn('getImportedUser: ' + vote._uid + ' err: ' + err);
+                        }
+                        cb(null, user);
+                      });
+                    }
                   }
                 ],
                 function(err, results){

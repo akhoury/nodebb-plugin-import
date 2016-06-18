@@ -30,7 +30,8 @@
 	"nodebb-plugin-import-wordpress": "*",
 	"nodebb-plugin-import-jforum": "*",
 	"nodebb-plugin-import-esotalk": "*",
-	"nodebb-plugin-import-esotalk2": "*"
+	"nodebb-plugin-import-esotalk2": "*",
+	"nodebb-plugin-import-q2a": "*"
   },
   "templates": "./public/templates"
 }
