@@ -1777,7 +1777,7 @@ var async = require('async'),
                   }
 
                   function onAttachmentsBlobs () {
-                    topic._content = (topic._content || '').trim();
+                    topic._content = topic._content || '';
 
                     topic._title = utils.slugify(topic._title) ? topic._title[0].toUpperCase() + topic._title.substr(1) : utils.truncate(topic._content, 100);
 
@@ -2046,7 +2046,7 @@ var async = require('async'),
 
                   function onAttachmentsBlobs () {
 
-                    post._content = (post._content || '').trim();
+                    post._content = post._content || '';
 
                     (post._images || []).forEach(function(_image) {
                       post._content += generateImageTag(_image);
