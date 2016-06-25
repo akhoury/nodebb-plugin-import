@@ -213,6 +213,8 @@ Each record should look like this:
 
         "_uid": 1, // OPTIONAL, THE OLD USER ID, Nodebb will create the topics for user 'Guest' if not provided
 
+        "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
+
         "_guest": "Some dude" // OPTIONAL, if you dont have _uid, you can pass a guest name to be used in future features, defaults to null
 
         "_cid": 1, // REQUIRED, THE OLD CATEGORY ID
@@ -282,6 +284,8 @@ Each record should look like this:
         "_content": "Post content ba dum tss", // REQUIRED
 
         "_uid": 202, // OPTIONAL, OLD USER ID, if not provided NodeBB will create under the "Guest" username, unless _guest is passed.
+
+        "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
 
         "_toPid": 65485, // OPTIONAL, OLD REPLIED-TO POST ID,
 
@@ -433,6 +437,8 @@ Each record should look like this:
 
         "_uid": 789, // REQUIRED, old user id which did the vote
 
+        "_uemail": "u45@example.com", // OPTIONAL, The OLD USER EMAIL. If the user is not imported, the plugin will get the user by his _uemail
+
 	// 1 of these 2 ids is REQUIRED
 	/*
 	     you shouldn't need to include `vote._tid` AND `vote._pid`,
@@ -572,4 +578,3 @@ You don't have to do that for it to work, you can type it in manually and it wor
 
 #### Why is it does it have an __import__ word in it when it's an exporter?
 Because it would only works with the __nodebb-plugin-import__ plugin, and I wanted to namespace it somehow. I don't care anymore, call it whatever you want.
-
