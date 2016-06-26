@@ -1,9 +1,9 @@
 
 (function(module) {
-  var nbbpath = require('../helpers/nbbpath');
+  var nbbRequire = require('nodebb-plugin-require');
 
   // nbb-core
-  var privileges = nbbpath.require('/src/privileges');
+  var privileges = nbbRequire('/src/privileges');
 
   privileges.categories.giveGuests = function (cid, callback) {
     async.parallel([

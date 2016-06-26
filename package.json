@@ -55,7 +55,6 @@
     "file-type": "^3.4.0",
     "fs-extra": "~0.11.0",
     "iconv": "^2.1.11",
-    "node.extend": "~1.0.10",
     "nodebb-plugin-require": "^0.0.4",
     "npm": "^1.4.6",
     "underscore": "~1.5.2"

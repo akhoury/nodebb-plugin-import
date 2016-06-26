@@ -1,5 +1,5 @@
 (function(module) {
-  var nbbpath = require('../helpers/nbbpath');
+  var nbbRequire = require('nodebb-plugin-require');
 
   var winston  = require('winston');
   var async  = require('async');
@@ -7,12 +7,12 @@
   var nconf = require('nconf');
   var dispatcher = require('./dispatcher');
 
-  nconf.file({file: path.join(nbbpath.fullpath, '/config.json') });
+  nconf.file({file: path.join(nbbRequire.fullpath, '/config.json') });
 
   var dbType = nconf.get('database');
   var productionDbConfig = nconf.get(dbType);
 
-  var db = nbbpath.require('/src/database');
+  var db = nbbRequire('/src/database');
   dispatcher(db);
 
   if (! db.client) {
@@ -32,15 +32,9 @@
         case "mongo":
           return mongoKeys;
         case "redis":
-          return redisKeys;
-        case "level":
-          return levelKeys;
-      }
+          return db.client.keys;
+        }
     })();
-
-  function redisKeys (key, callback) {
-    return db.client.keys(key, callback);
-  }
 
   function mongoKeys (key, callback) {
     key = key[0] == "*" ? key : "^" + key;
@@ -64,4 +58,3 @@
   module.exports = db;
 
 }(module));
-

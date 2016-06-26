@@ -1,21 +1,21 @@
 (function(module) {
 
-  var nbbpath = require('../helpers/nbbpath.js');
+  var nbbRequire = require('nodebb-plugin-require');
   var db = require('../augmented/database');
   var dispatcher = require('../helpers/dispatcher');
 
   var async = require('async');
   var util = require('util');
 
-  var batch = nbbpath.require('/src/batch');
+  var batch = nbbRequire('/src/batch');
 
   var DEFAULT_BATCH_SIZE = 100;
 
   var Data = {};
   dispatcher(Data);
 
-  db.on("ready", function() {
-    Data.emit("ready");
+  db.on('ready', function() {
+    Data.emit('ready');
   });
 
   Data.count = function(setKey, callback) {
@@ -175,7 +175,7 @@
     delete data.parse;
     delete data._key; // for mongo
 
-    if (typeof score != "number" || isNaN(score)) {
+    if (typeof score != 'number' || isNaN(score)) {
       score = +new Date(); // for redis, zadd score must be a number
     }
 

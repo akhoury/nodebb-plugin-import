@@ -1,11 +1,11 @@
 //var Groups = require('../../../src/groups.js');
 
 (function(module) {
-  var nbbpath = require('../helpers/nbbpath');
+  var nbbRequire = require('nodebb-plugin-require');
   var db = require('../helpers/database');
 
   // nbb-core
-  var Groups = nbbpath.require('/src/groups');
+  var Groups = nbbRequire('/src/groups');
 
   // join with passed-in timestamp
   // [potential-nodebb-core]

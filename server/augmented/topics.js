@@ -2,10 +2,10 @@
 
 
 (function(module) {
-  var nbbpath = require('../helpers/nbbpath');
+  var nbbRequire = require('nodebb-plugin-require');
 
   // nbb-core
-  var Topics = nbbpath.require('/src/topics');
+  var Topics = nbbRequire('/src/topics');
 
   // use uid=1 assuming it's the main admin
 

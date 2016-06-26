@@ -1,12 +1,12 @@
 
 (function(module) {
-	var nbbpath = require('../helpers/nbbpath');
+	var nbbRequire = require('nodebb-plugin-require');
   var db = require('../helpers/database');
 
 	var async = require('async');
 
   // nbb-core
-	var Categories = nbbpath.require('/src/categories');
+	var Categories = nbbRequire('/src/categories');
 
   Categories.batchImport = function (array, options, progressCallback, batchCallback) {
     var index = 0;

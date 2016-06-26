@@ -4,17 +4,16 @@
 
 (function(module) {
 
-  var nbbpath = require('../helpers/nbbpath.js');
-  var Data = require('../helpers/data.js');
+  var nbbRequire = require('nodebb-plugin-require');
+  var async = require('async');
+  var extend = require('extend');
 
   // nbb-core
-  var utils = nbbpath.require('../public/js/utils');
-  var User = nbbpath.require('/src/user');
-
-  var async = nbbpath.require('async');
-  var extend = nbbpath.require('extend');
+  var User = nbbRequire('/src/user');
 
   // custom
+  var Data = require('../helpers/data.js');
+  var utils = require('../../public/js/utils');
   var Groups = require('./groups');
   var File = require('./file');
 

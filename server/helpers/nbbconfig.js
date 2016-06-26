@@ -1,3 +1,2 @@
 
-var nbbpath = require('../helpers/nbbpath');
-module.exports = require(path.join(nbbpath, '/config.json'));
+module.exports = require('nodebb-plugin-require')('/config.json');

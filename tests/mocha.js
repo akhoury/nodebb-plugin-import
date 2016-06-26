@@ -1,12 +1,10 @@
 
-// todo: i think i need to start writing tests, this is getting out of hand;
-
 var path = require("path");
 var fs = require("fs");
 var assert = require("chai").assert;
 var pkg = require("../package.json");
 
-var nbbpath = require("../server/helpers/nbbpath");
+var nbbRequire = require("nodebb-plugin-require");
 
 var Data = require("../server/helpers/data");
 
@@ -17,7 +15,7 @@ describe(pkg.name + "@" + pkg.version + " test", function() {
   });
 
   it("find correct NodeBB path", function (done) {
-    assert.equal(nbbpath.isNodebbDirectory(nbbpath.fullpath), true);
+    assert.equal(nbbRequire.isNodebbDirectory(nbbRequire.fullpath), true);
     done();
   });
 

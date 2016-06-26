@@ -1,6 +1,6 @@
 
 (function(module) {
-  var nbbpath = require('../helpers/nbbpath.js');
+  var nbbRequire = require('nodebb-plugin-require');
 
   var fs = require('fs');
   var nconf = require('nconf');
@@ -9,7 +9,7 @@
   var fileType = require('file-type');
 
   // nbb-core
-  var file = nbbpath.require('/src/file.js');
+  var file = nbbRequire('/src/file.js');
 
   // [potential-nodebb-core]
   file.saveBlobToLocal = function(filename, folder, blob, callback) {
