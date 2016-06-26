@@ -634,6 +634,9 @@ var async = require('async'),
 			score = +new Date(); // for redis, zadd score must be a number
 		}
 
+    // for redis
+    utils.deleteNullUndefined(data);
+
 		return db.setObject(objPrefix + _id, data, function(err) {
 			if (err) {
 				return callback(err);

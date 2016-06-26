@@ -162,7 +162,16 @@
 		}
 	};
 
-	utils.truncate = utils.truncate || function(str, len) {
+  utils.deleteNullUndefined = function (obj) {
+    Object.keys(obj).forEach(function(key) {
+      if (obj[key] == null) {
+        delete obj[key];
+      }
+    });
+    return obj;
+  };
+
+  utils.truncate = utils.truncate || function(str, len) {
 		if (typeof str != 'string') return str;
 		len = utils.isNumber(len) && len > 3 ? len : 20;
 		return str.length <= len ? str : str.substr(0, len - 3) + '...';

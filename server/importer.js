@@ -579,6 +579,9 @@ var async = require('async'),
           Data.eachRoom(
             function(room, next) {
               Importer.progress(index++, total);
+              if (!room) { // room is undefined? nothing to do
+                return next()
+              }
               async.waterfall([
                 function(nxt) {
                   Messaging.getUidsInRoom(room.roomId, 0, -1, nxt);
@@ -587,7 +590,7 @@ var async = require('async'),
                   Messaging.leaveRoom(uids, room.roomId, nxt);
                 },
                 function(nxt) {
-                  db.deleteObject('chat:room:' + room.roomId);
+                  db.delete('chat:room:' + room.roomId, nxt);
                 }
               ], next);
             },
@@ -811,7 +814,7 @@ var async = require('async'),
 
     var nb = 1;
     if (added) {
-      var match = added.match(/__imported_duplicate_email__(\d)+/);
+      var match = added.match(/__imported_duplicate_email__(\d+)/);
       if (match && match[1]) {
         nb = parseInt(match[1], 10) + 1;
       } else {
@@ -917,6 +920,7 @@ var async = require('async'),
                           birthday: user._birthday || '',
                           showemail: user._showemail ? 1 : 0,
                           lastposttime: user._lastposttime || 0,
+                          lastonline: user._lastonline,
 
                           'email:confirmed': config.autoConfirmEmails ? 1 : 0,
 
@@ -942,9 +946,7 @@ var async = require('async'),
                           _imported_signature: user._signature
                         };
 
-                        if (user._lastonline) {
-                          fields.lastonline = user._lastonline;
-                        }
+                        utils.deleteNullUndefined(fields);
 
                         var keptPicture = false;
                         var onUserFields = function(err, result) {
@@ -1186,7 +1188,7 @@ var async = require('async'),
                       var now = new Date();
                       async.parallel([
                         function(next) {
-                          db.sortedSetAdd('chat:room:' + roomId + 'uids', uids.map(function() { return room._timestamp || now; }), uids, next);
+                          db.sortedSetAdd('chat:room:' + roomId + ':uids', uids.map(function() { return room._timestamp || now; }), uids, next);
                         },
                         function(next) {
                           db.sortedSetsAdd(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms'; }), room._timestamp || now, roomId, next);
@@ -1449,6 +1451,8 @@ var async = require('async'),
                 categoryData.color = category._color || config.categoriesTextColors[Math.floor(Math.random() * config.categoriesTextColors.length)];
               }
 
+              utils.deleteNullUndefined(categoryData);
+
               var onCreate = function(err, categoryReturn) {
                 if (err) {
                   Importer.warn('skipping category:_cid: ' + _cid + ' : ' + err);
@@ -1587,6 +1591,8 @@ var async = require('async'),
                 if (group._createtime || group._timestamp) {
                   fields.createtime = group._createtime || group._timestamp;
                 }
+
+                utils.deleteNullUndefined(fields);
 
                 db.setObject('group:' + groupReturn.name, fields, onFields);
               };
@@ -1771,7 +1777,7 @@ var async = require('async'),
                   }
 
                   function onAttachmentsBlobs () {
-                    topic._content = (topic._content || '').trim();
+                    topic._content = topic._content || '';
 
                     topic._title = utils.slugify(topic._title) ? topic._title[0].toUpperCase() + topic._title.substr(1) : utils.truncate(topic._content, 100);
 
@@ -1840,6 +1846,9 @@ var async = require('async'),
                           reputation: topic._reputation || 0,
                           edited: topic._edited || 0
                         };
+
+                        utils.deleteNullUndefined(topicFields);
+                        utils.deleteNullUndefined(postFields);
 
                         var onPinned = function() {
                           db.setObject('topic:' + returnTopic.topicData.tid, topicFields, function(err, result) {
@@ -2037,7 +2046,7 @@ var async = require('async'),
 
                   function onAttachmentsBlobs () {
 
-                    post._content = (post._content || '').trim();
+                    post._content = post._content || '';
 
                     (post._images || []).forEach(function(_image) {
                       post._content += generateImageTag(_image);
@@ -2090,6 +2099,8 @@ var async = require('async'),
                           _imported_category_slug: topic._imported_category_slug || '',
                           _imported_path: post._path || ''
                         };
+
+                        utils.deleteNullUndefined(fields);
 
                         post = extend(true, {}, post, fields, postReturn);
                         post.imported = true;
@@ -2199,12 +2210,26 @@ var async = require('async'),
                     });
                   },
                   function(cb) {
-                    Data.getImportedUser(vote._uid, function(err, user) {
-                      if (err) {
-                        Importer.warn('getImportedUser: ' + vote._uid + ' err: ' + err);
-                      }
-                      cb(null, user);
-                    });
+                    if (vote._uemail) {
+                      User.getUidByEmail(vote._uemail, function(err, uid) {
+                        if (err || !uid) {
+                          return cb(null, null);
+                        }
+                        User.getUserData(uid, function(err, data) {
+                          if (err || !uid) {
+                            return cb(null, null);
+                          }
+                          cb(null, data);
+                        });
+                      });
+                    } else {
+                      Data.getImportedUser(vote._uid, function(err, user) {
+                        if (err) {
+                          Importer.warn('getImportedUser: ' + vote._uid + ' err: ' + err);
+                        }
+                        cb(null, user);
+                      });
+                    }
                   }
                 ],
                 function(err, results){

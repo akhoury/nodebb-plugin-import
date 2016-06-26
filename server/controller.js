@@ -1180,7 +1180,7 @@ var fs = require('fs-extra'),
 											Controller.progress(index++, total);
 											next(err);
 										};
-										if (user && user._imported_uid && user._imported_signature) {
+										if (user && user._imported_uid && utils.resolveType(user._imported_signature)) {
 											db.setObjectField(
 													'user:' + user.uid,
 													'signature',
