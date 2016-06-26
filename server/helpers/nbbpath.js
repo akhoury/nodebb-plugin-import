@@ -22,7 +22,7 @@ var fs = require('fs-extra');
 			parts.pop();
 			dir = parts.join(path.sep);
 		}
-		throw new Error("Cannot find NodeBB installation path, are you sure you installed this module as a nodebb plugin? at least in '/path/to/nodebb/node_modules'?");
+		throw new Error("Cannot find NodeBB installation path, are you sure you installed this module somewhere under '/path/to/nodebb/node_modules'?");
 	};
 
   var fullpath = nbbpath.fullpath = findNodebbDirectory(__dirname);
