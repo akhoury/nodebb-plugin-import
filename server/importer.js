@@ -1257,11 +1257,11 @@ var async = require('async'),
 
               async.parallel([
                 function(cb) {
-                  Data.getImportedUser(message._fromuid, function(err, toUser) {
+                  Data.getImportedUser(message._fromuid, function(err, fromUser) {
                     if (err) {
                       Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
                     }
-                    cb(null, toUser);
+                    cb(null, fromUser);
                   });
                 },
                 function(cb) {
@@ -1297,10 +1297,16 @@ var async = require('async'),
                 var toUser = results[1];
                 var toRoom = results[2];
 
+                if (!fromUser) {
+                  Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom + ', _touid:' + message._touid + ':imported: ' + !!toUser);
+                  Importer.progress(count, total);
+                  return done();
+                }
+
                 var addMessage = function (err, toRoom, callback) {
 
-                  if (!fromUser || !toRoom) {
-                    Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom);
+                  if (!toRoom) {
+                    Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom + ', _touid:' + message._touid + ':imported: ' + !!toUser);
                     Importer.progress(count, total);
                     callback();
                   } else {
@@ -1309,7 +1315,7 @@ var async = require('async'),
                     Messaging.addMessage(fromUser.uid, toRoom.roomId, message._content, message._timestamp, function(err, messageReturn) {
 
                       if (err || !messageReturn) {
-                        Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom + (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
+                        Importer.warn('[process-count-at: ' + count + '] skipping message:_mid: ' + _mid + ' _fromuid:' + message._fromuid + ':imported: ' + !!fromUser + ', _roomId:' + message._roomId + ':imported: ' + !!toRoom  + ', _touid:' + message._touid + ':imported: ' + !!toUser + (err ? ' err: ' + err.message : ' messageReturn: ' + !!messageReturn));
                         Importer.progress(count, total);
                         return callback();
                       }

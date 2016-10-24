@@ -637,6 +637,9 @@ var async = require('async'),
     // for redis
     utils.deleteNullUndefined(data);
 
+    delete data._pictureBlob;
+    delete data._attachmentsBlobs;
+
 		return db.setObject(objPrefix + _id, data, function(err) {
 			if (err) {
 				return callback(err);
