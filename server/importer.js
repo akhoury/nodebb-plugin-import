@@ -2662,7 +2662,7 @@ var async = require('async'),
             },
 
             timestamps: function (done) {
-              if (!topic || !topic.tid)
+              if (!topic || !topic.tid || topic.pinned)
                 return done();
 
               // todo paginate this as well
