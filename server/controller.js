@@ -337,7 +337,7 @@ var fs = require('fs-extra'),
 	var buildFn = function(js) {
 		var fn, noop = function(s) {return s;};
 		try {
-			fn = Function.apply(null, ['content, encoding', (js || '') + '\nreturn content;' ]);
+			fn = Function.apply(global, ['content, encoding, url', (js || '') + '\nreturn content;' ]);
 		} catch (e) {
 			console.warn(js + '\nhas invalid javascript, ignoring...', e);
 			fn = noop;
@@ -348,6 +348,7 @@ var fs = require('fs-extra'),
 	Controller.setupConvert = function() {
 		var cconf = Controller.config().contentConvert;
 		var encoding = require("encoding");
+    var url = require("url");
 
 		var parseBefore = function(s) { return s;};
 		if (cconf.parseBefore && cconf.parseBefore.enabled && cconf.parseBefore.js) {
@@ -367,7 +368,7 @@ var fs = require('fs-extra'),
 		Controller.convert = function(s, type, id) {
 			s = s || '';
 			try {
-        s = parseAfter(parseMain(parseBefore(s, encoding)), encoding);
+        s = parseAfter(parseMain(parseBefore(s, encoding, url)), encoding, url);
       } catch (e) {
         console.warn(type + " with id=`" + id + "` and content=`" + s + "`, threw an error during convert, so it was skipped, error= `" + e + "`");
       }
@@ -377,7 +378,7 @@ var fs = require('fs-extra'),
 
 	var _convert = require('bbcode-to-markdown');
 
-	Controller['html-to-md'] = _convert.htmlToMarkdown;
+	Controller['html-to-md'] = _convert.convertHtmlToMarkdown;
 	Controller['bbcode-to-md'] = _convert.bbcodeToMarkdown;
 
 	Controller.phasePercentage = 0;

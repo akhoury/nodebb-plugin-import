@@ -1911,11 +1911,15 @@ var async = require('async'),
     });
   };
 
-  function generateImageTag (src) {
-    return '\n<img class="imported-image-tag" style="display:block" src="' + src + '" alt="' + src.split('/').pop() + '" />';
+  function generateImageTag (url) {
+    var href = url.url || url.src || url;
+    var filename = url.filename || href.split('/').pop();
+    return '\n<img class="imported-image-tag" style="display:block" src="' + href + '" alt="' + filename + '" />';
   }
   function generateAnchorTag (url) {
-    return '\n<a class="imported-anchor-tag" href="' + url + '" target="_blank">' +  url.split('/').pop() + '</a>';
+    var href = url.url || url.src || url;
+    var filename = url.filename || href.split('/').pop();
+    return '\n<a download="' + filename + '" class="imported-anchor-tag" href="' + href + '" target="_blank">' + filename + '</a>';
   }
 
   Importer.importPosts = function(next) {
@@ -2454,11 +2458,25 @@ var async = require('async'),
 
               async.parallel([
                   function(cb) {
+                    if (!favourite._pid) {
+                      return cb(null, null);
+                    }
                     Data.getImportedPost(favourite._pid, function(err, post) {
                       if (err) {
                         Importer.warn('getImportedPost: ' + favourite._pid + ' err: ' + err);
                       }
                       cb(null, post);
+                    });
+                  },
+                  function(cb) {
+                    if (!favourite._tid) {
+                      return cb(null, null);
+                    }
+                    Data.getImportedTopic(favourite._tid, function(err, topic) {
+                      if (err) {
+                        Importer.warn('getImportedPost: ' + favourite._pid + ' err: ' + err);
+                      }
+                      cb(null, topic);
                     });
                   },
                   function(cb) {
@@ -2472,11 +2490,12 @@ var async = require('async'),
                 ],
                 function(err, results){
                   var post = results[0];
-                  var user = results[1];
+                  var topic = results[1];
+                  var user = results[2];
 
-                  if (!post || !user) {
+                  if ((!post && !topic) || !user) {
                     Importer.warn('[process-count-at: ' + count + '] skipping favourite:_fid: '
-                      + _fid + ', post:_pid:' + favourite._pid + ':imported:' + (!!post) + ', user:_uid:' + favourite._uid + ':imported:' + (!!user));
+                      + _fid + ', post:_pid:' + favourite._pid + ':imported:' + (!!post) + ', topic:_tid:' + favourite._tid + ':imported:' + (!!topic) + ', user:_uid:' + favourite._uid + ':imported:' + (!!user));
                     done();
                   } else {
 
@@ -2497,7 +2516,7 @@ var async = require('async'),
                       Data.setFavouriteImported(_fid, +new Date, favourite, done);
                     };
 
-                    Favourites.favourite(post.pid, user.uid, onCreate);
+                    Favourites.favourite(post ? post.pid : topic.mainPost ? topic.mainPost.pid : topic.mainPid, user.uid, onCreate);
                   }
                 });
             });

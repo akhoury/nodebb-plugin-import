@@ -236,6 +236,9 @@ Each record should look like this:
         "_tags": ["tag1", "tag2", "tag3"], // OPTIONAL, an array of tags, or a comma separated string would work too, defaults to null
 
         "_attachments": ["http://example.com/myfile.zip"], // OPTIONAL, an array of urls, to append to the content for download.
+        // OR you can pass a filename with it
+        "_attachments": [{url: "http://example.com/myfile.zip", filename: "www.zip"}], // OPTIONAL, an array of objects with urls and filenames, to append to the content for download.
+
 
 		// OPTIONAL, an array of objects, each object mush have the binary BLOB,
 		// either a filename or extension, then each file will be written to disk,
@@ -503,7 +506,9 @@ Each record should look like this:
 
         "_fid": 987, // REQUIRED, old favourite id
 
-        "_pid": 123, // REQUIRED, old post id
+        "_pid": 123, // REQUIRED if _tid is not passed, old post id
+        "_tid": 122, // REQUIRED if _pid is not passed, old topic id
+        // if you pass both, _pid will be used
 
         "_uid": 789 // REQUIRED, old user id
 }
