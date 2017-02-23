@@ -1820,7 +1820,7 @@ var async = require('async'),
                         imported++;
 
                         var topicFields = {
-                          viewcount: topic._viewcount || topic._viewscount || 0,
+                          viewcount: topic._views || topic._viewcount || topic._viewscount || 0,
 
                           // assume that this topic not locked for now, but will iterate back again at the end and lock it back after finishing the importPosts()
                           // locked: normalizedTopic._locked ? 1 : 0,
