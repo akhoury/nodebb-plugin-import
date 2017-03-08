@@ -124,6 +124,9 @@ Each record should look like this:
         // untested with very large sets. So.
         "_readTids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []
 
+        // following other _Uids, untested with very large sets. So.
+        "_followingUids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []
+
         "_location": "u45 city", // OPTIONAL, defaults to ''
 
 		// (there is a config for multiplying these with a number for moAr karma)
@@ -180,11 +183,11 @@ Each record should look like this:
 
         "_skip": 0, // OPTIONAL, if you want to intentionally skip that record
 
-	"_color": "#FFFFFF", // OPTIONAL, text color, defaults to random
+	      "_color": "#FFFFFF", // OPTIONAL, text color, defaults to random
 
-	"_bgColor": "#123ABC", // OPTIONAL, background color, defaults to random
+	      "_bgColor": "#123ABC", // OPTIONAL, background color, defaults to random
 
-	"_icon": "comment", // OPTIONAL, Font Awesome icon, defaults to random
+	      "_icon": "comment", // OPTIONAL, Font Awesome icon, defaults to random
 }
 ```
 

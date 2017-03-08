@@ -210,8 +210,9 @@ var async = require('async'),
       Importer.importFavourites,
       Importer.fixCategoriesParentsAndAbilities,
       Importer.fixGroupsOwners,
+      Importer.fixFollowers,
       Importer.fixTopicsTeasers,
-      Importer.rebanAndMarkReadForUsers,
+      Importer.rebanMarkReadAndFollowForUsers,
       Importer.fixTopicTimestampsAndRelockLockedTopics,
       Importer.restoreConfig,
       Importer.disallowGuestsWriteOnAllCategories,
@@ -290,8 +291,9 @@ var async = require('async'),
 
     series.push(Importer.fixCategoriesParentsAndAbilities);
     series.push(Importer.fixGroupsOwners);
+    series.push(Importer.fixFollowers);
     series.push(Importer.fixTopicsTeasers);
-    series.push(Importer.rebanAndMarkReadForUsers);
+    series.push(Importer.rebanMarkReadAndFollowForUsers);
     series.push(Importer.fixTopicTimestampsAndRelockLockedTopics);
     series.push(Importer.restoreConfig);
     series.push(Importer.disallowGuestsWriteOnAllCategories);
@@ -932,6 +934,7 @@ var async = require('async'),
 
                           _imported_readTids: user._readTids && JSON.stringify(user._readTids),
                           _imported_readCids: user._readCids && JSON.stringify(user._readCids),
+                          _imported_followingUids: user._followingUids && JSON.stringify(user._followingUids),
                           _imported_path: user._path || '',
                           _imported_uid: _uid,
                           _imported_username: user._username || '',
@@ -2550,10 +2553,10 @@ var async = require('async'),
     next();
   };
 
-  Importer.rebanAndMarkReadForUsers = function(next) {
+  Importer.rebanMarkReadAndFollowForUsers = function(next) {
     var count = 0;
 
-    Importer.phase('rebanAndMarkReadForUsersStart');
+    Importer.phase('rebanMarkReadAndFollowForUsersStart');
     Importer.progress(0, 1);
 
     Data.countUsers(function(err, total) {
@@ -2641,14 +2644,55 @@ var async = require('async'),
                 function() {
                   nxt();
                 });
+            },
+
+            function(nxt) {
+              if (!user || !user._imported_followingUids) {
+                return nxt();
+              }
+
+              var _uids = user._imported_followingUids;
+              try {
+                while (typeof _uids == 'string') {
+                  _uids = JSON.parse(_uids);
+                }
+              } catch(e) {
+                return nxt();
+              }
+              async.eachLimit(_uids || [], 10, function(_uid, nxtUid) {
+                  async.parallel({
+                    followUser: function(next) {
+                      Data.getImportedUser(_uid, next);
+                    },
+                    isFollowing: function(next) {
+                      User.isFollowing(_uid, next)
+                    }
+                  }, function(err, results) {
+                    if (err) {
+                      Importer.warn('Error:' + err);
+                      return nxtUid();
+                    }
+                    if (results.isFollowing) {
+                      return nxtUid();
+                    }
+                    User.follow(user.uid, results.followUser.uid, function(err) {
+                      Importer.warn('Error:' + err);
+                      return nxtUid();
+                    });
+                  });
+                },
+                function() {
+                  nxt();
+                });
             }
+
           ], done);
         },
         {async: true, eachLimit: EACH_LIMIT_BATCH_SIZE},
         function(err) {
           if (err) throw err;
           Importer.progress(1, 1);
-          Importer.phase('rebanAndMarkReadForUsersDone');
+          Importer.phase('rebanMarkReadAndFollowForUsersDone');
           next();
         });
     });

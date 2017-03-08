@@ -832,6 +832,9 @@ var fs = require('fs-extra'),
 											function(cb) {
 												db.deleteObjectField('user:' + user.uid, '_imported_readCids', cb);
 											},
+                      function(cb) {
+                        db.deleteObjectField('user:' + user.uid, '_imported_followingUids', cb);
+                      },
 											function(cb) {
 												db.deleteObjectField('user:' + user.uid, '_imported_path', cb);
 											},
