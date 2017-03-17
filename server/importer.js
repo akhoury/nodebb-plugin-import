@@ -1187,7 +1187,7 @@ var async = require('async'),
           Importer.progress(1, 1);
           Importer.phase('roomsImportDone');
           Importer.success('Imported ' + imported + '/' + total + ' rooms' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
-          fs.remove(DIRTY_MESSAGES_FILE, next);
+          fs.remove(DIRTY_ROOMS_FILE, next);
         });
     });
   };
