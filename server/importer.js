@@ -68,8 +68,6 @@ var async = require('async'),
   alreadyImportedAllBookmarks = false,
   alreadyImportedAllFavourites = false,
 
-  flushed = false,
-
   defaults = {
     log: true,
     passwordGen: {
@@ -173,8 +171,6 @@ var async = require('async'),
 
     Importer.emit('importer.setup.start');
 
-    flushed = false;
-
     Importer.emit('importer.setup.done');
     Importer.emit('importer.ready');
     if (_.isFunction(callback)) {
@@ -210,7 +206,6 @@ var async = require('async'),
       Importer.importFavourites,
       Importer.fixCategoriesParentsAndAbilities,
       Importer.fixGroupsOwners,
-      Importer.fixFollowers,
       Importer.fixTopicsTeasers,
       Importer.rebanMarkReadAndFollowForUsers,
       Importer.fixTopicTimestampsAndRelockLockedTopics,
@@ -291,7 +286,6 @@ var async = require('async'),
 
     series.push(Importer.fixCategoriesParentsAndAbilities);
     series.push(Importer.fixGroupsOwners);
-    series.push(Importer.fixFollowers);
     series.push(Importer.fixTopicsTeasers);
     series.push(Importer.rebanMarkReadAndFollowForUsers);
     series.push(Importer.fixTopicTimestampsAndRelockLockedTopics);
@@ -326,8 +320,6 @@ var async = require('async'),
     alreadyImportedAllVotes = false;
     alreadyImportedAllBookmarks = false;
     alreadyImportedAllFavourites = false;
-
-    flushed = false;
 
     return _.isFunction(done) ? done(null, true) : true;
   }
@@ -644,7 +636,6 @@ var async = require('async'),
         });
       },
       function(done) {
-        flushed = true;
 
         Importer.phase('resetGlobalsStart');
         Importer.progress(0, 1);
@@ -714,70 +705,43 @@ var async = require('async'),
   };
 
   var recoverImportedGroup = function(_gid, callback) {
-    if (! flushed && (alreadyImportedAllGroups || areGroupsDirty)) {
-      return Data.getImportedGroup(_gid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedGroup(_gid, callback);
   };
 
   var recoverImportedUser = function(_uid, callback) {
-    if (! flushed && (alreadyImportedAllUsers || areUsersDirty)) {
-      return Data.getImportedUser(_uid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedUser(_uid, callback);
   };
 
   var recoverImportedRoom = function(_roomId, callback) {
-    if (! flushed && (alreadyImportedAllRooms || areRoomsDirty)) {
-      return Data.getImportedRoom(_roomId, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedRoom(_roomId, callback);
   };
 
   var recoverImportedMessage = function(_mid, callback) {
-    if (! flushed && (alreadyImportedAllMessages || areMessagesDirty)) {
-      return Data.getImportedMessage(_mid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedMessage(_mid, callback);
   };
 
   var recoverImportedCategory = function(_cid, callback) {
-    if (! flushed && (alreadyImportedAllCategories || areCategoriesDirty)) {
-      return Data.getImportedCategory(_cid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedCategory(_cid, callback);
   };
 
   var recoverImportedTopic = function(_tid, callback) {
-    if (! flushed && (alreadyImportedAllTopics || areTopicsDirty)) {
-      return Data.getImportedTopic(_tid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedTopic(_tid, callback);
   };
 
   var recoverImportedPost = function(_pid, callback) {
-    if (! flushed && (alreadyImportedAllPosts || arePostsDirty)) {
-      return Data.getImportedPost(_pid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedPost(_pid, callback);
   };
+
   var recoverImportedVote = function(_vid, callback) {
-    if (! flushed && (alreadyImportedAllVotes || areVotesDirty)) {
-      return Data.getImportedVote(_vid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedVote(_vid, callback);
   };
+
   var recoverImportedBookmark = function(_bid, callback) {
-    if (! flushed && (alreadyImportedAllBookmarks || areBookmarksDirty)) {
-      return Data.getImportedBookmark(_bid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedBookmark(_bid, callback);
   };
+
   var recoverImportedFavourite = function(_fid, callback) {
-    if (! flushed && (alreadyImportedAllFavourites || areFavouritesDirty)) {
-      return Data.getImportedFavourite(_fid, callback);
-    }
-    return callback(null, null);
+    return Data.getImportedFavourite(_fid, callback);
   };
 
   var writeBlob = function(filepath, blob, callback) {
