@@ -10,7 +10,7 @@ but __you can upgrade__ after the import is done, make sure you follow the [upgr
 ```
 git clone https://github.com/NodeBB/NodeBB.git
 cd NodeBB
-git checkout v1.0.0
+git checkout v1.0.3
 npm install
 node app --setup # i receommend using mongo over redis.
 ./nodebb start
@@ -18,7 +18,8 @@ node app --setup # i receommend using mongo over redis.
 # .. do the import...
 # .. then when you're done and happy
 
-git checkout v1.0.2 # or some higher version.
+git checkout v1.0.4 
+# or some higher version.
 ./nodebb upgrade
 ```
 
