@@ -915,8 +915,11 @@ var fs = require('fs-extra'),
 											},
 											function(cb) {
 												db.deleteObjectField('group:' + group.name, '_imported_slug', cb);
-											}
-										], nxt);
+											},
+                      function(cb) {
+                        db.deleteObjectField('group:' + group.name, '_imported_cids', cb);
+                      }
+                    ], nxt);
 									} else {
 										nxt();
 									}

@@ -205,7 +205,7 @@ var async = require('async'),
       Importer.importBookmarks,
       Importer.importFavourites,
       Importer.fixCategoriesParentsAndAbilities,
-      Importer.fixGroupsOwners,
+      Importer.fixGroupsOwnersAndRestrictCategories,
       Importer.fixTopicsTeasers,
       Importer.rebanMarkReadAndFollowForUsers,
       Importer.fixTopicTimestampsAndRelockLockedTopics,
@@ -285,7 +285,7 @@ var async = require('async'),
     }
 
     series.push(Importer.fixCategoriesParentsAndAbilities);
-    series.push(Importer.fixGroupsOwners);
+    series.push(Importer.fixGroupsOwnersAndRestrictCategories);
     series.push(Importer.fixTopicsTeasers);
     series.push(Importer.rebanMarkReadAndFollowForUsers);
     series.push(Importer.fixTopicTimestampsAndRelockLockedTopics);
@@ -1515,8 +1515,13 @@ var async = require('async'),
               Importer.log('[process-count-at:' + count + '] saving group:_gid: ' + _gid);
 
               var groupData = {
-                name: group._name || ('Group ' + (count + 1)),
-                description: group._description || 'no description available'
+                name: (group._name || ('Group ' + (count + 1))).replace(/\//g, '-'),
+                description: group._description || 'no description available',
+                userTitle: group._userTitle,
+                disableJoinRequests: group._disableJoinRequests,
+                system: group._system,
+                private: group._private,
+                hidden: group._hidden
               };
 
               var onCreate = function(err, groupReturn) {
@@ -1558,7 +1563,8 @@ var async = require('async'),
                   _imported_ownerUid: group._ownerUid || '',
                   _imported_path: group._path || '',
                   _imported_slug: group._slug || '',
-                  _imported_description: group._description || ''
+                  _imported_description: group._description || '',
+                  _imported_cids: group._cids && Array.isArray(group._cids) && group._cids.length ? group._cids.join(',') : ''
                 };
 
                 if (group._createtime || group._timestamp) {
@@ -2730,31 +2736,79 @@ var async = require('async'),
     });
   };
 
-  Importer.fixGroupsOwners = function(next) {
+  Importer.fixGroupsOwnersAndRestrictCategories = function(next) {
     var count = 0;
-    Importer.phase('fixGroupsOwnersStart');
+    Importer.phase('fixGroupsOwnersAndRestrictCategoriesStart');
     Importer.progress(0, 1);
+
+    var defaultPrivileges = ['find', 'read', 'topics:read', 'topics:create', 'topics:reply', 'posts:edit', 'posts:delete', 'topics:delete', 'upload:post:image'];
 
     Data.countGroups(function(err, total) {
       Data.eachGroup(function(group, done) {
           Importer.progress(count++, total);
-          if (!group || !group._imported_ownerUid) {
+          if (!group) {
             return done();
           }
-          Data.getImportedUser(group._imported_ownerUid, function(err, user) {
-            if (err || !user) {
-              return done();
+
+          async.series([
+            function (next) {
+              if (!group._imported_ownerUid) {
+                return next();
+              }
+              Data.getImportedUser(group._imported_ownerUid, function(err, user) {
+                if (err || !user) {
+                  return next();
+                }
+                db.setAdd('group:' + group.name + ':owners', user.uid, function() {
+                  return next();
+                });
+              });
+            },
+            function (next) {
+              if (!group._imported_cids) {
+                return next();
+              }
+              var _cids = group._imported_cids.split(',');
+              if (!_cids.length) {
+                return next();
+              }
+              async.eachLimit(_cids || [], 10,
+                function(_cid, nxtCid) {
+                  Data.getImportedCategory(_cid, function (err, category) {
+                    if (err || !category) {
+                      return next();
+                    }
+                    // hide this category from guest and all the other registered-users, then only give access to that group
+                    async.series([
+                      function (nxt) {
+                        privileges.categories.rescind(defaultPrivileges, category.cid, 'guests', nxt)
+                      },
+                      function (nxt) {
+                        privileges.categories.rescind(defaultPrivileges, category.cid, 'registered-users', nxt)
+                      },
+                      function (nxt) {
+                        Importer.warn('giving group:' + group.name + ' exclusive access to cid:' + category.cid + ', name:' + category.name);
+                        privileges.categories.give(defaultPrivileges, category.cid, group.name, nxt)
+                      }
+                    ], function() {
+                      nxtCid();
+                    });
+                  });
+                },
+                function () {
+                  next();
+                }
+              );
             }
-            db.setAdd('group:' + group.name + ':owners', user.uid, function() {
-              done();
-            });
+          ], function () {
+            done();
           });
         },
         {async: true, eachLimit: EACH_LIMIT_BATCH_SIZE},
         function(err) {
           if (err) throw err;
           Importer.progress(1, 1);
-          Importer.phase('fixGroupsOwnersDone');
+          Importer.phase('fixGroupsOwnersAndRestrictCategoriesDone');
           next();
         });
     });
