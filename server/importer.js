@@ -2741,7 +2741,19 @@ var async = require('async'),
     Importer.phase('fixGroupsOwnersAndRestrictCategoriesStart');
     Importer.progress(0, 1);
 
-    var defaultPrivileges = ['find', 'read', 'topics:read', 'topics:create', 'topics:reply', 'posts:edit', 'posts:delete', 'topics:delete', 'upload:post:image'];
+
+    var PRIVILEGES = privileges.groupPrivilegeList.slice(0).map(function (p) { return p.replace(/^groups:/, ''); });
+    var RESCIND_PRIVILEGES = PRIVILEGES.slice(0);
+    var GIVE_PRIVILEGES = PRIVILEGES.slice(0).filter(function (privilege) {
+      return !/purge|moderate/.test(privilege);
+    });
+
+    var defaultPrivileges = [
+      'find',
+      'read',
+      'topics:create',
+      'topics:reply'
+    ];
 
     Data.countGroups(function(err, total) {
       Data.eachGroup(function(group, done) {
