@@ -1031,8 +1031,26 @@ var fs = require('fs-extra'),
 											},
 											function(cb) {
 												db.deleteObjectField('topic:' + topic.tid, '_imported_category_slug', cb);
-											}
-										], nxt);
+											},
+                      function(cb) {
+                        db.deleteObjectField('topic:' + topic.tid, '_imported_status_id', cb);
+                      },
+                      function(cb) {
+                        db.deleteObjectField('topic:' + topic.tid, '_imported_status_key', cb);
+                      },
+                      function(cb) {
+                        db.deleteObjectField('topic:' + topic.tid, '_imported_status_text', cb);
+                      },
+                      function(cb) {
+                        db.deleteObjectField('topic:' + topic.tid, '_imported_status_description', cb);
+                      },
+                      function(cb) {
+                        db.deleteObjectField('topic:' + topic.tid, '_imported_status_is_completed', cb);
+                      },
+                      function(cb) {
+                        db.deleteObjectField('topic:' + topic.tid, '_imported_status_is_featured', cb);
+                      }
+                    ], nxt);
 									} else {
 										nxt();
 									}

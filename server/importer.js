@@ -1817,7 +1817,15 @@ var async = require('async'),
                           _imported_user_slug: user._slug || '',
                           _imported_user_path: user._path || '',
                           _imported_category_path: category._path || '',
-                          _imported_category_slug: category._slug || ''
+                          _imported_category_slug: category._slug || '',
+
+                          // we need to support a catch all _imported_data json-string
+                          _imported_status_id: topic._status_id || '',
+                          _imported_status_key: topic._status_key || '',
+                          _imported_status_text: topic._status_text || '',
+                          _imported_status_description: topic._status_description || '',
+                          _imported_status_is_completed: topic._status_is_completed || '',
+                          _imported_status_is_featured: topic._status_is_featured || ''
                         };
 
                         var postFields = {
