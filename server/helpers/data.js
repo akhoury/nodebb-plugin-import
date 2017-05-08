@@ -53,7 +53,7 @@
   Data.processSet = function(setKey, prefixEachId, process, options, callback) {
     return batch.processSortedSet(
       setKey,
-      function(err, ids, next) {
+      function(ids, next) {
         var keys = ids.map(function(id) {
           return prefixEachId + id;
         });
@@ -189,9 +189,9 @@
 
   Data.deleteImported = function(setKey, objPrefix, _id, callback) {
     return db.sortedSetRemove(setKey, _id, function() {
-      db.delete(objPrefix + _id, function () {
+      db.delete(objPrefix + _id, function (err) {
         // ignore errors
-        callback();
+        callback(err);
       });
     });
   };
@@ -199,12 +199,13 @@
   Data.deleteEachImported = function(setKey, objPrefix, onProgress, callback) {
     Data.count(setKey, function(err, total) {
       var count = 1;
-      batch.processSortedSet(setKey,
-        function(err, ids, nextBatch) {
-          async.mapLimit(ids, DEFAULT_BATCH_SIZE, function(_id, cb) {
+      batch.processSortedSet(
+        setKey,
+        function(ids, nextBatch) {
+          async.each(ids, function(_id, cb) {
             Data.deleteImported(setKey, objPrefix, _id, function(err, response) {
-              onProgress(null, {total: total, count: count++, percentage: (count/total)});
-              cb();
+              onProgress(err, {total: total, count: count++, percentage: (count/total)});
+              cb(err);
             });
           }, nextBatch);
         },

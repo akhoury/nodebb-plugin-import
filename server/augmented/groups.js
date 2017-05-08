@@ -2,7 +2,7 @@
 
 (function(module) {
   var nbbRequire = require('nodebb-plugin-require');
-  var db = require('../helpers/database');
+  var db = require('./database');
 
   // nbb-core
   var Groups = nbbRequire('/src/groups');

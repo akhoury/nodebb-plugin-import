@@ -1329,6 +1329,7 @@ var async = require('async'),
                   db.getObject(pairPrefix + pairID, function(err, pairData) {
                     if (err || !pairData || !pairData.roomId) {
                       Messaging.newRoom(fromUser.uid, [toUser.uid], function(err, roomId) {
+
                         addMessage(err, roomId ? {roomId: roomId} : null, function(err) {
                           db.setObject(pairPrefix + pairID, {roomId: roomId}, function(err) {
                             done(err);

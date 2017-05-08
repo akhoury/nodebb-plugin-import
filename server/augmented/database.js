@@ -5,9 +5,10 @@
   var async  = require('async');
   var path  = require('path');
   var nconf = require('nconf');
-  var dispatcher = require('./dispatcher');
+  var dispatcher = require('../helpers/dispatcher');
 
-  nconf.file({file: path.join(nbbRequire.fullpath, '/config.json') });
+  nconf.file({file: path.join(nbbRequire.fullpath, '/config.json')});
+  var pkg = require(path.join(nbbRequire.fullpath, '/package.json'));
 
   var dbType = nconf.get('database');
   var productionDbConfig = nconf.get(dbType);
@@ -17,6 +18,15 @@
 
   if (! db.client) {
     nconf.set(dbType, productionDbConfig);
+
+    nconf.defaults({
+      base_dir: nbbRequire.fullpath,
+      themes_path: path.join(nbbRequire.fullpath, '/node_modules'),
+      upload_path: 'public/uploads',
+      views_dir: path.join(nbbRequire.fullpath, '/build/public/templates'),
+      version: pkg.version
+    });
+
     db.init(function() {
       db.emit("ready");
     });
