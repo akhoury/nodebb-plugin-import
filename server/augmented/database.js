@@ -1,10 +1,9 @@
 (function(module) {
   var nbbRequire = require('nodebb-plugin-require');
 
-  var winston  = require('winston');
   var async  = require('async');
   var path  = require('path');
-  var nconf = require('nconf');
+  var nconf = nbbRequire('./node_modules/nconf');
   var dispatcher = require('../helpers/dispatcher');
 
   nconf.file({file: path.join(nbbRequire.fullpath, '/config.json')});

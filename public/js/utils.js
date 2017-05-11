@@ -1,9 +1,12 @@
 (function() {
 	var utils = {};
-	if ('undefined' === typeof window) {
+	
+    if ('undefined' === typeof window) {
 		var path = require('path');
-		utils = require(path.join(__dirname + '/../../../../public/src/utils.js'));
-	} else {
+        var nbbRequire = require('nodebb-plugin-require');
+		utils = nbbRequire('./public/src/utils.js');
+	
+    } else {
 
 		utils.printStack = utils.printStack || function() {
 			var e = new Error('dummy');

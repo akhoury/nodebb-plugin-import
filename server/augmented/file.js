@@ -3,9 +3,9 @@
   var nbbRequire = require('nodebb-plugin-require');
 
   var fs = require('fs');
-  var nconf = require('nconf');
+  var nconf = nbbRequire('./node_modules/nconf');
   var path = require('path');
-  var winston = require('winston');
+  var winston = nbbRequire('./node_modules/winston');
   var fileType = require('file-type');
 
   // nbb-core
