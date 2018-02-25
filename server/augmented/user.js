@@ -9,7 +9,7 @@
   var extend = require('extend');
 
   // nbb-core
-  var User = nbbRequire('/src/user');
+  var User = nbbRequire('src/user');
 
   // custom
   var Data = require('../helpers/data.js');
@@ -355,7 +355,6 @@
 }(module));
 
 //
-//var Favourites = require('../../../src/favourites.js');
 //var privileges = require('../../../src/privileges.js');
 //var Meta = require('../../../src/meta.js');
 //var Messaging = require('../../../src/messaging.js');

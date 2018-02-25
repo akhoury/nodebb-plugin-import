@@ -55,7 +55,7 @@
     "file-type": "^3.4.0",
     "fs-extra": "~0.11.0",
     "iconv": "^2.1.11",
-    "nodebb-plugin-require": "^0.0.5",
+    "nodebb-plugin-require": "^0.0.6",
     "npm": "^1.4.6",
     "underscore": "~1.5.2"
   },
@@ -64,6 +64,6 @@
     "mocha": "^2.4.5"
   },
   "nbbpm": {
-    "compatibility": "1.0.0"
+    "compatibility": "1.7.5"
   }
 }

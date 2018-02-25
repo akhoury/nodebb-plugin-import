@@ -1,3 +1,4 @@
+
 <link href="../../plugins/nodebb-plugin-import/css/acp.css" rel="stylesheet" />
 
 <div class="import-wrapper">
@@ -557,6 +558,3 @@
     For all problems, please file an issue at the plugin's <a href="https://github.com/akhoury/nodebb-plugin-import" target="_blank">github repo</a>
 </p>
 </div>
-
-<script src="../../plugins/nodebb-plugin-import/js/utils.js"></script>
-<script src="../../plugins/nodebb-plugin-import/js/acp.js"></script>

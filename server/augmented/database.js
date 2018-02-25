@@ -1,18 +1,17 @@
 (function(module) {
   var nbbRequire = require('nodebb-plugin-require');
 
-  var async  = require('async');
   var path  = require('path');
-  var nconf = nbbRequire('./node_modules/nconf');
+  var nconf = nbbRequire('nconf');
   var dispatcher = require('../helpers/dispatcher');
 
-  nconf.file({file: path.join(nbbRequire.fullpath, '/config.json')});
+  // nconf.file({file: path.join(nbbRequire.fullpath, '/config.json')});
   var pkg = require(path.join(nbbRequire.fullpath, '/package.json'));
 
   var dbType = nconf.get('database');
   var productionDbConfig = nconf.get(dbType);
 
-  var db = nbbRequire('/src/database');
+  var db = nbbRequire('src/database');
   dispatcher(db);
 
   if (! db.client) {
@@ -46,7 +45,7 @@
     })();
 
   function mongoKeys (key, callback) {
-    key = key[0] == "*" ? key : "^" + key;
+    key = key[0] === "*" ? key : "^" + key;
     var regex = new RegExp(key.replace(/\*/g, '.*'));
 
     db.client.collection('objects').find( { _key: { $regex: regex } }, function(err, result) {

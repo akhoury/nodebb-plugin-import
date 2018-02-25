@@ -1,74 +1,49 @@
-var async = require('async'),
-  fileType = require('file-type'),
-  EventEmitter2 = require('eventemitter2').EventEmitter2,
-  _ = require('underscore'),
-  extend = require('extend'),
-  fs = require('fs-extra'),
-  path = require('path'),
-  nconf = require('nconf'),
 
-  utils = require('../public/js/utils.js'),
-  Data = require('./data.js'),
+var nbbRequire = require('nodebb-plugin-require');
 
-  MAX_INT = Number.MAX_SAFE_INTEGER,
+var async = require('async');
+var fileType = require('file-type');
+var EventEmitter2 = require('eventemitter2').EventEmitter2;
+var _ = require('underscore');
+var extend = require('extend');
+var fs = require('fs-extra');
+var path = require('path');
 
-  Groups = require('../../../src/groups.js'),
-  Favourites = require('../../../src/favourites.js'),
-  privileges = require('../../../src/privileges.js'),
-  Meta = require('../../../src/meta.js'),
-  User = require('../../../src/user.js'),
-  Messaging = require('../../../src/messaging.js'),
-  File = require('../../../src/file.js'),
-  Topics = require('../../../src/topics.js'),
-  Posts = require('../../../src/posts.js'),
-  Categories = require('../../../src/categories.js'),
-  db = module.parent.require('../../../src/database.js'),
+var utils = require('../../public/js/utils');
+var Data = require('../helpers/data');
+var dirty = require('./dirty');
 
-  EACH_LIMIT_BATCH_SIZE = 10,
+// nbb core
+var nconf = nbbRequire('nconf');
+var privileges = nbbRequire('src/privileges');
+var Meta = nbbRequire('src/meta');
+
+// augmented
+var Categories = require('../augmented/categories');
+var Groups = require('../augmented/groups');
+var User = require('../augmented//user');
+var Messaging = require('../augmented/messages');
+var Topics = require('../augmented/topics');
+var Posts = require('../augmented//posts');
+var File = require('../augmented/file');
+var db = require('../augmented/database');
+
+// virtually augmented, from blank {} :D
+var Rooms = require('../augmented/rooms');
+var Votes = require('../augmented/votes');
+var Bookmarks = require('../augmented/bookmarks');
+
+
+var EACH_LIMIT_BATCH_SIZE = 10;
 
 //todo use the real one
-  LOGGEDIN_UID = 1,
+var LOGGEDIN_UID = 1;
 
-  logPrefix = '\n[nodebb-plugin-import]',
+var logPrefix = '\n[nodebb-plugin-import]';
 
-  BACKUP_CONFIG_FILE = path.join(__dirname, '/tmp/importer.nbb.backedConfig.json'),
+var BACKUP_CONFIG_FILE = path.join(__dirname, '/tmp/importer.nbb.backedConfig.json');
 
-  DIRTY_GROUPS_FILE = path.join(__dirname, '/tmp/importer.dirty.groups'),
-  DIRTY_USERS_FILE = path.join(__dirname, '/tmp/importer.dirty.users'),
-  DIRTY_ROOMS_FILE = path.join(__dirname, '/tmp/importer.dirty.rooms'),
-  DIRTY_MESSAGES_FILE = path.join(__dirname, '/tmp/importer.dirty.messages'),
-  DIRTY_CATEGORIES_FILE = path.join(__dirname, '/tmp/importer.dirty.categories'),
-  DIRTY_TOPICS_FILE = path.join(__dirname, '/tmp/importer.dirty.topics'),
-  DIRTY_POSTS_FILE = path.join(__dirname, '/tmp/importer.dirty.posts'),
-  DIRTY_VOTES_FILE = path.join(__dirname, '/tmp/importer.dirty.votes'),
-  DIRTY_BOOKMARKS_FILE = path.join(__dirname, '/tmp/importer.dirty.bookmarks'),
-  DIRTY_FAVOURITES_FILE = path.join(__dirname, '/tmp/importer.dirty.favourites'),
-
-  areGroupsDirty,
-  areUsersDirty,
-  areRoomsDirty,
-  areMessagesDirty,
-  areCategoriesDirty,
-  areTopicsDirty,
-  arePostsDirty,
-  areVotesDirty,
-  areBookmarksDirty,
-  areFavouritesDirty,
-
-  isAnythingDirty,
-
-  alreadyImportedAllGroups = false,
-  alreadyImportedAllUsers = false,
-  alreadyImportedAllRooms = false,
-  alreadyImportedAllMessages = false,
-  alreadyImportedAllCategories = false,
-  alreadyImportedAllTopics = false,
-  alreadyImportedAllPosts = false,
-  alreadyImportedAllVotes = false,
-  alreadyImportedAllBookmarks = false,
-  alreadyImportedAllFavourites = false,
-
-  defaults = {
+var defaults = {
     log: true,
     passwordGen: {
       enabled: false,
@@ -89,41 +64,7 @@ var async = require('async'),
 
     importDuplicateEmails: true,
 
-    nbbTmpConfig: {
-      maximumPostLength: MAX_INT,
-      maximumChatMessageLength: MAX_INT,
-      maximumTitleLength: MAX_INT,
-      maximumUsernameLength: MAX_INT,
-      postDelay: 0,
-      initialPostDelay: 0,
-      newbiePostDelay: 0,
-      minimumPostLength: 0,
-      minimumPasswordLength: 0,
-      minimumTitleLength: 0,
-      requireEmailConfirmation: 0,
-      trackIpPerPost: 1,
-      "newbiePostDelayThreshold": 0,
-      "minimumTagsPerTopic": 0,
-      "maximumTagsPerTopic": MAX_INT,
-      "allowGuestSearching": 1,
-      "allowTopicsThumbnail": 1,
-      "registrationType": "normal",
-      "allowLocalLogin": 1,
-      "allowAccountDelete": 1,
-      "allowGuestHandles": 1,
-      "allowFileUploads": 1,
-      "allowUserHomePage": 1,
-      "maximumFileSize": MAX_INT,
-      "minimumUsernameLength": 1,
-      "maximumSignatureLength": MAX_INT,
-      "maximumAboutMeLength": MAX_INT,
-      "maximumProfileImageSize": MAX_INT,
-      "maximumCoverImageSize": MAX_INT,
-      "profileImageDimension": 128,
-      "profile:allowProfileImageUploads": 1,
-      "reputation:disabled": 0,
-      "downvote:disabled": 0
-    }
+    nbbTmpConfig: require('./nbbTmpConfig')
   };
 
 (function(Importer) {
@@ -134,21 +75,6 @@ var async = require('async'),
       Importer.log('cooling down for ' + timeout/1000 + ' seconds');
       setTimeout(next, timeout);
     };
-  };
-
-  var groupsJoin = function (groupName, uid, timestamp, callback) {
-    Groups.join(groupName, uid, function(err, ret) {
-      if (err) {
-        return callback(err);
-      }
-      db.sortedSetAdd('group:' + groupName + ':members', timestamp, uid, function (err) {
-        if (err) {
-          return callback(err);
-        }
-        Importer.log(uid, 'joined group:', groupName);
-        callback(null, ret);
-      });
-    });
   };
 
   Importer._dispatcher = new EventEmitter2({
@@ -178,8 +104,16 @@ var async = require('async'),
     }
   };
 
+  //todo: warn, sync
+  // i guess it's ok for now
+  Importer.isDirty = function() {
+    return dirty.any();
+  };
+
   function start (flush, callback) {
     Importer.emit('importer.start');
+
+    dirty.cleanSync();
 
     var series = [];
 
@@ -187,8 +121,8 @@ var async = require('async'),
       series.push(Importer.flushData);
     } else {
       Importer.log('Skipping data flush');
-      series.push(makeDirty);
     }
+
     async.series(series.concat([
       Importer.backupConfig,
       Importer.setTmpConfig,
@@ -203,7 +137,6 @@ var async = require('async'),
       Importer.importPosts,
       Importer.importVotes,
       Importer.importBookmarks,
-      Importer.importFavourites,
       Importer.fixCategoriesParentsAndAbilities,
       Importer.fixGroupsOwnersAndRestrictCategories,
       Importer.fixTopicsTeasers,
@@ -224,64 +157,59 @@ var async = require('async'),
     Importer.emit('importer.start');
     Importer.emit('importer.resume');
 
-    Importer.isDirty();
-
     var series = [];
-    if (! alreadyImportedAllGroups) {
-      series.push(Importer.importGroups);
+    if (dirty.skip('groups')) {
+      Importer.warn('Skipping importGroups Phase');
     } else {
-      Importer.warn('alreadyImportedAllGroups=true, skipping importGroups Phase');
+      series.push(Importer.importGroups);
     }
 
-    if (! alreadyImportedAllCategories) {
+    if (dirty.skip('categories')) {
+      Importer.warn('Skipping importCategories Phase');
+    } else {
       series.push(Importer.importCategories);
       series.push(Importer.allowGuestsOnAllCategories);
-    } else {
-      Importer.warn('alreadyImportedAllCategories=true, skipping importCategories Phase');
     }
-    if (! alreadyImportedAllUsers) {
+
+    if (dirty.skip('users')) {
+      Importer.warn('Skipping importUsers Phase');
+    } else {
       series.push(Importer.importUsers);
-    } else {
-      Importer.warn('alreadyImportedAllUsers=true, skipping importUsers Phase');
     }
-    if (! alreadyImportedAllRooms) {
+
+    if (dirty.skip('rooms')) {
+      Importer.warn('Skipping importRooms Phase');
+    } else {
       series.push(Importer.importRooms);
-    } else {
-      Importer.warn('alreadyImportedAllRooms=true, skipping importRooms Phase');
     }
-    if (! alreadyImportedAllMessages) {
+
+    if (dirty.skip('messages')) {
+      Importer.warn('Skipping importMessages Phase');
+    } else {
       series.push(Importer.importMessages);
-    } else {
-      Importer.warn('alreadyImportedAllMessages=true, skipping importMessages Phase');
     }
 
-    if (! alreadyImportedAllTopics) {
+    if (dirty.skip('topics')) {
+      Importer.warn('Skipping importTopics Phase');
+    } else {
       series.push(Importer.importTopics);
-    } else {
-      Importer.warn('alreadyImportedAllTopics=true, skipping importTopics Phase');
     }
-    if (! alreadyImportedAllPosts) {
+    if (dirty.skip('posts')) {
+      Importer.warn('Skipping importPosts Phase');
+    } else {
       series.push(Importer.importPosts);
-    } else {
-      Importer.warn('alreadyImportedAllPosts=true, skipping importPosts Phase');
     }
 
-    if (! alreadyImportedAllVotes) {
+    if (dirty.skip('votes')) {
+      Importer.warn('Skipping importVotes Phase');
+    } else {
       series.push(Importer.importVotes);
-    } else {
-      Importer.warn('alreadyImportedAllVotes=true, skipping importVotes Phase');
     }
 
-    if (! alreadyImportedAllBookmarks) {
+    if (dirty.skip('bookmarks')) {
+      Importer.warn('Skipping importBookmarks Phase');
+    } else {
       series.push(Importer.importBookmarks);
-    } else {
-      Importer.warn('alreadyImportedAllBookmarks=true, skipping importBookmarks Phase');
-    }
-
-    if (! alreadyImportedAllFavourites) {
-      series.push(Importer.importFavourites);
-    } else {
-      Importer.warn('alreadyImportedAllFavourites=true, skipping importFavourites Phase');
     }
 
     series.push(Importer.fixCategoriesParentsAndAbilities);
@@ -296,176 +224,6 @@ var async = require('async'),
     async.series(series, callback);
   };
 
-  function makeDirty (done) {
-
-    areGroupsDirty = true;
-    areUsersDirty = true;
-    areRoomsDirty = true;
-    areMessagesDirty = true;
-    areCategoriesDirty = true;
-    areTopicsDirty = true;
-    arePostsDirty = true;
-    areVotesDirty = true;
-    areBookmarksDirty = true;
-    areFavouritesDirty = true;
-    isAnythingDirty = true;
-
-    alreadyImportedAllGroups = false;
-    alreadyImportedAllUsers = false;
-    alreadyImportedAllRooms = false;
-    alreadyImportedAllMessages = false;
-    alreadyImportedAllCategories = false;
-    alreadyImportedAllTopics = false;
-    alreadyImportedAllPosts = false;
-    alreadyImportedAllVotes = false;
-    alreadyImportedAllBookmarks = false;
-    alreadyImportedAllFavourites = false;
-
-    return _.isFunction(done) ? done(null, true) : true;
-  }
-
-  // todo: really? wtf is this logic
-  Importer.isDirty = function(done) {
-
-    areGroupsDirty = !! fs.existsSync(DIRTY_GROUPS_FILE);
-    areVotesDirty = !! fs.existsSync(DIRTY_VOTES_FILE);
-    areUsersDirty = !! fs.existsSync(DIRTY_USERS_FILE);
-    areRoomsDirty = !! fs.existsSync(DIRTY_ROOMS_FILE);
-    areMessagesDirty = !! fs.existsSync(DIRTY_MESSAGES_FILE);
-    areCategoriesDirty = !! fs.existsSync(DIRTY_CATEGORIES_FILE);
-    areTopicsDirty = !! fs.existsSync(DIRTY_TOPICS_FILE);
-    arePostsDirty = !! fs.existsSync(DIRTY_POSTS_FILE);
-    areBookmarksDirty = !! fs.existsSync(DIRTY_BOOKMARKS_FILE);
-    areFavouritesDirty = !! fs.existsSync(DIRTY_FAVOURITES_FILE);
-
-    isAnythingDirty =
-      areGroupsDirty ||
-      areVotesDirty ||
-      areUsersDirty ||
-      areCategoriesDirty ||
-      areTopicsDirty ||
-      arePostsDirty ||
-      areRoomsDirty ||
-      areMessagesDirty ||
-      areBookmarksDirty ||
-      areFavouritesDirty;
-
-    // order in start() and resume() matters and must be in sync
-    if (areGroupsDirty) {
-      alreadyImportedAllGroups = false;
-      alreadyImportedAllCategories = false;
-      alreadyImportedAllUsers = false;
-      alreadyImportedAllRooms = false;
-      alreadyImportedAllMessages = false;
-      alreadyImportedAllTopics = false;
-      alreadyImportedAllPosts = false;
-      alreadyImportedAllVotes = false;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (areCategoriesDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = false;
-      alreadyImportedAllUsers = false;
-      alreadyImportedAllRooms = false;
-      alreadyImportedAllMessages = false;
-      alreadyImportedAllTopics = false;
-      alreadyImportedAllPosts = false;
-      alreadyImportedAllVotes = false;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (areUsersDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = true;
-      alreadyImportedAllUsers = false;
-      alreadyImportedAllRooms = false;
-      alreadyImportedAllMessages = false;
-      alreadyImportedAllTopics = false;
-      alreadyImportedAllPosts = false;
-      alreadyImportedAllVotes = false;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (areRoomsDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = true;
-      alreadyImportedAllUsers = true;
-      alreadyImportedAllRooms = false;
-      alreadyImportedAllMessages = false;
-      alreadyImportedAllTopics = false;
-      alreadyImportedAllPosts = false;
-      alreadyImportedAllVotes = false;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (areMessagesDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = true;
-      alreadyImportedAllUsers = true;
-      alreadyImportedAllRooms = true;
-      alreadyImportedAllMessages = false;
-      alreadyImportedAllTopics = false;
-      alreadyImportedAllPosts = false;
-      alreadyImportedAllVotes = false;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (areTopicsDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = true;
-      alreadyImportedAllUsers = true;
-      alreadyImportedAllRooms = true;
-      alreadyImportedAllMessages = true;
-      alreadyImportedAllTopics = false;
-      alreadyImportedAllPosts = false;
-      alreadyImportedAllVotes = false;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (arePostsDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = true;
-      alreadyImportedAllUsers = true;
-      alreadyImportedAllRooms = true;
-      alreadyImportedAllMessages = true;
-      alreadyImportedAllTopics = true;
-      alreadyImportedAllPosts = false;
-      alreadyImportedAllVotes = false;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (areVotesDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = true;
-      alreadyImportedAllUsers = true;
-      alreadyImportedAllRooms = true;
-      alreadyImportedAllMessages = true;
-      alreadyImportedAllTopics = true;
-      alreadyImportedAllPosts = true;
-      alreadyImportedAllVotes = false;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (areBookmarksDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = true;
-      alreadyImportedAllUsers = true;
-      alreadyImportedAllRooms = true;
-      alreadyImportedAllMessages = true;
-      alreadyImportedAllTopics = true;
-      alreadyImportedAllPosts = true;
-      alreadyImportedAllVotes = true;
-      alreadyImportedAllBookmarks = false;
-      alreadyImportedAllFavourites = false;
-    } else if (areFavouritesDirty) {
-      alreadyImportedAllGroups = true;
-      alreadyImportedAllCategories = true;
-      alreadyImportedAllUsers = true;
-      alreadyImportedAllRooms = true;
-      alreadyImportedAllMessages = true;
-      alreadyImportedAllTopics = true;
-      alreadyImportedAllPosts = true;
-      alreadyImportedAllVotes = true;
-      alreadyImportedAllBookmarks = true;
-      alreadyImportedAllFavourites = false;
-    }
-
-    return _.isFunction(done) ? done(null, isAnythingDirty) : isAnythingDirty;
-  };
-
   Importer.flushData = function(next) {
     async.series([
       function(done){
@@ -473,9 +231,9 @@ var async = require('async'),
         Importer.progress(0, 1);
 
         // that will delete, categories, topics, topics.bookmarks, posts and posts.votes
-        Data.countCategories(function(err, total) {
+        Categories.count(function(err, total) {
           var index = 0;
-          Data.processCategoriesCidsSet(
+          Categories.processCidsSet(
             function (err, ids, nextBatch) {
               async.eachSeries(ids, function(id, cb) {
                 Importer.progress(index++, total);
@@ -497,16 +255,17 @@ var async = require('async'),
         Importer.phase('purgeUsersStart');
         Importer.progress(0, 1);
 
-        Data.countUsers(function(err, total) {
-          var index = 0; var count = 0;
-          Data.processUsersUidsSet(
+        User.count(function(err, total) {
+          var index = 0;
+          var count = 0;
+          User.processUidsSet(
             function(err, ids, nextBatch) {
               async.eachSeries(ids, function(uid, cb) {
                 Importer.progress(index++, total);
                 if (parseInt(uid, 10) === 1) {
                   return cb();
                 }
-                User.delete(uid, function() {
+                User.delete(LOGGEDIN_UID, uid, function() {
                   count++;
                   cb();
                 });
@@ -531,9 +290,9 @@ var async = require('async'),
         Importer.phase('purgeGroupsStart');
         Importer.progress(0, 1);
 
-        Data.countGroups(function(err, total) {
+        Groups.count(function(err, total) {
           var index = 0; var count = 0;
-          Data.processGroupsNamesSet(
+          Groups.processNamesSet(
             function(err, names, nextBatch) {
               async.eachSeries(names, function(name, cb) {
                 Importer.progress(index++, total);
@@ -565,12 +324,32 @@ var async = require('async'),
         });
       },
       function(done) {
+        Importer.phase('purgeMessagesStart');
+        Importer.progress(0, 1);
+
+        Messaging.count(function(err, total) {
+          var index = 0;
+          Messaging.each(
+            function(message, next) {
+              Importer.progress(index++, total);
+              Messaging.deleteMessage(message.mid, message.roomId, next);
+            },
+            {},
+            function(err) {
+              Importer.progress(1, 1);
+              Importer.phase('purgeMessagesDone');
+              done(err)
+            }
+          );
+        });
+      },
+      function(done) {
         Importer.phase('purgeRoomsStart');
         Importer.progress(0, 1);
 
-        Data.countRooms(function(err, total) {
+        Rooms.count(function(err, total) {
           var index = 0;
-          Data.eachRoom(
+          Rooms.each(
             function(room, next) {
               Importer.progress(index++, total);
               if (!room) { // room is undefined? nothing to do
@@ -592,44 +371,6 @@ var async = require('async'),
             function(err) {
               Importer.progress(1, 1);
               Importer.phase('purgeRoomsDone');
-              done(err)
-            }
-          );
-        });
-      },
-      function(done) {
-        Importer.phase('purgeMessagesStart');
-        Importer.progress(0, 1);
-
-        Data.countMessages(function(err, total) {
-          var index = 0;
-          Data.eachMessage(
-            function(message, next) {
-              Importer.progress(index++, total);
-              var uids = [message.fromuid, message.touid].sort();
-              async.parallel([
-                function(nxt) {
-                  db.delete('message:' + message.mid, function () {
-                    nxt();
-                  });
-                },
-                function(nxt) {
-                  db.sortedSetRemove('messages:uid:' + uids[0] + ':to:' + uids[1], message.mid, function() {
-                    nxt();
-                  });
-                },
-                function(next) {
-                  db.sortedSetRemove('uid:' + uids[0] + ':chats', uids[1], next);
-                },
-                function(next) {
-                  db.sortedSetRemove('uid:' + uids[1] + ':chats', uids[0], next);
-                }
-              ], next);
-            },
-            {},
-            function(err) {
-              Importer.progress(1, 1);
-              Importer.phase('purgeMessagesDone');
               done(err)
             }
           );
@@ -704,46 +445,6 @@ var async = require('async'),
     Importer.emit('importer.phase', {phase: phase, data: data, timestamp: +new Date()});
   };
 
-  var recoverImportedGroup = function(_gid, callback) {
-    return Data.getImportedGroup(_gid, callback);
-  };
-
-  var recoverImportedUser = function(_uid, callback) {
-    return Data.getImportedUser(_uid, callback);
-  };
-
-  var recoverImportedRoom = function(_roomId, callback) {
-    return Data.getImportedRoom(_roomId, callback);
-  };
-
-  var recoverImportedMessage = function(_mid, callback) {
-    return Data.getImportedMessage(_mid, callback);
-  };
-
-  var recoverImportedCategory = function(_cid, callback) {
-    return Data.getImportedCategory(_cid, callback);
-  };
-
-  var recoverImportedTopic = function(_tid, callback) {
-    return Data.getImportedTopic(_tid, callback);
-  };
-
-  var recoverImportedPost = function(_pid, callback) {
-    return Data.getImportedPost(_pid, callback);
-  };
-
-  var recoverImportedVote = function(_vid, callback) {
-    return Data.getImportedVote(_vid, callback);
-  };
-
-  var recoverImportedBookmark = function(_bid, callback) {
-    return Data.getImportedBookmark(_bid, callback);
-  };
-
-  var recoverImportedFavourite = function(_fid, callback) {
-    return Data.getImportedFavourite(_fid, callback);
-  };
-
   var writeBlob = function(filepath, blob, callback) {
     var buffer, ftype = {mime: "unknown/unkown", extension: ""};
 
@@ -808,7 +509,8 @@ var async = require('async'),
       oldOwnerNotFound = config.adminTakeOwnership.enable,
       startTime = +new Date();
 
-    fs.writeFileSync(DIRTY_USERS_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('users');
+
     fs.ensureDirSync(picturesTmpPath);
     fs.ensureDirSync(picturesPublicPath);
 
@@ -821,11 +523,11 @@ var async = require('async'),
               // todo: hack for disqus importer with users already imported, and wanting to import just the comments as Posts
               if (user.uid) {
                 Importer.progress(count, total);
-                return Data.setUserImported(user._uid, user.uid, user, done);
+                return User.setImported(user._uid, user.uid, user, done);
               }
 
               var _uid = user._uid;
-              recoverImportedUser(_uid, function(err, _user) {
+              User.getImported(_uid, function(err, _user) {
                 if (_user) {
                   Importer.progress(count, total);
                   imported++;
@@ -855,10 +557,33 @@ var async = require('async'),
                   return done();
                 }
                 Importer.log('[process-count-at: ' + count + '] saving user:_uid: ' + _uid);
-                var onCreate = function(err, uid) {
+
+                if (oldOwnerNotFound
+                  && parseInt(user._uid, 10) === parseInt(config.adminTakeOwnership._uid, 10)
+                  || (user._username || '').toLowerCase() === config.adminTakeOwnership._username.toLowerCase()
+                ) {
+                  Importer.warn('[process-count-at:' + count + '] skipping user: ' + user._username + ':'+ user._uid + ', it was revoked ownership by the LOGGED_IN_UID=' + LOGGEDIN_UID);
+                  // cache the _uid for the next phases
+                  Importer.config('adminTakeOwnership', {
+                    enable: true,
+                    username: user._username,
+                    // just an alias in this case
+                    _username: user._username,
+                    _uid: user._uid
+                  });
+                  // no need to make it a mod or an admin, it already is
+                  user._level = null;
+                  // set to false so we don't have to match all users
+                  oldOwnerNotFound = false;
+                  // dont create, but set the fields
+                  return onCreate(null, LOGGEDIN_UID);
+                } else {
+                  User.create(userData, onCreate);
+                }
+
+                function onCreate (err, uid) {
 
                   if (err) {
-
                     if (err.message === "[[error:email-taken]]" && config.importDuplicateEmails) {
                       userData.email = incrementEmail(userData.email);
                       User.create(userData, onCreate);
@@ -870,9 +595,41 @@ var async = require('async'),
                     done();
                   } else {
 
-                    var onLevel = function() {
+                    if (('' + user._level).toLowerCase() === 'moderator') {
+                      Groups.joinAt('Global Moderators', uid, user._joindate || startTime, function () {
+                        Importer.warn(userData.username + ' just became a Global Moderator');
+                        onLevel();
+                      });
+                    } else if (('' + user._level).toLowerCase() === 'administrator') {
+                      Groups.joinAt('administrators', uid, user._joindate || startTime, function(){
+                        Importer.warn(userData.username + ' became an Administrator');
+                        onLevel();
+                      });
+                    } else {
+                      onLevel();
+                    }
 
-                      var onGroups = function () {
+                    function onLevel () {
+
+                      if (user._groups && user._groups.length) {
+                        async.eachSeries(user._groups, function(_gid, next) {
+                          Groups.getImported(_gid, function(err, _group) {
+                            if (_group && _group.name) {
+                              Groups.joinAt(_group._name, uid, user._joindate || startTime, function() {
+                                next();
+                              });
+                            } else {
+                              next();
+                            }
+                          });
+                        }, function() {
+                          onGroups();
+                        });
+                      } else {
+                        onGroups();
+                      }
+
+                      function onGroups () {
 
                         var fields = {
                           // preseve the signature, but Nodebb allows a max of 255 chars, so i truncate with an '...' at the end
@@ -896,49 +653,28 @@ var async = require('async'),
                           // don't ban the users now, ban them later, if _imported_user:_uid._banned == 1
                           banned: 0,
 
-                          _imported_readTids: user._readTids && JSON.stringify(user._readTids),
-                          _imported_readCids: user._readCids && JSON.stringify(user._readCids),
-                          _imported_followingUids: user._followingUids && JSON.stringify(user._followingUids),
-                          _imported_path: user._path || '',
-                          _imported_uid: _uid,
-                          _imported_username: user._username || '',
+                          __imported_original_data__: JSON.stringify(_.omit(user, ['_pictureBlob']))
 
-                          // need to find somewhere else to store these, because nodebb api will return the whole hash.
-                          // or make a PR to nodebb core to avoid returning these values.
-                          // _imported_password: user._password || '',
-                          // _imported_hashed_password: user._hashed_password || '',
-                          // _imported_tmp_autogenerated_password: generatedPassword || '',
-
-                          _imported_slug: user._slug || user._userslug || '',
-                          _imported_signature: user._signature
+                          // _imported_readTids: user._readTids && JSON.stringify(user._readTids),
+                          // _imported_readCids: user._readCids && JSON.stringify(user._readCids),
+                          // _imported_followingUids: user._followingUids && JSON.stringify(user._followingUids),
+                          // _imported_path: user._path || '',
+                          // _imported_uid: _uid,
+                          // _imported_username: user._username || '',
+                          //
+                          // // need to find somewhere else to store these, because nodebb api will return the whole hash.
+                          // // or make a PR to nodebb core to avoid returning these values.
+                          // // _imported_password: user._password || '',
+                          // // _imported_hashed_password: user._hashed_password || '',
+                          // // _imported_tmp_autogenerated_password: generatedPassword || '',
+                          //
+                          // _imported_slug: user._slug || user._userslug || '',
+                          // _imported_signature: user._signature
                         };
 
                         utils.deleteNullUndefined(fields);
 
                         var keptPicture = false;
-                        var onUserFields = function(err, result) {
-                          if (err) {
-                            return done(err);
-                          }
-
-                          user.imported = true;
-                          imported++;
-
-                          fields.uid = uid;
-                          user = extend(true, {}, user, fields);
-                          user.keptPicture = keptPicture;
-                          user.userslug = u.userslug;
-                          users[_uid] = user;
-                          Importer.progress(count, total);
-
-                          var series = [];
-                          if (fields.reputation > 0) {
-                            series.push(async.apply(db.sortedSetAdd, 'users:reputation', fields.reputation, uid));
-                          }
-                          async.series(series, function () {
-                            Data.setUserImported(_uid, uid, user, done);
-                          });
-                        };
 
                         if (user._pictureBlob) {
 
@@ -972,66 +708,34 @@ var async = require('async'),
 
                           User.setUserFields(uid, fields, onUserFields);
                         }
-                      };
 
-                      if (user._groups && user._groups.length) {
-                        async.eachSeries(user._groups, function(_gid, next) {
-                          Data.getImportedGroup(_gid, function(err, _group) {
-                            if (_group && _group.name) {
-                              groupsJoin(_group._name, uid, user._joindate || startTime, function() {
-                                next();
-                              });
-                            } else {
-                              next();
-                            }
+                        function onUserFields (err, result) {
+                          if (err) {
+                            return done(err);
+                          }
+
+                          user.imported = true;
+                          imported++;
+
+                          fields.uid = uid;
+                          user = extend(true, {}, user, fields);
+                          user.keptPicture = keptPicture;
+                          user.userslug = u.userslug;
+                          users[_uid] = user;
+                          Importer.progress(count, total);
+
+                          var series = [];
+                          if (fields.reputation > 0) {
+                            series.push(async.apply(db.sortedSetAdd, 'users:reputation', fields.reputation, uid));
+                          }
+                          async.series(series, function () {
+                            User.setImported(_uid, uid, user, done);
                           });
-                        }, function() {
-                          onGroups();
-                        });
-                      } else {
-                        onGroups();
+                        }
                       }
-                    };
-
-                    if (('' + user._level).toLowerCase() == 'moderator') {
-                      groupsJoin('Global Moderators', uid, user._joindate || startTime, function () {
-                        Importer.warn(userData.username + ' just became a Global Moderator');
-                        onLevel();
-                      });
-                    } else if (('' + user._level).toLowerCase() == 'administrator') {
-                      groupsJoin('administrators', uid, user._joindate || startTime, function(){
-                        Importer.warn(userData.username + ' became an Administrator');
-                        onLevel();
-                      });
-                    } else {
-                      onLevel();
                     }
-
                   }
-                };  // end onCreate
-
-                if (oldOwnerNotFound
-                  && parseInt(user._uid, 10) === parseInt(config.adminTakeOwnership._uid, 10)
-                  || (user._username || '').toLowerCase() === config.adminTakeOwnership._username.toLowerCase()
-                ) {
-                  Importer.warn('[process-count-at:' + count + '] skipping user: ' + user._username + ':'+ user._uid + ', it was revoked ownership');
-                  // cache the _uid for the next phases
-                  Importer.config('adminTakeOwnership', {
-                    enable: true,
-                    username: user._username,
-                    // just an alias in this case
-                    _username: user._username,
-                    _uid: user._uid
-                  });
-                  // no need to make it a mod or an admin, it already is
-                  user._level = null;
-                  // set to false so we don't have to match all users
-                  oldOwnerNotFound = false;
-                  // dont create, but set the fields
-                  return onCreate(null, LOGGEDIN_UID);
-                } else {
-                  User.create(userData, onCreate);
-                }
+                }  // end onCreate
               });
             },
             nextExportBatch);
@@ -1046,13 +750,13 @@ var async = require('async'),
           Importer.success('Imported ' + imported + '/' + total + ' users' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
           var nxt = function () {
             fs.remove(picturesTmpPath, function() {
-              fs.remove(DIRTY_USERS_FILE, next);
+              dirty.remove('users', next);
             });
           };
-          if (config.autoConfirmEmails && Data.keys) {
+          if (config.autoConfirmEmails && db.keys) {
             async.parallel([
               function (done) {
-                Data.keys('confirm:*', function (err, keys) {
+                db.keys('confirm:*', function (err, keys) {
                   keys.forEach(function (key) {
                     db.delete(key);
                   });
@@ -1060,7 +764,7 @@ var async = require('async'),
                 });
               },
               function (done) {
-                Data.keys('email:*:confirm', function (err, keys) {
+                db.keys('email:*:confirm', function (err, keys) {
                   keys.forEach(function (key) {
                     db.delete(key);
                   });
@@ -1091,7 +795,8 @@ var async = require('async'),
       alreadyImported = 0,
       startTime = +new Date();
 
-    fs.writeFileSync(DIRTY_ROOMS_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('rooms');
+
     Importer.exporter.countRooms(function(err, total) {
       Importer.success('Importing ' + total + ' rooms.');
       Importer.exporter.exportRooms(
@@ -1101,7 +806,7 @@ var async = require('async'),
             count++;
             var _roomId = room._roomId;
 
-            recoverImportedRoom(_roomId, function(err, _room) {
+            Rooms.getImported(_roomId, function(err, _room) {
               if (_room) {
                 Importer.progress(count, total);
                 imported++;
@@ -1111,7 +816,7 @@ var async = require('async'),
 
               async.parallel([
                 function(cb) {
-                  Data.getImportedUser(room._uid, function(err, fromUser) {
+                  User.getImported(room._uid, function(err, fromUser) {
                     if (err) {
                       Importer.warn('getImportedUser:_uid:' + room._uid + ' err: ' + err.message);
                     }
@@ -1120,7 +825,7 @@ var async = require('async'),
                 },
                 function(cb) {
                   async.map(room._uids, function(id, cb_) {
-                    Data.getImportedUser(id, function(err, toUser) {
+                    User.getImported(id, function(err, toUser) {
                       if (err) {
                         Importer.warn('getImportedUser:_uids:' + id + ' err: ' + err.message);
                       }
@@ -1171,7 +876,7 @@ var async = require('async'),
 
                         Importer.progress(count, total);
                         room = extend(true, {}, room, results[2]);
-                        Data.setRoomImported(_roomId, roomId, room, done);
+                        Rooms.setImported(_roomId, roomId, room, done);
                       });
                     });
                   });
@@ -1187,7 +892,7 @@ var async = require('async'),
           Importer.progress(1, 1);
           Importer.phase('roomsImportDone');
           Importer.success('Imported ' + imported + '/' + total + ' rooms' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
-          fs.remove(DIRTY_ROOMS_FILE, next);
+          dirty.remove('rooms', next);
         });
     });
   };
@@ -1203,7 +908,7 @@ var async = require('async'),
       alreadyImported = 0,
       startTime = +new Date();
 
-    fs.writeFileSync(DIRTY_MESSAGES_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('messages');
 
     Importer.exporter.countMessages(function(err, total) {
       Importer.success('Importing ' + total + ' messages.');
@@ -1214,7 +919,7 @@ var async = require('async'),
             count++;
             var _mid = message._mid;
 
-            recoverImportedMessage(_mid, function(err, _message) {
+            Messaging.getImported(_mid, function(err, _message) {
               if (_message) {
                 Importer.progress(count, total);
                 imported++;
@@ -1224,7 +929,7 @@ var async = require('async'),
 
               async.parallel([
                 function(cb) {
-                  Data.getImportedUser(message._fromuid, function(err, fromUser) {
+                  User.getImported(message._fromuid, function(err, fromUser) {
                     if (err) {
                       Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
                     }
@@ -1236,7 +941,7 @@ var async = require('async'),
                   // support for backward compatible way to import messages the old way.
 
                   if (!message._roomId && message._touid) {
-                    Data.getImportedUser(message._touid, function(err, toUser) {
+                    User.getImported(message._touid, function(err, toUser) {
                       if (err) {
                         Importer.warn('getImportedUser:_fromuid:' + message._fromuid + ' err: ' + err.message);
                       }
@@ -1248,7 +953,7 @@ var async = require('async'),
                 },
                 function(cb) {
                   if (message._roomId) {
-                    Data.getImportedRoom(message._roomId, function(err, toRoom) {
+                    Rooms.getImported(message._roomId, function(err, toRoom) {
                       if (err) {
                         Importer.warn('getImportedRoom:_roomId:' + message._roomId + ' err: ' + err.message);
                       }
@@ -1316,7 +1021,7 @@ var async = require('async'),
 
                         Importer.progress(count, total);
                         message = extend(true, {}, message, messageReturn);
-                        Data.setMessageImported(_mid, mid, message, callback);
+                        Messaging.setImported(_mid, mid, message, callback);
                       });
                     });
                   }
@@ -1355,7 +1060,7 @@ var async = require('async'),
           Importer.progress(1, 1);
           Importer.phase('messagesImportDone');
           Importer.success('Imported ' + imported + '/' + total + ' messages' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
-          fs.remove(DIRTY_MESSAGES_FILE, next);
+          dirty.remove('messages', next);
         });
     });
   };
@@ -1370,10 +1075,9 @@ var async = require('async'),
     var count = 0,
       imported = 0,
       alreadyImported = 0,
-      startTime = +new Date(),
       config = Importer.config();
 
-    fs.writeFileSync(DIRTY_CATEGORIES_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('categories');
 
     Importer.exporter.countCategories(function(err, total) {
       Importer.success('Importing ' + total + ' categories.');
@@ -1385,12 +1089,12 @@ var async = require('async'),
             // hack for disqus importer with categories already imported
             if (category.cid) {
               Importer.progress(count, total);
-              return Data.setCategoryImported(category._cid, category.cid, category, done);
+              return Categories.setImported(category._cid, category.cid, category, done);
             }
 
             var _cid = category._cid;
 
-            recoverImportedCategory(_cid, function(err, _category) {
+            Categories.getImported(_cid, function(err, _category) {
               if (_category) {
                 imported++;
                 alreadyImported++;
@@ -1446,7 +1150,7 @@ var async = require('async'),
                   category = extend(true, {}, category, categoryReturn, fields);
                   categories[_cid] = category;
 
-                  Data.setCategoryImported(_cid, categoryReturn.cid, category, done);
+                  Categories.setImported(_cid, categoryReturn.cid, category, done);
                 };
 
                 var fields = {
@@ -1477,7 +1181,7 @@ var async = require('async'),
           Importer.success('Imported ' + imported + '/' + total + ' categories' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
           Importer.progress(1, 1);
           Importer.phase('categoriesImportDone');
-          fs.remove(DIRTY_CATEGORIES_FILE, next);
+          dirty.remove('categories', next);
         });
     });
   };
@@ -1488,13 +1192,11 @@ var async = require('async'),
 
     Importer._lastPercentage = 0;
 
-    var count = 0,
-      imported = 0,
-      alreadyImported = 0,
-      startTime = +new Date(),
-      config = Importer.config();
+    var count = 0;
+    var imported = 0;
+    var alreadyImported = 0;
 
-    fs.writeFileSync(DIRTY_GROUPS_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('groups');
 
     Importer.exporter.countGroups(function(err, total) {
       Importer.success('Importing ' + total + ' groups.');
@@ -1505,7 +1207,7 @@ var async = require('async'),
             count++;
             var _gid = group._gid;
 
-            recoverImportedGroup(_gid, function(err, _group) {
+            Groups.getImported(_gid, function(err, _group) {
               if (_group) {
                 imported++;
                 alreadyImported++;
@@ -1546,7 +1248,7 @@ var async = require('async'),
                     group = extend(true, {}, group, groupReturn, fields);
                     groups[_gid] = group;
 
-                    Data.setGroupImported(_gid, 0, group, done);
+                    Groups.setImported(_gid, 0, group, done);
                   };
 
                   if (group._createtime || group._timestamp) {
@@ -1592,13 +1294,13 @@ var async = require('async'),
           Importer.success('Importing ' + imported + '/' + total + ' groups' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
           Importer.progress(1, 1);
           Importer.phase('groupsImportDone');
-          fs.remove(DIRTY_GROUPS_FILE, next);
+          dirty.remove('groups', next);
         });
     });
   };
 
   Importer.allowGuestsOnAllCategories = function(done) {
-    Data.eachCategory(function(category, next) {
+    Categories.each(function(category, next) {
         async.parallel([
           function(nxt) {
             Groups.join('cid:' + category.cid + ':privileges:groups:topics:create', 'guests', nxt);
@@ -1615,7 +1317,7 @@ var async = require('async'),
   };
 
   Importer.disallowGuestsWriteOnAllCategories = function(done) {
-    Data.eachCategory(function(category, next) {
+    Categories.each(function(category, next) {
         async.parallel([
           function(nxt) {
             // 'cid:' + cids[i] + ':privileges:groups:' + privilege'
@@ -1646,7 +1348,7 @@ var async = require('async'),
       attachmentsPublicPath = path.join(nconf.get('base_dir'), nconf.get('upload_path'), '_imported_attachments'),
       config = Importer.config();
 
-    fs.writeFileSync(DIRTY_TOPICS_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('topics');
     fs.ensureDirSync(attachmentsTmpPath);
     fs.ensureDirSync(attachmentsPublicPath);
 
@@ -1661,12 +1363,12 @@ var async = require('async'),
             // todo: hack for disqus importer with topics already imported.
             if (topic.tid && parseInt(topic.tid, 10) === 1) {
               Importer.progress(count, total);
-              return Data.setTopicImported(topic._tid, topic.tid, topic, done);
+              return Topics.setImported(topic._tid, topic.tid, topic, done);
             }
 
             var _tid = topic._tid;
 
-            recoverImportedTopic(_tid, function(err, _topic) {
+            Topics.getImported(_tid, function(err, _topic) {
               if (_topic) {
                 Importer.progress(count, total);
                 imported++;
@@ -1676,7 +1378,7 @@ var async = require('async'),
 
               async.parallel([
                 function(cb) {
-                  Data.getImportedCategory(topic._cid, function(err, cat) {
+                  Categories.getImported(topic._cid, function(err, cat) {
                     if (err) {
                       Importer.warn('getImportedCategory: ' + topic._cid + ' err: ' + err);
                     }
@@ -1697,7 +1399,7 @@ var async = require('async'),
                       });
                     });
                   } else {
-                    Data.getImportedUser(topic._uid, function(err, usr) {
+                    User.getImported(topic._uid, function(err, usr) {
                       if (err) {
                         Importer.warn('getImportedUser: ' + topic._uid + ' err: ' + err);
                       }
@@ -1848,7 +1550,7 @@ var async = require('async'),
                             Posts.setPostFields(returnTopic.postData.pid, postFields, function(){
                               topic = extend(true, {}, topic, topicFields, returnTopic.topicData);
                               topics[_tid] = topic;
-                              Data.setTopicImported(_tid, returnTopic.topicData.tid, topic, function() {
+                              Topics.setImported(_tid, returnTopic.topicData.tid, topic, function() {
                                 done();
                               });
                             });
@@ -1882,7 +1584,7 @@ var async = require('async'),
 
           async.series([
             function(nxt) {
-              fs.remove(DIRTY_TOPICS_FILE, nxt);
+              dirty.remove('topics', nxt);
             },
             function(nxt) {
               fs.remove(attachmentsTmpPath, nxt);
@@ -1918,7 +1620,8 @@ var async = require('async'),
       attachmentsPublicPath = path.join(nconf.get('base_dir'), nconf.get('upload_path'), '_imported_attachments'),
       config = Importer.config();
 
-    fs.writeFileSync(DIRTY_POSTS_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('posts');
+
     fs.ensureDirSync(attachmentsTmpPath);
     fs.ensureDirSync(attachmentsPublicPath);
 
@@ -1938,7 +1641,7 @@ var async = require('async'),
 
             var _pid = post._pid;
 
-            recoverImportedPost(_pid, function(err, _post) {
+            Posts.getImported(_pid, function(err, _post) {
               if (_post) {
                 Importer.progress(count, total);
                 imported++;
@@ -1948,7 +1651,7 @@ var async = require('async'),
 
               async.parallel([
                 function(cb) {
-                  Data.getImportedTopic(post._tid, function(err, top) {
+                  Topics.getImported(post._tid, function(err, top) {
                     if (err) {
                       Importer.warn('getImportedTopic: ' + post._tid + ' err: ' + err);
                     }
@@ -1969,7 +1672,7 @@ var async = require('async'),
                         });
                       });
                   } else {
-                    Data.getImportedUser(post._uid, function(err, usr) {
+                    User.getImported(post._uid, function(err, usr) {
                       if (err) {
                         Importer.warn('getImportedUser: ' + post._uid + ' err: ' + err);
                       }
@@ -1981,7 +1684,7 @@ var async = require('async'),
                   if (!post._toPid) {
                     return cb(null, null);
                   }
-                  Data.getImportedPost(post._toPid, function(err, toPost) {
+                  Posts.getImported(post._toPid, function(err, toPost) {
                     if (err) {
                       Importer.warn('getImportedPost: ' + post._toPid + ' err: ' + err);
                     }
@@ -2102,7 +1805,7 @@ var async = require('async'),
                             db.setObject('post:' + postReturn.pid, fields, next);
                           },
                           function (next) {
-                            Data.setPostImported(_pid, post.pid, post, next);
+                            Posts.setImported(_pid, post.pid, post, next);
                           }
                         ], function(err) {
                           Importer.progress(count, total);
@@ -2128,7 +1831,7 @@ var async = require('async'),
 
           async.series([
             function(nxt) {
-              fs.remove(DIRTY_POSTS_FILE, nxt);
+              dirty.remove('posts', nxt);
             },
             function(nxt) {
               fs.remove(attachmentsTmpPath, nxt);
@@ -2152,7 +1855,7 @@ var async = require('async'),
       startTime = +new Date(),
       config = Importer.config();
 
-    fs.writeFileSync(DIRTY_VOTES_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('votes');
 
     Importer.exporter.countVotes(function(err, total) {
       Importer.success('Importing ' + total + ' votes.');
@@ -2163,7 +1866,7 @@ var async = require('async'),
             count++;
             var _vid = vote._vid;
 
-            recoverImportedVote(_vid, function(err, _vote) {
+            Votes.getImported(_vid, function(err, _vote) {
               if (_vote) {
                 imported++;
                 alreadyImported++;
@@ -2183,7 +1886,7 @@ var async = require('async'),
                     if (!vote._pid)
                       return cb();
 
-                    Data.getImportedPost(vote._pid, function(err, post) {
+                    Posts.getImported(vote._pid, function(err, post) {
                       if (err) {
                         Importer.warn('getImportedPost: ' + vote._pid + ' err: ' + err);
                       }
@@ -2194,7 +1897,7 @@ var async = require('async'),
                     if (!vote._tid)
                       return cb();
 
-                    Data.getImportedTopic(vote._tid, function(err, topic) {
+                    Topics.getImported(vote._tid, function(err, topic) {
                       if (err) {
                         Importer.warn('getImportedTopic: ' + vote._tid + ' err: ' + err);
                       }
@@ -2215,7 +1918,7 @@ var async = require('async'),
                         });
                       });
                     } else {
-                      Data.getImportedUser(vote._uid, function(err, user) {
+                      User.getImported(vote._uid, function(err, user) {
                         if (err) {
                           Importer.warn('getImportedUser: ' + vote._uid + ' err: ' + err);
                         }
@@ -2261,13 +1964,13 @@ var async = require('async'),
                       imported++;
                       vote = extend(true, {}, vote, voteReturn);
                       votes[_vid] = vote;
-                      Data.setVoteImported(_vid, +new Date(), vote, done);
+                      Votes.setImported(_vid, +new Date(), vote, done);
                     };
 
                     if (vote._action == -1) {
-                      Favourites.downvote(targetPid, voterUid, onCreate);
+                      Posts.downvote(targetPid, voterUid, onCreate);
                     } else {
-                      Favourites.upvote(targetPid, voterUid, onCreate);
+                      Posts.upvote(targetPid, voterUid, onCreate);
                     }
                   }
                 });
@@ -2287,7 +1990,7 @@ var async = require('async'),
             + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
           Importer.progress(1, 1);
           Importer.phase('votesImportDone');
-          fs.remove(DIRTY_VOTES_FILE, next);
+          dirty.remove('votes', next);
         });
     });
   };
@@ -2298,13 +2001,11 @@ var async = require('async'),
 
     Importer._lastPercentage = 0;
 
-    var count = 0,
-      imported = 0,
-      alreadyImported = 0,
-      startTime = +new Date(),
-      config = Importer.config();
+    var count = 0;
+    var imported = 0;
+    var alreadyImported = 0;
 
-    fs.writeFileSync(DIRTY_BOOKMARKS_FILE, +new Date(), {encoding: 'utf8'});
+    dirty.writeSync('bookmarks');
 
     Importer.exporter.countBookmarks(function(err, total) {
       Importer.success('Importing ' + total + ' bookmarks.');
@@ -2315,7 +2016,7 @@ var async = require('async'),
             count++;
             var _bid = bookmark._bid;
 
-            recoverImportedBookmark(_bid, function(err, _bookmark) {
+            Bookmarks.getImported(_bid, function(err, _bookmark) {
               if (_bookmark) {
                 imported++;
                 alreadyImported++;
@@ -2333,7 +2034,7 @@ var async = require('async'),
 
               async.parallel([
                   function(cb) {
-                    Data.getImportedTopic(bookmark._tid, function(err, topic) {
+                    Topics.getImported(bookmark._tid, function(err, topic) {
                       if (err) {
                         Importer.warn('getImportedTopic: ' + bookmark._tid + ' err: ' + err);
                       }
@@ -2341,7 +2042,7 @@ var async = require('async'),
                     });
                   },
                   function(cb) {
-                    Data.getImportedUser(bookmark._uid, function(err, user) {
+                    User.getImported(bookmark._uid, function(err, user) {
                       if (err) {
                         Importer.warn('getImportedUser: ' + bookmark._uid + ' err: ' + err);
                       }
@@ -2373,7 +2074,7 @@ var async = require('async'),
                       bookmark = extend(true, {}, bookmark, bookmarkReturn);
                       bookmarks[_bid] = bookmark;
 
-                      Data.setBookmarkImported(_bid, +new Date, bookmark, done);
+                      Bookmarks.setImported(_bid, +new Date, bookmark, done);
                     };
 
                     Topics.setUserBookmark(topic.tid, user.uid, bookmark._index, onCreate);
@@ -2394,133 +2095,10 @@ var async = require('async'),
           Importer.progress(1, 1);
           Importer.phase('bookmarksImportDone');
 
-          fs.remove(DIRTY_BOOKMARKS_FILE, next);
+          dirty.remove('bookmarks', next);
         });
     });
   };
-
-  Importer.importFavourites = function(next) {
-    Importer.phase('favouritesImportStart');
-    Importer.progress(0, 1);
-
-    Importer._lastPercentage = 0;
-
-    var count = 0,
-      imported = 0,
-      alreadyImported = 0,
-      startTime = +new Date(),
-      config = Importer.config();
-
-    fs.writeFileSync(DIRTY_FAVOURITES_FILE, +new Date(), {encoding: 'utf8'});
-
-    Importer.exporter.countFavourites(function(err, total) {
-      Importer.success('Importing ' + total + ' favourites.');
-      Importer.exporter.exportFavourites(
-        function(err, favourites, favouritesArr, nextExportBatch) {
-
-          var onEach = function(favourite, done) {
-            count++;
-            var _fid = favourite._fid;
-
-            recoverImportedFavourite(_fid, function(err, _favourite) {
-              if (_favourite) {
-                imported++;
-                alreadyImported++;
-                Importer.progress(count, total);
-                return done();
-              }
-
-              if (err) {
-                Importer.warn('skipping favourite:_fid: ' + _fid + ' : ' + err);
-                Importer.progress(count, total);
-                return done();
-              }
-
-              Importer.log('[process-count-at:' + count + '] saving favourite:_fid: ' + _fid);
-
-              async.parallel([
-                  function(cb) {
-                    if (!favourite._pid) {
-                      return cb(null, null);
-                    }
-                    Data.getImportedPost(favourite._pid, function(err, post) {
-                      if (err) {
-                        Importer.warn('getImportedPost: ' + favourite._pid + ' err: ' + err);
-                      }
-                      cb(null, post);
-                    });
-                  },
-                  function(cb) {
-                    if (!favourite._tid) {
-                      return cb(null, null);
-                    }
-                    Data.getImportedTopic(favourite._tid, function(err, topic) {
-                      if (err) {
-                        Importer.warn('getImportedPost: ' + favourite._pid + ' err: ' + err);
-                      }
-                      cb(null, topic);
-                    });
-                  },
-                  function(cb) {
-                    Data.getImportedUser(favourite._uid, function(err, user) {
-                      if (err) {
-                        Importer.warn('getImportedUser: ' + favourite._uid + ' err: ' + err);
-                      }
-                      cb(null, user);
-                    });
-                  }
-                ],
-                function(err, results){
-                  var post = results[0];
-                  var topic = results[1];
-                  var user = results[2];
-
-                  if ((!post && !topic) || !user) {
-                    Importer.warn('[process-count-at: ' + count + '] skipping favourite:_fid: '
-                      + _fid + ', post:_pid:' + favourite._pid + ':imported:' + (!!post) + ', topic:_tid:' + favourite._tid + ':imported:' + (!!topic) + ', user:_uid:' + favourite._uid + ':imported:' + (!!user));
-                    done();
-                  } else {
-
-                    var onCreate = function(err, favouriteReturn) {
-                      if (err) {
-                        Importer.warn('skipping favourite:_fid: ' + _fid + ' : ' + err);
-                        Importer.progress(count, total);
-                        return done();
-                      }
-
-                      Importer.progress(count, total);
-
-                      favourite.imported = true;
-                      imported++;
-                      favourite = extend(true, {}, favourite, favouriteReturn);
-                      favourites[_fid] = favourite;
-
-                      Data.setFavouriteImported(_fid, +new Date, favourite, done);
-                    };
-
-                    Favourites.favourite(post ? post.pid : topic.mainPost ? topic.mainPost.pid : topic.mainPid, user.uid, onCreate);
-                  }
-                });
-            });
-          };
-          async.eachSeries(favouritesArr, onEach, nextExportBatch);
-        },
-        {
-          // options
-        },
-        function(err) {
-          if (err) {
-            throw err;
-          }
-          Importer.success('Imported ' + imported + '/' + total + ' favourites' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
-          Importer.progress(1, 1);
-          Importer.phase('favouritesImportDone');
-
-          fs.remove(DIRTY_FAVOURITES_FILE, next);
-        });
-    });
-  };
-
 
   Importer.teardown = function(next) {
     Importer.phase('importerTeardownStart');
@@ -2538,8 +2116,8 @@ var async = require('async'),
     Importer.phase('rebanMarkReadAndFollowForUsersStart');
     Importer.progress(0, 1);
 
-    Data.countUsers(function(err, total) {
-      Data.eachUser(function(user, done) {
+    User.count(function(err, total) {
+      User.each(function(user, done) {
           Importer.progress(count++, total);
 
           async.parallel([
@@ -2565,7 +2143,7 @@ var async = require('async'),
               var _tids = user._imported_readTids;
               try {
                 // value can come back as a double-stringed version of a JSON array
-                while (typeof _tids == 'string') {
+                while (typeof _tids === 'string') {
                   _tids = JSON.parse(_tids);
                 }
               } catch(e) {
@@ -2573,7 +2151,7 @@ var async = require('async'),
               }
 
               async.eachLimit(_tids || [], 10, function(_tid, nxtTid) {
-                  Data.getImportedTopic(_tid, function(err, topic) {
+                  Topics.getImported(_tid, function(err, topic) {
                     if (err) {
                       Importer.warn('Error:' + err);
                       return nxtTid();
@@ -2598,14 +2176,14 @@ var async = require('async'),
 
               var _cids = user._imported_readCids;
               try {
-                while (typeof _cids == 'string') {
+                while (typeof _cids === 'string') {
                   _cids = JSON.parse(_cids);
                 }
               } catch(e) {
                 return nxt();
               }
               async.eachLimit(_cids || [], 10, function(_cid, nxtCid) {
-                  Data.getImportedCategory(_cid, function(err, category) {
+                  Categories.getImported(_cid, function(err, category) {
                     if (err) {
                       Importer.warn('Error:' + err);
                       return nxtTid();
@@ -2632,7 +2210,7 @@ var async = require('async'),
 
               var _uids = user._imported_followingUids;
               try {
-                while (typeof _uids == 'string') {
+                while (typeof _uids === 'string') {
                   _uids = JSON.parse(_uids);
                 }
               } catch(e) {
@@ -2641,7 +2219,7 @@ var async = require('async'),
               async.eachLimit(_uids || [], 10, function(_uid, nxtUid) {
                   async.parallel({
                     followUser: function(next) {
-                      Data.getImportedUser(_uid, next);
+                      User.getImported(_uid, next);
                     },
                     isFollowing: function(next) {
                       User.isFollowing(_uid, next)
@@ -2683,8 +2261,8 @@ var async = require('async'),
     Importer.phase('fixTopicTimestampsAndRelockLockedTopicsStart');
     Importer.progress(0, 1);
 
-    Data.countTopics(function(err, total) {
-      Data.eachTopic(function(topic, done) {
+    Topics.count(function(err, total) {
+      Topics.each(function(topic, done) {
           Importer.progress(count++, total);
 
           async.parallel({
@@ -2764,8 +2342,8 @@ var async = require('async'),
       'topics:reply'
     ];
 
-    Data.countGroups(function(err, total) {
-      Data.eachGroup(function(group, done) {
+    Groups.count(function(err, total) {
+      Groups.each(function(group, done) {
           Importer.progress(count++, total);
           if (!group) {
             return done();
@@ -2776,7 +2354,7 @@ var async = require('async'),
               if (!group._imported_ownerUid) {
                 return next();
               }
-              Data.getImportedUser(group._imported_ownerUid, function(err, user) {
+              User.getImported(group._imported_ownerUid, function(err, user) {
                 if (err || !user) {
                   return next();
                 }
@@ -2795,7 +2373,7 @@ var async = require('async'),
               }
               async.eachLimit(_cids || [], 10,
                 function(_cid, nxtCid) {
-                  Data.getImportedCategory(_cid, function (err, category) {
+                  Categories.getImported(_cid, function (err, category) {
                     if (err || !category) {
                       return next();
                     }
@@ -2840,8 +2418,8 @@ var async = require('async'),
     Importer.phase('fixTopicsTeasersStart');
     Importer.progress(0, 1);
 
-    Data.countTopics(function(err, total) {
-      Data.eachTopic(function(topic, done) {
+    Topics.count(function(err, total) {
+      Topics.each(function(topic, done) {
           Importer.progress(count++, total);
           Topics.updateTeaser(topic.tid, done);
         },
@@ -2862,8 +2440,8 @@ var async = require('async'),
     Importer.phase('fixCategoriesParentsAndAbilitiesStart');
     Importer.progress(0, 1);
 
-    Data.countCategories(function(err, total) {
-      Data.eachCategory(function (category, done) {
+    Categories.count(function(err, total) {
+      Categories.each(function (category, done) {
           Importer.progress(count++, total);
 
           var disabled = 0;
@@ -2904,7 +2482,7 @@ var async = require('async'),
               disabled = 1;
             }
             if (category._imported_parentCid) {
-              Data.getImportedCategory(category._imported_parentCid, function (err, parentCategory) {
+              Categories.getImported(category._imported_parentCid, function (err, parentCategory) {
                 cb(parentCategory && parentCategory.cid, disabled);
               });
             } else {
@@ -3155,20 +2733,32 @@ var async = require('async'),
 
   Importer.deleteTmpImportedSetsAndObjects = function(done) {
     var phasePrefix = 'deleteTmpImportedSetsAndObjects';
-    async.series(['users', 'groups', 'categories', 'topics', 'posts', 'messages', 'votes', 'bookmarks', 'favourites']
+
+    async.series([
+      {augmented: User, name: 'Users'},
+      {augmented: Groups, name: 'Groups'},
+      {augmented: Categories, name: 'Categories'},
+      {augmented: Topics, name: 'Topics'},
+      {augmented: Posts, name: 'Posts'},
+      {augmented: Messaging, name: 'Messages'},
+      {augmented: Votes, name: 'Votes'},
+      {augmented: Bookmarks, name: 'Bookmarks'}
+    ]
       .reduce(function(series, current) {
-        var Current = current[0].toUpperCase() + current.slice(1);
+
+        var Obj = current.augmented;
+        var name = current.name;
 
         series.push(function(next) {
-          Importer.phase(phasePrefix + Current + 'Start');
-          Data['deleteImported' + Current](
+          Importer.phase(phasePrefix + name + 'Start');
+          Obj['deleteEachImported'](
             function(err, progress) {
               Importer.progress(progress.count, progress.total);
             },
             function(err) {
               Importer.progress(1, 1);
-              Importer.phase(phasePrefix + Current + 'Done');
-              next();
+              Importer.phase(phasePrefix + name + 'Done');
+              next(err);
             });
         });
         return series;

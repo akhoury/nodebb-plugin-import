@@ -7,11 +7,11 @@
   var async = require('async');
   var util = require('util');
 
-  var batch = nbbRequire('/src/batch');
+  var batch = nbbRequire('src/batch');
 
   var DEFAULT_BATCH_SIZE = 100;
 
-  var Data = {};
+  var Data = {DEFAULT_BATCH_SIZE: DEFAULT_BATCH_SIZE};
   dispatcher(Data);
 
   db.on('ready', function() {

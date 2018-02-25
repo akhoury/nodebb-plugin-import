@@ -18,7 +18,7 @@ node app --setup # i receommend using mongo over redis.
 # .. do the import...
 # .. then when you're done and happy
 
-git checkout v1.0.4 
+git checkout v1.0.4
 # or some higher version.
 ./nodebb upgrade
 ```
@@ -151,4 +151,6 @@ NodeBB prefers using Markdown as the *content language format*, and since most W
 
 ### Test
 
-~~pfffffft~~ soon.
+~~pfffffft~~
+~~soon~~
+....

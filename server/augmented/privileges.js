@@ -3,7 +3,7 @@
   var nbbRequire = require('nodebb-plugin-require');
 
   // nbb-core
-  var privileges = nbbRequire('/src/privileges');
+  var privileges = nbbRequire('src/privileges');
 
   privileges.categories.giveGuests = function (cid, callback) {
     async.parallel([
@@ -23,6 +23,6 @@
     ], callback);
   };
 
-  module.exports = Privileges;
+  module.exports = privileges;
 
 }(module));

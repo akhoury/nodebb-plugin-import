@@ -9,7 +9,7 @@
   var extend = require('extend');
 
   // nbb-core
-  var Messages = nbbRequire('/src/messaging');
+  var Messages = nbbRequire('src/messaging');
 
   // custom
   var Data = require('../helpers/data');
@@ -22,7 +22,7 @@
   Messages.batchImport = function (array, options, progressCallback, batchCallback) {
     var index = 0;
 
-    if (typeof batchCallback == 'undefined') {
+    if (typeof batchCallback === 'undefined') {
       batchCallback = progressCallback;
       progressCallback = options;
       options = {};
@@ -52,7 +52,7 @@
   };
 
   Messages.import = function (data, options, callback) {
-    if (typeof callback == 'undefined') {
+    if (typeof callback === 'undefined') {
       callback = options;
       options = {};
     }
@@ -195,24 +195,24 @@
     });
   };
 
-  Messages.setImported = function (_uid, uid, user, callback) {
-    return Data.setImported('_imported:_messages', '_imported_message:', _uid, uid, user, callback);
+  Messages.setImported = function (_mid, uid, message, callback) {
+    return Data.setImported('_imported:_messages', '_imported_message:', _mid, uid, message, callback);
   };
 
-  Messages.getImported = function (_uid, callback) {
-    return Data.getImported('_imported:_messages', '_imported_message:', _uid, callback);
+  Messages.getImported = function (_mid, callback) {
+    return Data.getImported('_imported:_messages', '_imported_message:', _mid, callback);
   };
 
-  Messages.deleteImported = function (_uid, callback) {
-    return Data.deleteImported('_imported:_messages', '_imported_message:', _uid, callback);
+  Messages.deleteImported = function (_mid, callback) {
+    return Data.deleteImported('_imported:_messages', '_imported_message:', _mid, callback);
   };
 
   Messages.deleteEachImported = function(onProgress, callback) {
     return Data.deleteEachImported('_imported:_messages', '_imported_message:', onProgress, callback);
   };
 
-  Messages.isImported = function (_uid, callback) {
-    return Data.isImported('_imported:_messages', _uid, callback);
+  Messages.isImported = function (_mid, callback) {
+    return Data.isImported('_imported:_messages', _mid, callback);
   };
 
   Messages.eachImported = function (iterator, options, callback) {
@@ -235,7 +235,7 @@
 
   // [potential-nodebb-core]
   Messages.each = function (iterator, options, callback) {
-    if (typeof callback == 'undefined') {
+    if (typeof callback === 'undefined') {
       callback = options;
       options = {};
     }

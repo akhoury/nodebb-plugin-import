@@ -1,15 +1,13 @@
-var
-		pkg = require('../package.json'),
-		fs = require('fs-extra'),
-		_ = require('underscore'),
-		path = require('path'),
-		Data = require('./data.js'),
-		winston = module.parent.require('winston'),
-		nconf = module.parent.require('nconf'),
-		async = module.parent.require('async'),
-		meta = module.parent.require('./meta'),
-		sockets = module.parent.require('./socket.io'),
-		utils = require(path.join(__dirname, '/../public/js/utils.js'));
+var nbbRequire = require('nodebb-plugin-require');
+
+var pkg = require('../package.json');
+var fs = require('fs-extra');
+var path = require('path');
+var Data = require('./helpers/data.js');
+var winston = nbbRequire('winston');
+var nconf = nbbRequire('nconf');
+var meta = nbbRequire('src/meta');
+var sockets = nbbRequire('src/socket.io');
 
 (function(Plugin) {
 
@@ -48,7 +46,7 @@ var
 			json: Plugin.json || {},
 			config: Plugin.config || {},
 			pkg: pkg,
-			exporterModules: exporterModules,
+			exporterModules: exporterModules
 		});
 	};
 
@@ -73,7 +71,7 @@ var
 					require('./routes').setup(params, Plugin);
 
 					fs.ensureDir(path.join(__dirname, '/tmp'), function(err) {
-						Plugin.controller = require('./controller');
+						Plugin.controller = require('./controller/');
 						var handler = function(a, b, c) {
 							sockets.server.sockets.emit.apply(sockets.server.sockets, arguments);
 						};
@@ -99,6 +97,7 @@ var
 			data: function(req, res, next) {
 				var fn = req.query.fn,
 						args = (req.query.args || '').split(',');
+
 				args.push(function(err, result) {
 					if (err) {
 						res.status(500).json(err);
@@ -109,7 +108,7 @@ var
 				if (typeof Data[fn] === 'function') {
 					Data[fn].apply(Data, args);
 				} else {
-					res.status(500).json({ error: 'message' });
+					res.status(500).json({ error: fn + ' is not a Data function' });
 				}
 			},
 

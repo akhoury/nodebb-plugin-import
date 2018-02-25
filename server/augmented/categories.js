@@ -1,12 +1,14 @@
 
 (function(module) {
 	var nbbRequire = require('nodebb-plugin-require');
-  var db = require('../helpers/database');
+  var db = require('./database');
 
-	var async = require('async');
+  var Data = require('../helpers/data.js');
+
+  var async = require('async');
 
   // nbb-core
-	var Categories = nbbRequire('/src/categories');
+	var Categories = nbbRequire('src/categories');
 
   Categories.batchImport = function (array, options, progressCallback, batchCallback) {
     var index = 0;
@@ -27,7 +29,7 @@
   };
 
   Categories.import = function (data, options, callback) {
-    if (typeof callback == 'undefined') {
+    if (typeof callback === 'undefined') {
       callback = options;
       options = {};
     }
@@ -76,7 +78,7 @@
       function (next) {
         var fields = {
           __imported_original_data__: JSON.stringify(data)
-        }
+        };
 
         db.setObject('category:' + cid, fields, next);
       }
@@ -110,24 +112,28 @@
     return Data.each('_imported:_categories', '_imported:_category:', iterator, options, callback);
   };
 
+  Categories.countImported = function (iterator, options, callback) {
+    Data.count('_imported:_categories', callback);
+  };
+
   // [potential-nodebb-core]
   Categories.count = function (callback) {
-    Data.count('users:joindate', callback);
+    Data.count('categories:cid', callback);
   };
 
   // [potential-nodebb-core]
   Categories.each = function (iterator, options, callback) {
-    return Data.each('users:joindate', 'user:', iterator, options, callback);
+    return Data.each('categories:cid', 'category:', iterator, options, callback);
   };
 
   // [potential-nodebb-core]
-  Categories.processUidsSet = function(process, options, callback) {
-    return Data.processIdsSet('users:joindate', process, options, callback);
+  Categories.processCidsSet = function(process, options, callback) {
+    return Data.processIdsSet('categories:cid', process, options, callback);
   };
 
   // [potential-nodebb-core]
   Categories.processSet = function(process, options, callback) {
-    return Data.processSet('users:joindate', 'user:', process, options, callback);
+    return Data.processSet('categories:cid', 'category:', process, options, callback);
   };
 
 	// [potential-nodebb-core]
@@ -176,6 +182,6 @@
 		return Categories.setCategoryField(cid, 'disabled', 0, callback);
 	};
 
-	module.exports = User;
+	module.exports = Categories;
 
 }(module));
