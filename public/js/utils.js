@@ -1,11 +1,11 @@
 (function() {
 	var utils = {};
-	
+
     if ('undefined' === typeof window) {
 		var path = require('path');
         var nbbRequire = require('nodebb-plugin-require');
 		utils = nbbRequire('./public/src/utils.js');
-	
+
     } else {
 
 		utils.printStack = utils.printStack || function() {
@@ -74,11 +74,27 @@
 			visibleDirection = visibleDirection || 'down';
 
 			if (visibleDirection === 'down') {
-				show = function() { $el.slideDown(); return true; };
-				hide = function() { $el.slideUp(); return false; };
+				show = function() {
+				  $el.slideDown();
+				  $el.attr('data-end-result', 'shown');
+          return true;
+				};
+				hide = function() {
+				  $el.slideUp();
+          $el.attr('data-end-result', 'hidden');
+          return false;
+				};
 			} else {
-				show = function() { $el.slideUp(); return true; };
-				hide = function() { $el.slideDown(); return false; };
+				show = function() {
+				  $el.slideUp();
+          $el.attr('data-end-result', 'shown');
+          return true;
+				};
+				hide = function() {
+				  $el.slideDown();
+				  $el.attr('data-end-result', 'hidden');
+				  return false;
+				};
 			}
 			return (toggle === false || $el.is(':visible')) && toggle !== true ? hide() : show();
 		};
@@ -164,6 +180,17 @@
 			return str;
 		}
 	};
+
+  utils.jsonParseSafe = function (str, defaultValue) {
+    var obj = defaultValue;
+    if (typeof str !== 'string') {
+      return str == null ? defaultValue : str;
+    }
+    try {
+      obj = JSON.parse(str);
+    } catch (e) {}
+    return obj;
+  };
 
   utils.deleteNullUndefined = function (obj) {
     Object.keys(obj).forEach(function(key) {

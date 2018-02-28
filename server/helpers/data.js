@@ -5,7 +5,7 @@
   var dispatcher = require('../helpers/dispatcher');
 
   var async = require('async');
-  var util = require('util');
+  var utils = require('../../public/js/utils');
 
   var batch = nbbRequire('src/batch');
 
@@ -139,7 +139,7 @@
             if (err) {
               return next(err);
             }
-            start += util.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
+            start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
             end = start + batch;
             next();
           });

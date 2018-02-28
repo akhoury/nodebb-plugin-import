@@ -5,22 +5,12 @@
   // nbb-core
   var privileges = nbbRequire('src/privileges');
 
-  privileges.categories.giveGuests = function (cid, callback) {
-    async.parallel([
-      async.apply(privileges.categories.give, 'find', 'guests'),
-      async.apply(privileges.categories.give, 'read', 'guests'),
-      async.apply(privileges.categories.give, 'topics:create', 'guests'),
-      async.apply(privileges.categories.give, 'topics:reply', 'guests')
-    ], next);
+  privileges.categories.allowGroupOnCategory = function (groupName, cid, callback) {
+    privileges.categories.give(privileges.userPrivilegeList, cid, groupName, callback);
   };
 
-  privileges.categories.rescindGuests = function (cid, callback) {
-    async.parallel([
-      async.apply(privileges.categories.rescind, 'find', 'guests'),
-      async.apply(privileges.categories.rescind, 'read', 'guests'),
-      async.apply(privileges.categories.rescind, 'topics:create', 'guests'),
-      async.apply(privileges.categories.rescind, 'topics:reply', 'guests')
-    ], callback);
+  privileges.categories.disallowGroupOnCategory = function (groupName, cid, callback) {
+    privileges.categories.rescind(privileges.userPrivilegeList, cid, groupName, callback);
   };
 
   module.exports = privileges;

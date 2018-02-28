@@ -19,6 +19,11 @@
   // var Room = require('../augmented/room');
   var utils = require('../../public/js/utils');
 
+
+  Messages.import = function (data, options, callback) {
+    throw new Error('not implemented');
+  };
+
   Messages.batchImport = function (array, options, progressCallback, batchCallback) {
     var index = 0;
 
@@ -51,146 +56,41 @@
       });
   };
 
-  Messages.import = function (data, options, callback) {
-    if (typeof callback === 'undefined') {
-      callback = options;
-      options = {};
-    }
+  // [potential-nodebb-core]
 
-    Messages.getImported(data._mid, function(err, _imported) {
-      if (!err && _imported) {
-        return callback('data._mid:' + data._mid + ', already imported', _imported);
+  Messages.newRoomWithNameAndTimestamp = function (fromUid, toUids, roomName, timestamp, callback) {
+    Messages.newRoom(fromUid, toUids, function(err, roomId) {
+
+      if (err) {
+        throw err;
+        return callback(err);
       }
 
-      var createData = {
-        content: data._content || ' ',
-        timestamp: data._timestamp
-      };
+      Messages.renameRoom(fromUid, roomId, roomName, function() {
+        var uids = [fromUid].concat(toUids).sort();
 
-      async.series([
-        function (next) {
-          if (!data._fromuid) {
-            return next('Messages.import failed, no _fromuid');
+        timestamp = timestamp || new Date();
+
+        async.parallel([
+          function (next) {
+            db.sortedSetAdd('chat:room:' + roomId + ':uids', timestamp, fromUid, next);
+          },
+          function(next) {
+            db.sortedSetAdd('chat:room:' + roomId + ':uids', uids.map(function() { return timestamp; }), uids, next);
+          },
+          function(next) {
+            db.sortedSetsAdd(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms'; }), timestamp, roomId, next);
+          },
+          function(next) {
+            Messages.getRoomData(roomId, next);
           }
-
-          User.getImported(data._fromuid, function (err, fromUser) {
-            if (fromUser) {
-              createData.fromuid = fromUser.uid;
-            }
-            next(err);
-          });
-        },
-
-        function (next) {
-          if (data._roomId) {
-            // todo
-            // return Room.getImported(data._roomId, function (err, room) {
-            //  if (room) {
-            //    createData.roomId = room.rid;
-            //  }
-            // });
+        ], function(err, results) {
+          if (err) {
+            throw err;
+            return callback(err);
           }
-
-          data._touids = data._touids || [];
-
-          if (data._touid) {
-            data._touids.push(data._touid);
-          }
-
-          if (data._touids && data._touids.length) {
-
-            // filter dups
-            data._touids = data._touids.filter(function (_touid, index) {
-              return !!_touid && this.indexOf(_touid) == index;
-            }, data._touids);
-
-            return async.each(data._touids,
-              function (_touid, next) {
-                return User.getImported(_touid, function (err, toUser) {
-                  if (toUser) {
-                    createData.touids = createData.touids || [];
-                    createData.touids.push(toUser.uid);
-                  }
-                  next(err);
-                });
-              }, next);
-          }
-          next('Messages.import failed, no _touid or _touids or _roomId');
-        },
-
-        function(next) {
-
-          if (!createData.fromuid) {
-            return next('Messages.import failed, no fromuid');
-          }
-
-          if (createData.roomId) {
-            // todo: implement
-            return next();
-          }
-
-          if (createData.touids && createData.touids.length) {
-            var listKey = '_imported_message_uids_chat_rooms:';
-
-            var arr = [parseInt(createData.fromuid, 10)]
-                .concat(createData.touids.map(function (touid) { return parseInt(touid, 10); }));
-            arr.sort(function (a, b) { return a > b ? 1 : a < b ? -1 : 0; });
-            listKey += arr.join(':');
-
-            return db.getObject(listKey, function (err, listData) {
-              if (err || !listData || !listData.roomId) {
-                return Messages.newRoom(createData.fromuid, createData.touids, function (err, roomId) {
-                  createData.roomId = roomId;
-                  db.setObject(listKey, {roomId: roomId}, function(err) {
-                    next(err);
-                  });
-                });
-              }
-              createData.roomId = listData.roomId;
-              next(err);
-            });
-          }
-
-          next('Messages.import failed, no touids or roomId');
-        },
-
-        function (next) {
-          if (!createData.roomId) {
-            return callback('Messages.import failed, no roomId provided or found.');
-          }
-
-          Messages.addMessage(
-            createData.fromuid,
-            createData.roomId,
-            createData.content,
-            createData.timestamp,
-            function(err, messageReturn) {
-              createData = extend(true, {}, createData, data, messageReturn);
-              next(err);
-            });
-        },
-
-        function (next) {
-          Messages.setMessageFields(
-            createData.mid,
-            {
-              __imported_original_data__: JSON.stringify(data)
-            },
-            next
-          );
-        },
-
-        function(next) {
-          Messages.setImported(data._mid, createData.mid, createData, function(err) {
-            next(err);
-          });
-        }
-
-      ], function(err) {
-        if (err) {
-          return callback(err, createData);
-        }
-        callback(null, createData);
+          callback(null, results[3]);
+        });
       });
     });
   };

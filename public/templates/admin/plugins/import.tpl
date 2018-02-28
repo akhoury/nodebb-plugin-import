@@ -213,7 +213,7 @@
             </div>
         </div>
 
-		<div style="overflow: hidden; margin: 10px 0;">
+		  <div style="overflow: hidden; margin: 10px 0;">
         	<button class="btn btn-lg btn-primary"
         			data-on="click"
         			data-action="saveSettings"
@@ -221,16 +221,20 @@
         			type="button">Save Config
         	</button>
         </div>
-
-        <button title="Will try to resume import if it can, it not, I recommend you flush then import" class="btn btn-lg btn-info hidden" data-on="click" data-action="resume" id="import-resume" type="button">Last run was interrupted, try to resume</button>
-        <button title="Imports all records without flushing NodeBB, but will check each records if it was already imported and skip it" class="btn btn-lg btn-success" data-on="click" data-action="startWithoutFlush" id="import-start-no-flush" type="button">Don't Flush NodeBB DB, just import</button>
-        <button title="Will flush NodeBB DB from all records and start a fresh import" class="btn btn-lg btn-warning" data-on="click" data-action="start" id="import-start" type="button">Flush NodeBB DB, then import</button>
-
+        <div style="overflow: hidden; margin: 10px 0;">
+           <button title="Will try to resume import if it can, it not, I recommend you flush then import" class="btn btn-lg btn-info hidden" data-on="click" data-action="resume" id="import-resume" type="button">Last run was interrupted, try to resume</button>
+        </div>
+        <div style="overflow: hidden; margin: 10px 0;">
+           <button title="Imports all records without flushing NodeBB, but will check each records if it was already imported and skip it" class="btn btn-lg btn-success" data-on="click" data-action="startWithoutFlush" id="import-start-no-flush" type="button">Don't Flush NodeBB DB, just import</button>
+        </div>
+        <div style="overflow: hidden; margin: 10px 0;">
+           <button title="Will flush NodeBB DB from all records and start a fresh import" class="btn btn-lg btn-warning" data-on="click" data-action="start" id="import-start" type="button">Flush NodeBB DB, then import</button>
+        </div>
         <button class="btn btn-lg btn-danger hidden" data-on="click" data-action="stop" id="import-stop" type="button">Stop</button>
 
     </div>
 
-    <div class="text-center">
+    <div class="text-center import-darker-on-hover import-panel-toggle import-config-panel-toggle">
         <span title="Toggle settings" data-target-visible-direction="down" data-on="click" data-action="slideVerticalToggle" data-target=".import-config" class="import-hand">Toggle pre-import settings</span>
     </div>
 </div>
@@ -497,7 +501,7 @@
 </div>
 
 </div>
-<div class="text-center">
+<div class="text-center import-darker-on-hover import-panel-toggle import-tools-panel-toggle">
     <span title="Toggle settings" data-target-visible-direction="down" data-on="click" data-action="slideVerticalToggle" data-target=".import-tools" class="import-hand">Toggle post-import tools</span>
 </div>
 </div>

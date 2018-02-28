@@ -4,6 +4,29 @@
 
   var Votes = {};
 
+  Votes.import = function () {
+    throw new Error('not implemented');
+  };
+
+  Votes.batchImport = function (array, options, progressCallback, batchCallback) {
+    var index = 0;
+    options = extend(true, {}, options);
+
+    async.eachSeries(
+      array,
+      function (record, next) {
+        Votes.import(record, options, function(err, data) {
+          progressCallback(err, {data: data, index: ++index});
+          // ignore errors:
+          // let progressCallback throw an error or log a warning if it wants to.
+          next();
+        });
+      },
+      function (err) {
+        batchCallback(err);
+      });
+  };
+
   Votes.setImported = function (_vid, vid, vote, callback) {
     return Data.setImported('_imported:_votes', '_imported_vote:', _vid, vid, vote, callback);
   };

@@ -10,6 +10,11 @@
   // nbb-core
 	var Categories = nbbRequire('src/categories');
 
+
+  Categories.import = function (data, options, callback) {
+    throw new Error('not implemented');
+  };
+
   Categories.batchImport = function (array, options, progressCallback, batchCallback) {
     var index = 0;
     async.eachSeries(
@@ -26,66 +31,6 @@
       function (err) {
         batchCallback(err);
       });
-  };
-
-  Categories.import = function (data, options, callback) {
-    if (typeof callback === 'undefined') {
-      callback = options;
-      options = {};
-    }
-
-    var cid;
-    var createData;
-    var flushed = options.flush || options.flushed;
-
-    async.series([
-      function (next) {
-        if (!flushed) {
-          return Categories.getImported(data._cid, function(err, _imported) {
-            if (err || !_imported) {
-              return next();
-            }
-            callback(null, _imported);
-          });
-        }
-
-        return next();
-      },
-
-      function (next) {
-        createData = {
-          name: data._name || 'Untitled Category',
-          description: data._description || 'no description available',
-
-          // force all categories Parent to be 0, then after the import is done, we can iterate again and fix them.
-          parentCid: 0,
-          // same deal with disabled
-          disabled: 0,
-
-          // you can fix the order later, nbb/admin
-          order: data._order || (+new Date),
-
-          link: data._link || 0
-        };
-
-        Categories.create(createData, function (err, category) {
-          cid = category.cid;
-
-          next(err);
-        });
-      },
-
-      function (next) {
-        var fields = {
-          __imported_original_data__: JSON.stringify(data)
-        };
-
-        db.setObject('category:' + cid, fields, next);
-      }
-
-    ], function () {
-
-    });
   };
 
   Categories.setImported = function (_cid, cid, category, callback) {

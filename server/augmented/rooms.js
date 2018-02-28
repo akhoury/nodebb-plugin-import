@@ -6,6 +6,29 @@
 
   var Rooms = {};
 
+  Rooms.import = function () {
+    throw new Error('not implemented');
+  };
+
+  Rooms.batchImport = function (array, options, progressCallback, batchCallback) {
+    var index = 0;
+    options = extend(true, {}, options);
+
+    async.eachSeries(
+      array,
+      function (record, next) {
+        Rooms.import(record, options, function(err, data) {
+          progressCallback(err, {data: data, index: ++index});
+          // ignore errors:
+          // let progressCallback throw an error or log a warning if it wants to.
+          next();
+        });
+      },
+      function (err) {
+        batchCallback(err);
+      });
+  };
+
   Rooms.setImported = function (_rid, rid, room, callback) {
     return Data.setImported('_imported:_rooms', '_imported_room:', _rid, rid, room, callback);
   };
@@ -35,7 +58,7 @@
   };
 
   Rooms.count = function (callback) {
-    Data.keys('chat:room:*', function(err, keys) {
+    db.keys('chat:room:*', function(err, keys) {
       if (err) {
         callback(err);
       }
@@ -46,7 +69,7 @@
   Rooms.each = function (iterator, options, callback) {
     options = options || {};
     var prefix = 'chat:room:';
-    Data.keys(prefix + '*', function(err, keys) {
+    db.keys(prefix + '*', function(err, keys) {
       if (err) {
         return callback(err);
       }

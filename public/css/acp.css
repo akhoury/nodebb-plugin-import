@@ -13,9 +13,13 @@
 .import-hand[data-target=".import-tools"]:hover {
 	color: rgb(107, 107, 107);
 }
+.import-panel-toggle {
+
+}
 .import-config,
-.import-config-wrapper {
-	background: #E2E4F6;
+.import-config-wrapper,
+[data-end-result="hidden"] + .import-config-panel-toggle {
+	background: rgba(226, 228, 246, 0.9);
 }
 .import-settings select.form-control,
 .import-settings input.form-control {
@@ -23,13 +27,14 @@
 	padding: 3px;
 }
 .import-tools,
-.import-tools-wrapper {
-	background: #DCF7C8;
+.import-tools-wrapper,
+[data-end-result="hidden"] + .import-tools-panel-toggle {
+	background: rgba(220, 247, 200, 0.9);
 }
 .import-config-wrapper,
 .import-tools-wrapper {
 	border: 1px solid gray;
-	padding: 5px;
+	padding: 0;
 }
 .import-config,
 .import-tools {
@@ -72,6 +77,11 @@
 }
 .import-log-error {
 	color: #970002;
+}
+.import-darker-on-hover {
+}
+.import-darker-on-hover:hover {
+  filter: brightness(90%);
 }
 #content-convert-parse-before,
 #content-convert-parse-after {

@@ -1,4 +1,6 @@
 
+var nbbRequire = require('nodebb-plugin-require');
+
 var async = require('async');
 var _ = require('underscore');
 var EventEmitter2 = require('eventemitter2').EventEmitter2;
@@ -18,9 +20,9 @@ var getModuleId = function(module) {
   return module.split('@')[0];
 };
 
-
 var searchModulesCache = function(moduleName, callback) {
-  var mod = require.resolve(getModuleId(moduleName));
+  var mod = safeRequire(getModuleId(moduleName));
+
   if (mod && ((mod = require.cache[mod]) !== undefined)) {
     (function run(mod) {
       mod.children.forEach(function (child) {
@@ -31,19 +33,21 @@ var searchModulesCache = function(moduleName, callback) {
   }
 };
 
+var safeRequire = function (moduleName) {
+  var m;
+  try {
+    m = require.resolve(moduleName);
+  } catch (e) {
+    m = nbbRequire(moduleName);
+  }
+  return m;
+};
+
 var reloadModule = function(moduleName) {
   searchModulesCache(moduleName, function(mod) {
     delete require.cache[mod.id];
   });
-
-  // https://github.com/joyent/node/issues/8266
-  Object.keys(module.constructor._pathCache).forEach(function(cacheKey) {
-    if (cacheKey.indexOf(moduleName) > 0) {
-      delete module.constructor._pathCache[cacheKey];
-    }
-  });
-
-  return require(moduleName);
+  return safeRequire(moduleName);
 };
 
 (function(Exporter) {

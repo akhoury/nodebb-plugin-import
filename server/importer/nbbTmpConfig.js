@@ -4,7 +4,8 @@ var nbbDefaults = nbbRequire('install/data/defaults.json');
 var extend = require('extend');
 var MAX_INT = Number.MAX_SAFE_INTEGER;
 
-module.export = extend(true, {}, nbbDefaults, {
+module.exports = extend(true, {}, nbbDefaults, {
+  "maintenanceMode": 1,
   "showSiteTitle": 1,
   "postDelay": 0,
   "initialPostDelay": 0,
@@ -33,7 +34,8 @@ module.export = extend(true, {}, nbbDefaults, {
   "maximumAboutMeLength": MAX_INT,
   "maximumProfileImageSize": MAX_INT,
   "maximumCoverImageSize": MAX_INT,
-  "requireEmailConfirmation": 0,
+  "minimumChatMessageLength": 0,
+  "maximumChatMessageLength": MAX_INT,
   "allowProfileImageUploads": 1,
   "teaserPost": "last-reply",
   "allowPrivateGroups": 1,
@@ -41,5 +43,6 @@ module.export = extend(true, {}, nbbDefaults, {
   "bookmarkThreshold": 5,
   "topicsPerList": 20,
   "autoDetectLang": 1,
-  "min:rep:flag": 0
+  "min:rep:flag": 0,
+  "trackIpPerPost": 1
 });
