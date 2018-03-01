@@ -10,7 +10,6 @@ var fs = require('fs-extra');
 var path = require('path');
 
 var utils = require('../../public/js/utils');
-var Data = require('../helpers/data');
 var dirty = require('./dirty');
 
 // nbb core
@@ -144,6 +143,7 @@ var defaults = {
       Importer.fixTopicTimestampsAndRelockLockedTopics,
       Importer.restoreConfig,
       Importer.disallowGuestsWriteOnAllCategories,
+      Importer.allowGuestsReadOnAllCategories,
       Importer.teardown
     ]), callback);
   }
@@ -219,6 +219,7 @@ var defaults = {
     series.push(Importer.fixTopicTimestampsAndRelockLockedTopics);
     series.push(Importer.restoreConfig);
     series.push(Importer.disallowGuestsWriteOnAllCategories);
+    series.push(Importer.allowGuestsReadOnAllCategories);
     series.push(Importer.teardown);
 
     async.series(series, callback);
@@ -838,7 +839,8 @@ var defaults = {
                     }
                     Importer.progress(count, total);
                     room = extend(true, {}, room, newRoom);
-                    Rooms.setImported(_roomId, roomId, room, done);
+                    imported++;
+                    Rooms.setImported(_roomId, newRoom.roomId, room, done);
                   });
                 }
               });
@@ -993,7 +995,6 @@ var defaults = {
                           Importer.warn('[process-count-at: ' + count + '] message creation error message:_mid: ' + _mid + ':mid:' + mid, err);
                           return callback();
                         }
-
                         Importer.progress(count, total);
                         message = extend(true, {}, message, messageReturn);
                         Messaging.setImported(_mid, mid, message, callback);
@@ -1004,7 +1005,6 @@ var defaults = {
               });
             });
           }, nextExportBatch);
-
         },
         {
           // options
@@ -1216,12 +1216,26 @@ var defaults = {
           if (err) {
             throw err;
           }
-          Importer.success('Importing ' + imported + '/' + total + ' groups' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
+          Importer.success('Imported ' + imported + '/' + total + ' groups' + (alreadyImported ? ' (out of which ' + alreadyImported + ' were already imported at an earlier time)' : ''));
           Importer.progress(1, 1);
           Importer.phase('groupsImportDone');
           dirty.remove('groups', next);
         });
     });
+  };
+
+  Importer.allowGuestsReadOnAllCategories = function(done) {
+    Categories.each(function(category, next) {
+        privileges.categories.give([
+          'find',
+          'read',
+          'topics:read'
+        ], category.cid, 'guests', next);
+      },
+      {async: true, eachLimit: 10},
+      function() {
+        done();
+      });
   };
 
   Importer.allowGuestsWriteOnAllCategories = function(done) {
