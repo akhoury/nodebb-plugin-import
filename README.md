@@ -3,14 +3,14 @@ nodebb-plugin-import
 Import your old forum data to nodebb | a one time use plugin
 
 # THIS PLUGIN ONLY SUPPORTS:
-## [NodeBB v1.0.3](https://github.com/NodeBB/NodeBB/tree/v1.0.3)
+## [NodeBB v1.7.5](https://github.com/NodeBB/NodeBB/tree/v1.7.5)
 
 but __you can upgrade__ after the import is done, make sure you follow the [upgrade docs](https://docs.nodebb.org/vi/latest/upgrading/)
 
 ```
 git clone https://github.com/NodeBB/NodeBB.git
 cd NodeBB
-git checkout v1.0.3
+git checkout v1.7.5
 npm install
 node app --setup # i receommend using mongo over redis.
 ./nodebb start
@@ -18,7 +18,7 @@ node app --setup # i receommend using mongo over redis.
 # .. do the import...
 # .. then when you're done and happy
 
-git checkout v1.0.4
+git checkout v1.7.6
 # or some higher version.
 ./nodebb upgrade
 ```
@@ -141,7 +141,7 @@ NodeBB prefers using Markdown as the *content language format*, and since most W
 
 *If you are importing already 'markdownified' content, just don't set the `convert` option, or select "Don't convert" to skip the conversion, also if you are importing some other format, feel free to submit a pull request or open an issue, if there is a Node Module to it, or if there is some pre-built JS "function" to convert the content, I'll add it*
 
-### Some common issues</h4>
+### Some common issues
 
 * After converting your content, you should restart the server, NodeBB caches the content recently read in memory.
 * `EMFILE too many open files` error, try disabling the server logs, there is an option for that

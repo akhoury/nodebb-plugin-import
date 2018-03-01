@@ -1,6 +1,8 @@
 ## Examples to fork:
-* https://github.com/akhoury/nodebb-plugin-import-ubb
+
 * https://github.com/akhoury/nodebb-plugin-import-vbulletin
+* https://github.com/akhoury/nodebb-plugin-import-discourse
+* https://github.com/akhoury/nodebb-plugin-import-ubb
 * https://github.com/a5mith/nodebb-plugin-import-smf
 * https://github.com/psychobunny/nodebb-plugin-import-phpbb
 * https://github.com/akhoury/nodebb-plugin-import-ipboard
