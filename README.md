@@ -12,7 +12,7 @@ git clone https://github.com/NodeBB/NodeBB.git
 cd NodeBB
 git checkout v1.7.5
 npm install
-node app --setup # i receommend using mongo over redis.
+node app --setup # i recommend using mongo over redis.
 ./nodebb start
 
 # .. do the import...
