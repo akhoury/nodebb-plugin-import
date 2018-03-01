@@ -24,7 +24,7 @@
   "faIcon": "fa-magic",
 
   "exporters": {
-    "nodebb-plugin-import-discourse": "*",
+    "nodebb-plugin-import-discourse": "git://github.com/akhoury/nodebb-plugin-import-discourse#master",
     "nodebb-plugin-import-vanilla": "*",
     "nodebb-plugin-import-punbb2": "*",
     "nodebb-plugin-import-xenforo": "*",

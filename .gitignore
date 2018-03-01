@@ -19,6 +19,7 @@ node_modules
 .tmp
 config.json
 server/tmp/*
+tmp/**
 server/*.DS_Store
 server/logs/*.log
 public/tmp/*.csv
