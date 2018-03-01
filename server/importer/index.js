@@ -1170,9 +1170,9 @@ var defaults = {
                 description: group._description || 'no description available',
                 userTitle: group._userTitle,
                 disableJoinRequests: group._disableJoinRequests,
-                system: group._system,
-                private: group._private,
-                hidden: group._hidden,
+                system: group._system || 0,
+                private: group._private || 0,
+                hidden: group._hidden || 0,
                 timestamp: group._createtime || group._timestamp
               };
 
@@ -1186,7 +1186,8 @@ var defaults = {
                 }
 
                 var fields = {
-                  __imported_original_data__: JSON.stringify(_.omit(group, []))
+                  __imported_original_data__: JSON.stringify(_.omit(group, [])),
+                  userTitleEnabled: utils.isNumber(group._userTitleEnabled) ? group._userTitleEnabled : 1
                 };
 
                 utils.deleteNullUndefined(fields);

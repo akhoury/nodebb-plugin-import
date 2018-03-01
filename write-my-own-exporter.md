@@ -413,6 +413,18 @@ Each record should look like this:
 
         "_description": "My group description", // OPTIONAL
 
+        "_userTitle": "My group badge", // OPTIONAL, will show instead of the _name
+
+        "_userTitleEnabled": 1, // OPTIONAL, to show the userTitle at all
+
+        "_disableJoinRequests": 0, // OPTIONAL
+
+        "_system": 0, // OPTIONAL, if system group
+
+        "_private": 0, // OPTIONAL, if private group
+
+        "_hidden": 0, // OPTIONAL, if hidden group
+
         "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
 }
 ```
