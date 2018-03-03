@@ -36,7 +36,7 @@ var searchModulesCache = function(moduleName, callback) {
 var safeRequire = function (moduleName) {
   var m;
   try {
-    m = require.resolve(moduleName);
+    m = require(require.resolve(moduleName));
   } catch (e) {
     m = nbbRequire(moduleName);
   }

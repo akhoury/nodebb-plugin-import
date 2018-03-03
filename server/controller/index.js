@@ -27,6 +27,9 @@ var LAST_IMPORT_TIMESTAMP_FILE = path.join(__dirname + '/tmp/lastimport');
 
 var DIRTY_FILE = path.join(__dirname + '/tmp/controller.dirty');
 
+fs.ensureDirSync(DELIVERABLES_TMP_DIR);
+fs.ensureDirSync(path.join(__dirname, '/tmp'));
+
 var DELETE_BATCH_LIMIT = 50;
 var CONVERT_BATCH_LIMIT = 50;
 
