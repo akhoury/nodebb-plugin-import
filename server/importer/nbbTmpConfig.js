@@ -44,5 +44,5 @@ module.exports = extend(true, {}, nbbDefaults, {
   "topicsPerList": 20,
   "autoDetectLang": 1,
   "min:rep:flag": 0,
-  "trackIpPerPost": 1
+  "trackIpPerPost": 0
 });

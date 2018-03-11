@@ -293,28 +293,21 @@ var defaults = {
 
         Groups.count(function(err, total) {
           var index = 0; var count = 0;
-          Groups.processNamesSet(
-            function(err, names, nextBatch) {
-              async.eachSeries(names, function(name, cb) {
+          Groups.processSet(
+            function(err, groups, nextBatch) {
+              async.eachSeries(groups, function(group, cb) {
                 Importer.progress(index++, total);
-
                 // skip if system group
-                if (name === 'administrators') {
+                if (group.system && !group.__imported_original_data__) {
                   return cb();
                 }
-                Groups.destroy(name, function() {
+                Groups.destroy(group.name, function() {
                   count++;
                   cb();
                 });
               }, nextBatch);
             }, {
-              // since we're deleting records the range is always shifting backwards, so need to advance the batch start boundary
-              alwaysStartAt: 0,
 
-              // done if the administrators group in the only one in the db
-              doneIf: function(start, end, names) {
-                return !names.length || names.length === 1;
-              }
             },
             function(err) {
               Importer.progress(1, 1);
@@ -327,7 +320,6 @@ var defaults = {
       function(done) {
         Importer.phase('purgeMessagesStart');
         Importer.progress(0, 1);
-
         Messaging.count(function(err, total) {
           var index = 0;
           Messaging.each(
@@ -397,6 +389,7 @@ var defaults = {
           postCount: 1,
           nextVid: 1,
           voteCount: 1,
+          nextEid: 1,
           nextBid: 1,
           bookmarkCount: 1
         }, function(err) {
@@ -1645,7 +1638,9 @@ var defaults = {
                   function onAttachmentsBlobs () {
 
                     post._content = post._content || '';
-
+                    if ((post._images && post._images.length) || (post._attachments && post._attachments.length)) {
+                      post._content += '\n<br>\n<br>';
+                    }
                     (post._images || []).forEach(function(_image) {
                       post._content += generateImageTag(_image);
                     });
@@ -2391,6 +2386,9 @@ var defaults = {
         if (err) {
           throw err;
         }
+        // till https://github.com/NodeBB/NodeBB/pull/6352
+        data.maximumChatMessageLength = 1000;
+
         Importer.config('backedConfig', data || {});
         fs.outputJsonSync(BACKUP_CONFIG_FILE, Importer.config('backedConfig'));
         next();
