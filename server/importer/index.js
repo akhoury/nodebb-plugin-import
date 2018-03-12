@@ -1303,7 +1303,14 @@ var defaults = {
                   });
                 },
                 function(cb) {
-                  if (topic._uemail) {
+                  if (topic._uid) {
+                    User.getImported(topic._uid, function(err, usr) {
+                      if (err) {
+                        Importer.warn('getImportedUser: ' + topic._uid + ' err: ' + err);
+                      }
+                      cb(null, usr);
+                    });
+                  } else if (topic._uemail) {
                     User.getUidByEmail(topic._uemail, function(err, uid) {
                       if (err || !uid) {
                         return cb(null, null);
@@ -1316,12 +1323,7 @@ var defaults = {
                       });
                     });
                   } else {
-                    User.getImported(topic._uid, function(err, usr) {
-                      if (err) {
-                        Importer.warn('getImportedUser: ' + topic._uid + ' err: ' + err);
-                      }
-                      cb(null, usr);
-                    });
+                    cb(null, null);
                   }
                 }
               ], function(err, results) {
@@ -1555,25 +1557,27 @@ var defaults = {
                   });
                 },
                 function(cb) {
-                  if (post._uemail) {
-                      User.getUidByEmail(post._uemail, function(err, uid) {
-                        if (err || !uid) {
-                          return cb(null, null);
-                        }
-                        User.getUserData(uid, function(err, data) {
-                          if (err || !uid) {
-                            return cb(null, null);
-                          }
-                          cb(null, data);
-                        });
-                      });
-                  } else {
+                  if (post._uid) {
                     User.getImported(post._uid, function(err, usr) {
                       if (err) {
                         Importer.warn('getImportedUser: ' + post._uid + ' err: ' + err);
                       }
                       cb(null, usr);
                     });
+                  } else if (post._uemail) {
+                    User.getUidByEmail(post._uemail, function(err, uid) {
+                      if (err || !uid) {
+                        return cb(null, null);
+                      }
+                      User.getUserData(uid, function(err, data) {
+                        if (err || !uid) {
+                          return cb(null, null);
+                        }
+                        cb(null, data);
+                      });
+                    });
+                  } else {
+                    cb(null, null);
                   }
                 },
                 function(cb) {
