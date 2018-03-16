@@ -610,7 +610,10 @@ var defaults = {
                         async.eachSeries(user._groups, function(_gid, next) {
                           Groups.getImported(_gid, function(err, _group) {
                             if (_group && _group.name) {
-                              Groups.joinAt(_group._name, uid, user._joindate || startTime, function() {
+                              Groups.joinAt(_group._name, uid, user._joindate || startTime, function(e) {
+                                if (e) {
+                                  console.log(e, _group._name, uid)
+                                }
                                 next();
                               });
                             } else {
@@ -2117,7 +2120,7 @@ var defaults = {
                       User.getImported(_uid, next);
                     },
                     isFollowing: function(next) {
-                      User.isFollowing(_uid, next)
+                      User.isFollowing(user.uid, _uid, next)
                     }
                   }, function(err, results) {
                     if (err) {
@@ -2127,8 +2130,15 @@ var defaults = {
                     if (results.isFollowing) {
                       return nxtUid();
                     }
+                    if (!results.followUser) {
+                      Importer.warn('followUser:_uid:' + _uid + ' was not imported, skipping follow from user.uid:' + user.uid);
+                      return nxtUid();
+                    }
                     User.follow(user.uid, results.followUser.uid, function(err) {
-                      Importer.warn('Error:' + err);
+                      if (err) {
+                        Importer.warn('User.follow Error: ', err);
+                        return nxtUid();
+                      }
                       return nxtUid();
                     });
                   });

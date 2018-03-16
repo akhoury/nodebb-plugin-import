@@ -20,7 +20,7 @@ node_modules
 config.json
 server/tmp/*
 server/controller/tmp/*
-server/imported/tmp/*
+server/importer/tmp/*
 server/exporter/tmp/*
 server/*.DS_Store
 server/logs/*.log

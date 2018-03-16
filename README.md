@@ -18,7 +18,7 @@ node app --setup # i recommend using mongo over redis.
 # .. do the import...
 # .. then when you're done and happy
 
-git checkout v1.7.6
+git checkout v1.8.0
 # or some higher version.
 ./nodebb upgrade
 ```
