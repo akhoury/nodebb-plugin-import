@@ -43,28 +43,28 @@ var logPrefix = '\n[nodebb-plugin-import]';
 var BACKUP_CONFIG_FILE = path.join(__dirname, '/tmp/importer.nbb.backedConfig.json');
 
 var defaults = {
-    log: true,
-    passwordGen: {
-      enabled: false,
-      chars: '{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890',
-      len: 13
-    },
-    categoriesTextColors: ['#FFFFFF'],
-    categoriesBgColors: ['#AB4642', '#DC9656', '#F7CA88', '#A1B56C', '#86C1B9', '#7CAFC2', '#BA8BAF', '#A16946'],
-    categoriesIcons: ['fa-comment'],
-    autoConfirmEmails: true,
-    userReputationMultiplier: 1,
+  log: true,
+  passwordGen: {
+    enabled: false,
+    chars: '{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890',
+    len: 13
+  },
+  categoriesTextColors: ['#FFFFFF'],
+  categoriesBgColors: ['#AB4642', '#DC9656', '#F7CA88', '#A1B56C', '#86C1B9', '#7CAFC2', '#BA8BAF', '#A16946'],
+  categoriesIcons: ['fa-comment'],
+  autoConfirmEmails: true,
+  userReputationMultiplier: 1,
 
-    adminTakeOwnership: {
-      enable: false,
-      _username: null,
-      _uid: null
-    },
+  adminTakeOwnership: {
+    enable: false,
+    _username: null,
+    _uid: null
+  },
 
-    importDuplicateEmails: true,
+  importDuplicateEmails: true,
 
-    nbbTmpConfig: require('./nbbTmpConfig')
-  };
+  nbbTmpConfig: require('./nbbTmpConfig')
+};
 
 (function(Importer) {
 
@@ -137,13 +137,13 @@ var defaults = {
       Importer.importVotes,
       Importer.importBookmarks,
       Importer.fixCategoriesParentsAndAbilities,
-      Importer.fixGroupsOwnersAndRestrictCategories,
       Importer.fixTopicsTeasers,
       Importer.rebanMarkReadAndFollowForUsers,
       Importer.fixTopicTimestampsAndRelockLockedTopics,
       Importer.restoreConfig,
       Importer.disallowGuestsWriteOnAllCategories,
       Importer.allowGuestsReadOnAllCategories,
+      Importer.fixGroupsOwnersAndRestrictCategories,
       Importer.teardown
     ]), callback);
   }
@@ -213,13 +213,13 @@ var defaults = {
     }
 
     series.push(Importer.fixCategoriesParentsAndAbilities);
-    series.push(Importer.fixGroupsOwnersAndRestrictCategories);
     series.push(Importer.fixTopicsTeasers);
     series.push(Importer.rebanMarkReadAndFollowForUsers);
     series.push(Importer.fixTopicTimestampsAndRelockLockedTopics);
     series.push(Importer.restoreConfig);
     series.push(Importer.disallowGuestsWriteOnAllCategories);
     series.push(Importer.allowGuestsReadOnAllCategories);
+    series.push(Importer.fixGroupsOwnersAndRestrictCategories);
     series.push(Importer.teardown);
 
     async.series(series, callback);
@@ -936,7 +936,7 @@ var defaults = {
                   db.getObject(pairPrefix + pairID, function(err, pairData) {
 
                     if (err || !pairData || !pairData.roomId) {
-                        Messaging.newRoomWithNameAndTimestamp(fromUser.uid, [toUser.uid], 'Room:' + fromUser.uid + ':' + toUser.uid, message._timestamp, function(err, room) {
+                      Messaging.newRoomWithNameAndTimestamp(fromUser.uid, [toUser.uid], 'Room:' + fromUser.uid + ':' + toUser.uid, message._timestamp, function(err, room) {
                         addMessage(err, room || null, function(err) {
                           db.setObject(pairPrefix + pairID, room, function(err) {
                             done(err);
@@ -1223,11 +1223,7 @@ var defaults = {
 
   Importer.allowGuestsReadOnAllCategories = function(done) {
     Categories.each(function(category, next) {
-        privileges.categories.give([
-          'find',
-          'read',
-          'topics:read'
-        ], category.cid, 'guests', next);
+        privileges.categories.give(['find', 'read', 'topics:read'], category.cid, 'guests', next);
       },
       {async: true, eachLimit: 10},
       function() {
@@ -1334,8 +1330,12 @@ var defaults = {
                   throw err;
                 }
 
-                var category = results[0];
+                var category = results[0] || {cid: '0'};
                 var user = results[1] || {uid: '0'};
+
+                if (!results[0]) {
+                  Importer.warn('[process-count-at:' + count + '] topic:_tid:"' + _tid + '", has a category:_cid:"' + topic._cid + '" that was not imported, falling back to cid:0');
+                }
 
                 if (!category) {
                   Importer.warn('[process-count-at:' + count + '] skipping topic:_tid:"' + _tid + '" --> _cid: ' + topic._cid + ':imported:' + !!category);
@@ -1833,9 +1833,9 @@ var defaults = {
 
                   if ((!post && !topic) || !user) {
                     Importer.warn('[process-count-at: ' + count + '] skipping vote:_vid: ' + _vid
-                    	+ (vote._tid ? ', vote:_tid:' + vote._tid + ':imported:' + (!!topic) : '')
-                    	+ (vote._pid ? ', vote:_pid:' + vote._pid + ':imported:' + (!!post) : '')
-                    	+ ', user:_uid:' + vote._uid + ':imported:' + (!!user));
+                      + (vote._tid ? ', vote:_tid:' + vote._tid + ':imported:' + (!!topic) : '')
+                      + (vote._pid ? ', vote:_pid:' + vote._pid + ':imported:' + (!!post) : '')
+                      + ', user:_uid:' + vote._uid + ':imported:' + (!!user));
 
                     Importer.progress(count, total);
                     return done();
@@ -2146,6 +2146,56 @@ var defaults = {
                 function() {
                   nxt();
                 });
+            },
+
+            function(nxt) {
+              if (!user) {
+                return nxt();
+              }
+              var _uids = __imported_original_data__._friendsUids;
+              if (!_uids) {
+                return nxt();
+              }
+              try {
+                while (typeof _uids === 'string') {
+                  _uids = JSON.parse(_uids);
+                }
+              } catch(e) {
+                return nxt();
+              }
+              async.eachLimit(_uids || [], 10, function(_uid, nxtUid) {
+                  async.parallel({
+                    friendUser: function(next) {
+                      User.getImported(_uid, next);
+                    },
+                    isFriends: function(next) {
+                      User.isFriends(user.uid, _uid, next)
+                    }
+                  }, function(err, results) {
+                    if (err) {
+                      Importer.warn('Error:' + err);
+                      return nxtUid();
+                    }
+                    if (!results.friendUser) {
+                      Importer.warn('friendUser:_uid:' + _uid + ' was not imported, skipping friending from user.uid:' + user.uid);
+                      return nxtUid();
+                    }
+                    if (results.isFriends) {
+                      Importer.warn('friendUser:uid:' + results.friendUser.uid + ' is already a friend of user.uid:' + + user.uid + ', skipping friending from user.uid:' + user.uid);
+                      return nxtUid();
+                    }
+                    User.friend(user.uid, results.friendUser.uid, function(err) {
+                      if (err) {
+                        Importer.warn('User.friend Error: ', err);
+                        return nxtUid();
+                      }
+                      return nxtUid();
+                    });
+                  });
+                },
+                function() {
+                  nxt();
+                });
             }
 
           ], done);
@@ -2251,7 +2301,14 @@ var defaults = {
               if (!__imported_original_data__._cids) {
                 return next();
               }
-              var _cids = __imported_original_data__._cids.split(',');
+              var _cids = __imported_original_data__._cids;
+              try {
+                while (typeof _cids === 'string') {
+                  _cids = JSON.parse(_cids);
+                }
+              } catch(e) {
+                return next();
+              }
               if (!_cids.length) {
                 return next();
               }

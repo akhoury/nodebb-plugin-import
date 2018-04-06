@@ -7,6 +7,7 @@
   var nbbRequire = require('nodebb-plugin-require');
   var async = require('async');
   var extend = require('extend');
+  var db = require('./database');
 
   // nbb-core
   var User = nbbRequire('src/user');
@@ -42,6 +43,37 @@
       function (err) {
         batchCallback(err);
       });
+  };
+
+  // support https://github.com/sanbornmedia/nodebb-plugin-friends
+  User.isFriends = function (uid, toUid, callback) {
+    if (Array.isArray(toUid)) {
+      db.isSortedSetMembers('uid:' + uid + ':friends', toUid, callback);
+    } else {
+      db.isSortedSetMember('uid:' + uid + ':friends', toUid, callback);
+    }
+  };
+
+  // support https://github.com/sanbornmedia/nodebb-plugin-friends
+  User.friend = function (uid, toUid, timestamp, callback) {
+    if (typeof timestamp === 'function') {
+      callback = timestamp;
+      timestamp = null;
+    }
+    var now = timestamp || Date.now();
+    async.parallel([
+      async.apply(db.sortedSetAdd, 'uid:' + uid + ':friends', now, toUid),
+      async.apply(db.sortedSetRemove, 'uid:' + uid + ':friends:pending', toUid),
+      async.apply(db.sortedSetRemove, 'uid:' + uid + ':friends:requests', toUid),
+      async.apply(db.sortedSetAdd, 'uid:' + toUid + ':friends', now, uid),
+      async.apply(db.sortedSetRemove, 'uid:' + toUid + ':friends:pending', uid),
+      async.apply(db.sortedSetRemove, 'uid:' + toUid + ':friends:requests', uid),
+    ], function(err) {
+      if (err) {
+        return callback(err);
+      }
+      callback();
+    });
   };
 
   User.setImported = function (_uid, uid, user, callback) {
@@ -177,13 +209,3 @@
   module.exports = User;
 
 }(module));
-
-//
-//var privileges = require('../../../src/privileges.js');
-//var Meta = require('../../../src/meta.js');
-//var Messaging = require('../../../src/messaging.js');
-//var File = require('../../../src/file.js');
-//var Topics = require('../../../src/topics.js');
-//var Posts = require('../../../src/posts.js');
-//var Categories = require('../../../src/categories.js');
-//var db = module.parent.require('../../../src/database.js');

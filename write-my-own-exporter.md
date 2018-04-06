@@ -127,6 +127,10 @@ Each record should look like this:
         // following other _Uids, untested with very large sets. So.
         "_followingUids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []
 
+        // friend other _Uids, untested with very large sets. So.
+        // if you have https://github.com/sanbornmedia/nodebb-plugin-friends installed or want to use it
+        "_friendsUids": [1, 2, 4, 5, 6, 7], // OPTIONAL, defaults to []
+
         "_location": "u45 city", // OPTIONAL, defaults to ''
 
 		// (there is a config for multiplying these with a number for moAr karma)

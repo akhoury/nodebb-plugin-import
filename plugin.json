@@ -28,6 +28,7 @@
     "nodebb-plugin-import-vanilla": "*",
     "nodebb-plugin-import-punbb2": "*",
     "nodebb-plugin-import-xenforo": "*",
+    "nodebb-plugin-import-smallworld": "*",
     "nodebb-plugin-import-wefrag": "*",
     "nodebb-plugin-import-vbulletin": "*",
     "nodebb-plugin-import-phpbb": "*",
