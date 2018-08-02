@@ -14,7 +14,7 @@
 	color: rgb(107, 107, 107);
 }
 .import-panel-toggle {
-
+  z-index: -1000 !important;
 }
 .import-config,
 .import-config-wrapper,

@@ -1,8 +1,20 @@
 (function(module) {
   var nbbRequire = require('nodebb-plugin-require');
+  var nconf = require('nconf');
+
+  try {
+    nconf.argv().env({
+      separator: '__'
+    });
+
+    nconf.stores = nconf.stores || {};
+    nconf.stores.env = nconf.stores.env || {};
+
+    var prestart = nbbRequire('src/prestart');
+    prestart.loadConfig(nbbRequire.fullpath + '/config.json');
+  } catch (e) {}
 
   var path  = require('path');
-  var nconf = nbbRequire('nconf');
   var dispatcher = require('../helpers/dispatcher');
 
   // nconf.file({file: path.join(nbbRequire.fullpath, '/config.json')});
