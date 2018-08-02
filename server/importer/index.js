@@ -612,7 +612,7 @@ var defaults = {
                             if (_group && _group.name) {
                               Groups.joinAt(_group._name, uid, user._joindate || startTime, function(e) {
                                 if (e) {
-                                  console.log(e, _group._name, uid)
+                                  Importer.warn('Error joining group.name:' + _group._name + ' for uid:' + uid);
                                 }
                                 next();
                               });
@@ -708,11 +708,11 @@ var defaults = {
 
                           var series = [];
                           if (fields.reputation > 0) {
-                            series.push(async.apply(db.sortedSetAdd, 'users:reputation', fields.reputation, uid));
+                            // series.push(async.apply(db.sortedSetAdd, 'users:reputation', fields.reputation, uid));
                           }
-                          async.series(series, function () {
+                          //async.series(series, function () {
                             User.setImported(_uid, uid, user, done);
-                          });
+                          //});
                         }
                       }
                     }
@@ -2279,7 +2279,7 @@ var defaults = {
     Groups.count(function(err, total) {
       Groups.each(function(group, done) {
           Importer.progress(count++, total);
-          if (!group) {
+          if (!group || group.system) {
             return done();
           }
 
@@ -2288,12 +2288,19 @@ var defaults = {
           async.series([
             function (next) {
               if (!__imported_original_data__._ownerUid) {
+                Importer.warn('group.name: ' + group.name + ' does not have an ownerUid');
                 return next();
               }
               User.getImported(__imported_original_data__._ownerUid, function(err, user) {
-                if (err || !user) {
+                if (!user) {
+                  Importer.warn('group.name: ' + group.name + '\'s owner with _ownerUid:' + __imported_original_data__._ownerUid + ' not imported');
                   return next();
                 }
+                if (err) {
+                  Importer.warn('group.name: ' + group.name + ' error while User.getImported(' + __imported_original_data__._ownerUid + ')', err);
+                  return next();
+                }
+                Importer.warn('group.name: ' + group.name + ' granting ownership to uid:' + user.uid);
                 Groups.ownership.grant(user.uid, group.name, next);
               });
             },
@@ -2327,7 +2334,7 @@ var defaults = {
                         privileges.categories.disallowGroupOnCategory('registered-users', category.cid, nxt);
                       },
                       function (nxt) {
-                        Importer.warn('giving group:' + group.name + ' exclusive access to cid:' + category.cid + ', name:' + category.name);
+                        // Importer.warn('giving group:' + group.name + ' exclusive access to cid:' + category.cid + ', name:' + category.name);
                         privileges.categories.allowGroupOnCategory(group.name, category.cid, nxt);
                       }
                     ], function() {
