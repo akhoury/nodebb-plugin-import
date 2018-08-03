@@ -1,23 +1,23 @@
 (function(module) {
   var nbbRequire = require('nodebb-plugin-require');
-  var nconf = require('nconf');
+  var nconf = nbbRequire('nconf');
 
-  try {
-    nconf.argv().env({
-      separator: '__'
-    });
-
-    nconf.stores = nconf.stores || {};
-    nconf.stores.env = nconf.stores.env || {};
-
-    var prestart = nbbRequire('src/prestart');
-    prestart.loadConfig(nbbRequire.fullpath + '/config.json');
-  } catch (e) {}
+  // try {
+  //   nconf.argv().env({
+  //     separator: '__'
+  //   });
+  //
+  //   nconf.stores = nconf.stores || {};
+  //   nconf.stores.env = nconf.stores.env || {};
+  //
+  //   var prestart = nbbRequire('src/prestart');
+  //   prestart.loadConfig(nbbRequire.fullpath + '/config.json');
+  // } catch (e) {}
 
   var path  = require('path');
   var dispatcher = require('../helpers/dispatcher');
 
-  // nconf.file({file: path.join(nbbRequire.fullpath, '/config.json')});
+  nconf.file({file: path.join(nbbRequire.fullpath, '/config.json')});
   var pkg = require(path.join(nbbRequire.fullpath, '/package.json'));
 
   var dbType = nconf.get('database');
