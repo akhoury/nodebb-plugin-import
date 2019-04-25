@@ -10,15 +10,15 @@
 
 
 ## Terminology
-This section is up here because it's very important for you to read it, so let's make few things clear before we go on.
+This section is up here because it's very important for you to read, so let's make a few things clear before we go on.
 
 * 'NodeBB' == 'NBB' == 'nbb' == 'Nbb'
 * when you see the term __OLD__ it refers to your source forum or bulletin-board
 * when you see the term __NEW__ it refers to NodeBB
 * __ALL__ of the __OLD__ __variables__, must start with an __underscore__ character: `_`
-* `_cid` --> old category id, some forum software use different terms for categories, such as __forums__ or __boards__
+* `_cid` --> old category id, some forum software uses different terms for categories, such as __forums__ or __boards__
 * `_uid` --> old user id
-* `_tid` --> old topic id, some forum software use different terms for topics, such as __threads__
+* `_tid` --> old topic id, some forum software uses different terms for topics, such as __threads__
 * `_pid` --> old post id
 * `_roomId` --> old chatroom id
 * `_mid` --> old message id
@@ -40,7 +40,7 @@ You need a node module that has the following interface.
 
 ## During development
 
-Don't forget to check the "Skip the module install" checkbox in the "Select an Exporter" section, so the -import plugin won't delete your changes.
+Don't forget to check the "Skip the module install" checkbox in the "Select an Exporter" section, so the -import plugin doesn't delete your changes.
 
 ### YourModule.setup(config, callback) [REQUIRED FUNCTION]
 * `config`: a JS object that will be passed to `setup()` and it contains the following:
@@ -68,7 +68,7 @@ Don't forget to check the "Skip the module install" checkbox in the "Select an E
 ### YourModule.getPaginatedUsers(start, limit, callback) [REQUIRED FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -156,15 +156,15 @@ Each record should look like this:
 ### YourModule.getPaginatedCategories(start, limit, callback) [REQUIRED FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
-Note: Categories are sometimes known as __forums__ in some forums software
+Note: Categories are sometimes known as __forums__ in some forum software
 
 ```
   - err: if truthy the export process will throw the error and stop
   - map: a hashmap of all the categories ready to import
 ```
-In the `map`, the `keys` are the categories `_cid` (or the old categorie id).
+In the `map`, the `keys` are the categories `_cid` (or the old category id).
 
 Each record should look like this:
 ```javascript
@@ -200,9 +200,9 @@ Each record should look like this:
 ### YourModule.getPaginatedTopics(start, limit, callback) [REQUIRED FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
-Note: Topics are sometimes known as __threads__ in some forums software
+Note: Topics are sometimes known as __threads__ in some forum software
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -273,7 +273,7 @@ Each record should look like this:
 ### YourModule.getPaginatedPosts(start, limit, callback) [REQUIRED FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -329,7 +329,7 @@ Each record should look like this:
 ### YourModule.getPaginatedRooms(start, limit, callback) [OPTIONAL FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -360,7 +360,7 @@ Each record should look like this:
 ### YourModule.getPaginatedMessages(start, limit, callback) [OPTIONAL FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -395,7 +395,7 @@ Each record should look like this:
 ### YourModule.getPaginatedGroups(start, limit, callback) [OPTIONAL FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback`  Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback`  Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -441,7 +441,7 @@ Each record should look like this:
 
 * `start` of the query row
 * `limit` of the query results
-* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -480,7 +480,7 @@ Each record should look like this:
 ### YourModule.getPaginatedBookmarks(start, limit, callback) [OPTIONAL FUNCTION]
 * `start` of the query row
 * `limit` of the query results
-* `callback` Query the records, filter them at will, then call the `callback(err, map)` wih the following arguments
+* `callback` Query the records, filter them at will, then call the `callback(err, map)` with the following arguments:
 
 ```
   - err: if truthy the export process will throw the error and stop
@@ -522,12 +522,12 @@ In these 3 functions, you can basically do whatever you want, such as printing s
 * `exporter.warn`
 * `exporter.error`
 
-You do not have to do anything extra to emit the events, just implement these functions at will and use them appropriately. see [this](https://github.com/akhoury/nodebb-plugin-import-ubb/blob/master/index.js#L366) for example.
+You do not have to do anything extra to emit the events, just implement these functions at will and use them appropriately (see [this](https://github.com/akhoury/nodebb-plugin-import-ubb/blob/master/index.js#L366) for example).
 
 #### a testrun function
 * `YouModule.testrun(config, callback)`
 
-just a function for you to be able to test your module independently from __nodebb-plugin-import__
+Just a function for you to be able to test your module independently from __nodebb-plugin-import__
 
 ```javascript
 // for example
@@ -560,16 +560,16 @@ YourModule.testrun = function(config, callback) {
     };
 ```
 ## Important Note On Topics and Posts:
-* Most forums, when creating a topic, a post will be created immediately along with it, this last post will be the __main-post__ or __parent-post__ or __topic_content_post__ or whatever other term it's known with, and it's usually saved in the same __table__ with the other posts, known as the "__reply-posts__". Usually this  __parent-post__ have some sort of flag to differentiate it, such as `is_parent = 1` or `parent = 0` or something close.
-* Most likely, you may have to do some tables `join`ing to get each Topic's record along with its __parent-post__'s content, then save it the `_content` on each `topicsMap.[_tid]` object.
-* You should discard all of the other data on that __parent-post__ as in NodeBB, it will be the Topic's content.
+* In most forums, when creating a topic, a post will be created immediately along with it. This last post will be the __main-post__ or __parent-post__ or __topic_content_post__ or whatever other term it's known by, and it's usually saved in the same __table__ with the other posts, known as the "__reply-posts__". Usually this  __parent-post__ has some sort of flag to differentiate it, such as `is_parent = 1` or `parent = 0` or something similar.
+* Most likely, you may have to do some table `join`ing to get each topic's record along with its __parent-post__'s content, then save it as the `_content` on each `topicsMap.[_tid]` object.
+* You should discard all of the other data on that __parent-post__ as, in NodeBB, it will be the topic's content.
 * Remember to filter these __parent-posts__ from your __reply-posts__ query so they don't get imported twice.
 
-## Convention
-In order for your exporter to be automatically by the [nodebb-plugin-import](https://github.com/akhoury/nodebb-plugin-import) plugin as a compatible exporter,
-its name needs to start with `nodebb-plugin-import-`, i.e. `nodebb-plugin-import-ubb`
+## Conventions
+In order for your exporter to be automatically recognised by the [nodebb-plugin-import](https://github.com/akhoury/nodebb-plugin-import) plugin as a compatible exporter,
+its name needs to start with `nodebb-plugin-import-`, e.g. `nodebb-plugin-import-ubb`
 
 You don't have to do that for it to work, you can type it in manually and it works fine.
 
-#### Why is it does it have an __import__ word in it when it's an exporter?
-Because it would only works with the __nodebb-plugin-import__ plugin, and I wanted to namespace it somehow. I don't care anymore, call it whatever you want.
+#### Why does it contain the word __import__ when it's an exporter?
+Because it only works with the __nodebb-plugin-import__ plugin, and I wanted to namespace it somehow. I don't care anymore, call it whatever you want.
