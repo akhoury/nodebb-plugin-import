@@ -1,35 +1,36 @@
 
-(function(module) {
-  var nbbRequire = require('nodebb-plugin-require');
-  var db = require('./database');
-  var async = require('async');
-  var extend = require('extend');
-  var Data = require('../helpers/data.js');
+(function (module) {
+  const nbbRequire = require('nodebb-plugin-require');
+  const db = require('./database');
+  const async = require('async');
+  const extend = require('extend');
+  const Data = require('../helpers/data');
 
   // nbb-core
-  var Topics = nbbRequire('src/topics');
+  const Topics = nbbRequire('src/topics');
 
   Topics.import = function () {
     throw new Error('not implemented');
   };
 
   Topics.batchImport = function (array, options, progressCallback, batchCallback) {
-    var index = 0;
+    let index = 0;
     options = extend(true, {}, options);
 
     async.eachSeries(
       array,
-      function (record, next) {
-        Topics.import(record, options, function(err, data) {
-          progressCallback(err, {data: data, index: ++index});
+      (record, next) => {
+        Topics.import(record, options, (err, data) => {
+          progressCallback(err, { data, index: ++index });
           // ignore errors:
           // let progressCallback throw an error or log a warning if it wants to.
           next();
         });
       },
-      function (err) {
+      (err) => {
         batchCallback(err);
-      });
+      },
+    );
   };
 
   Topics.setImported = function (_tid, tid, topic, callback) {
@@ -44,7 +45,7 @@
     return Data.deleteImported('_imported:_topics', '_imported_topic:', _tid, callback);
   };
 
-  Topics.deleteEachImported = function(onProgress, callback) {
+  Topics.deleteEachImported = function (onProgress, callback) {
     return Data.deleteEachImported('_imported:_topics', '_imported_topic:', onProgress, callback);
   };
 
@@ -71,12 +72,12 @@
   };
 
   // [potential-nodebb-core]
-  Topics.processNamesSet = function(process, options, callback) {
+  Topics.processNamesSet = function (process, options, callback) {
     return Data.processIdsSet('topics:tid', process, options, callback);
   };
 
   // [potential-nodebb-core]
-  Topics.processSet = function(process, options, callback) {
+  Topics.processSet = function (process, options, callback) {
     return Data.processSet('topics:tid', 'topic:', process, options, callback);
   };
 
@@ -103,5 +104,4 @@
   };
 
   module.exports = Topics;
-
 }(module));

@@ -6,13 +6,13 @@
   "library": "./server/index.js",
   "templates": "./public/templates",
   "acpScripts": [
-    "public/js/utils.js",
-    "public/js/acp.js"
+    "./public/js/utils.js",
+    "./public/js/acp.js"
   ],
   "staticDirs": {
-    "js": "public/js",
-    "css": "public/css",
-    "tmp": "public/tmp"
+    "js": "./public/js",
+    "css": "./public/css",
+    "tmp": "./public/tmp"
   },
   "___modules": [
     "./public/js/highlight.js"

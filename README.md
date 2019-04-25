@@ -3,14 +3,14 @@ nodebb-plugin-import
 Import your old forum data to nodebb | a one time use plugin
 
 # THIS PLUGIN ONLY SUPPORTS:
-## [NodeBB v1.7.5](https://github.com/NodeBB/NodeBB/tree/v1.7.5)
+## [NodeBB v1.12.1](https://github.com/NodeBB/NodeBB/tree/v1.12.1)
 
 but __you can upgrade__ after the import is done, make sure you follow the [upgrade docs](https://docs.nodebb.org/vi/latest/upgrading/)
 
 ```
 git clone https://github.com/NodeBB/NodeBB.git
 cd NodeBB
-git checkout v1.7.5
+git checkout v1.12.1
 npm install
 node app --setup # i recommend using mongo over redis.
 ./nodebb start
@@ -18,10 +18,11 @@ node app --setup # i recommend using mongo over redis.
 # .. do the import...
 # .. then when you're done and happy
 
-git checkout v1.8.0
-# or some higher version.
+git checkout v2.0.0
+# or some other version higher than v1.12.1
 ./nodebb upgrade
 ```
+If you want to import to an older nodebb version, you can, just checkout older versions of the plugin
 
 
 ## Screenshots
@@ -148,6 +149,7 @@ NodeBB prefers using Markdown as the *content language format*, and since most W
 * `Segmentation fault` error, along with disabling server logs, try the Redis note, then file an issue, I'll help you through it.
 * `Error: MISCONF Redis is configured to save RDB snapshots, but is currently not able to persist on disk.` see [the redis note](https://github.com/akhoury/nodebb-plugin-import#redis-note), it might help
 * if NodeBB <= 0.5.1 hangs, similar [to this issue](https://github.com/akhoury/nodebb-plugin-import/issues/61), disable the Markdown plugin
+* if you get an `uncaughtException: ER_WRONG_FIELD_WITH_GROUP: Expression #4 of SELECT list is not in GROUP BY clause and contains nonaggregated column 'somedatabase.somecolumn' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by` you will need to temporarily do this https://stackoverflow.com/a/35729681  
 
 ### Test
 

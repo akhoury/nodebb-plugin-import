@@ -1,8 +1,8 @@
 
-(function(module) {
-  var Data = require('../helpers/data.js');
+(function (module) {
+  const Data = require('../helpers/data');
 
-  var Bookmarks = {};
+  const Bookmarks = {};
 
   Bookmarks.setImported = function (_bid, bid, bookmark, callback) {
     return Data.setImported('_imported:_bookmarks', '_imported_bookmark:', _bid, bid, bookmark, callback);
@@ -16,7 +16,7 @@
     return Data.deleteImported('_imported:_bookmarks', '_imported_bookmark:', _bid, callback);
   };
 
-  Bookmarks.deleteEachImported = function(onProgress, callback) {
+  Bookmarks.deleteEachImported = function (onProgress, callback) {
     return Data.deleteEachImported('_imported:_bookmarks', '_imported_bookmark:', onProgress, callback);
   };
 
@@ -28,10 +28,9 @@
     return Data.each('_imported:_bookmarks', '_imported_bookmark:', iterator, options, callback);
   };
 
-  Bookmarks.countImported = function(callback) {
+  Bookmarks.countImported = function (callback) {
     Data.count('_imported:_bookmarks', callback);
   };
 
   module.exports = Bookmarks;
-
 }(module));

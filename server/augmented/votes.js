@@ -1,30 +1,31 @@
 
-(function(module) {
-  var Data = require('../helpers/data.js');
+(function (module) {
+  const Data = require('../helpers/data');
 
-  var Votes = {};
+  const Votes = {};
 
   Votes.import = function () {
     throw new Error('not implemented');
   };
 
   Votes.batchImport = function (array, options, progressCallback, batchCallback) {
-    var index = 0;
+    let index = 0;
     options = extend(true, {}, options);
 
     async.eachSeries(
       array,
-      function (record, next) {
-        Votes.import(record, options, function(err, data) {
-          progressCallback(err, {data: data, index: ++index});
+      (record, next) => {
+        Votes.import(record, options, (err, data) => {
+          progressCallback(err, { data, index: ++index });
           // ignore errors:
           // let progressCallback throw an error or log a warning if it wants to.
           next();
         });
       },
-      function (err) {
+      (err) => {
         batchCallback(err);
-      });
+      },
+    );
   };
 
   Votes.setImported = function (_vid, vid, vote, callback) {
@@ -39,7 +40,7 @@
     return Data.deleteImported('_imported:_votes', '_imported_vote:', _vid, callback);
   };
 
-  Votes.deleteEachImported = function(onProgress, callback) {
+  Votes.deleteEachImported = function (onProgress, callback) {
     return Data.deleteEachImported('_imported:_votes', '_imported_vote:', onProgress, callback);
   };
 
@@ -51,10 +52,9 @@
     return Data.each('_imported:_votes', '_imported_vote:', iterator, options, callback);
   };
 
-  Votes.countImported = function(callback) {
+  Votes.countImported = function (callback) {
     Data.count('_imported:_votes', callback);
   };
 
   module.exports = Votes;
-
 }(module));

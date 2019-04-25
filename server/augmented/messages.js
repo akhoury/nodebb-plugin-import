@@ -2,22 +2,21 @@
 
 // todo: how to warn?
 
-(function(module) {
-
-  var nbbRequire = require('nodebb-plugin-require');
-  var async = require('async');
-  var extend = require('extend');
+(function (module) {
+  const nbbRequire = require('nodebb-plugin-require');
+  const async = require('async');
+  const extend = require('extend');
 
   // nbb-core
-  var Messages = nbbRequire('src/messaging');
+  const Messages = nbbRequire('src/messaging');
 
   // custom
-  var Data = require('../helpers/data');
-  var User = require('../augmented/user');
-  var db = require('../augmented/database');
+  const Data = require('../helpers/data');
+  const User = require('../augmented/user');
+  const db = require('../augmented/database');
 
   // var Room = require('../augmented/room');
-  var utils = require('../../public/js/utils');
+  const utils = require('../../public/js/utils');
 
 
   Messages.import = function (data, options, callback) {
@@ -25,7 +24,7 @@
   };
 
   Messages.batchImport = function (array, options, progressCallback, batchCallback) {
-    var index = 0;
+    let index = 0;
 
     if (typeof batchCallback === 'undefined') {
       batchCallback = progressCallback;
@@ -37,13 +36,12 @@
 
     async.eachSeries(
       array,
-      function (record, next) {
-        Messages.import(record, options, function(err, data) {
-
+      (record, next) => {
+        Messages.import(record, options, (err, data) => {
           progressCallback(err, {
             original: record,
             imported: data,
-            index: ++index
+            index: ++index,
           });
 
           // ignore errors:
@@ -51,40 +49,40 @@
           next();
         });
       },
-      function (err) {
+      (err) => {
         batchCallback(err);
-      });
+      },
+    );
   };
 
   // [potential-nodebb-core]
 
   Messages.newRoomWithNameAndTimestamp = function (fromUid, toUids, roomName, timestamp, callback) {
-    Messages.newRoom(fromUid, toUids, function(err, roomId) {
-
+    Messages.newRoom(fromUid, toUids, (err, roomId) => {
       if (err) {
         throw err;
         return callback(err);
       }
 
-      Messages.renameRoom(fromUid, roomId, roomName, function() {
-        var uids = [fromUid].concat(toUids).sort();
+      Messages.renameRoom(fromUid, roomId, roomName, () => {
+        const uids = [fromUid].concat(toUids).sort();
 
         timestamp = timestamp || new Date();
 
         async.parallel([
           function (next) {
-            db.sortedSetAdd('chat:room:' + roomId + ':uids', timestamp, fromUid, next);
+            db.sortedSetAdd(`chat:room:${roomId}:uids`, timestamp, fromUid, next);
           },
-          function(next) {
-            db.sortedSetAdd('chat:room:' + roomId + ':uids', uids.map(function() { return timestamp; }), uids, next);
+          function (next) {
+            db.sortedSetAdd(`chat:room:${roomId}:uids`, uids.map(() => timestamp), uids, next);
           },
-          function(next) {
-            db.sortedSetsAdd(uids.map(function(uid) { return 'uid:' + uid + ':chat:rooms'; }), timestamp, roomId, next);
+          function (next) {
+            db.sortedSetsAdd(uids.map(uid => `uid:${uid}:chat:rooms`), timestamp, roomId, next);
           },
-          function(next) {
+          function (next) {
             Messages.getRoomData(roomId, next);
-          }
-        ], function(err, results) {
+          },
+        ], (err, results) => {
           if (err) {
             throw err;
             return callback(err);
@@ -107,7 +105,7 @@
     return Data.deleteImported('_imported:_messages', '_imported_message:', _mid, callback);
   };
 
-  Messages.deleteEachImported = function(onProgress, callback) {
+  Messages.deleteEachImported = function (onProgress, callback) {
     return Data.deleteEachImported('_imported:_messages', '_imported_message:', onProgress, callback);
   };
 
@@ -125,11 +123,11 @@
 
   // [potential-nodebb-core]
   Messages.count = function (callback) {
-    db.keys('message:*', function(err, keys) {
+    db.keys('message:*', (err, keys) => {
       if (err) {
         callback(err);
       }
-      callback(err, keys.length)
+      callback(err, keys.length);
     });
   };
 
@@ -141,13 +139,13 @@
     }
     options = options || {};
 
-    var prefix = 'message:';
-    db.keys(prefix + '*', function(err, keys) {
+    const prefix = 'message:';
+    db.keys(`${prefix}*`, (err, keys) => {
       if (err) {
         return callback(err);
       }
-      async.mapLimit(keys, options.batch || 100, function(key, next) {
-        db.getObject(key, function(err, message) {
+      async.mapLimit(keys, options.batch || 100, (key, next) => {
+        db.getObject(key, (err, message) => {
           if (message) {
             message.mid = key.replace(prefix, '');
           }
@@ -158,5 +156,4 @@
   };
 
   module.exports = Messages;
-
 }(module));

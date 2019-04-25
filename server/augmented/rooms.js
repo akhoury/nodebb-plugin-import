@@ -1,32 +1,33 @@
 
-(function(module) {
-  var db = require('./database');
-  var async = require('async');
-  var Data = require('../helpers/data.js');
+(function (module) {
+  const db = require('./database');
+  const async = require('async');
+  const Data = require('../helpers/data');
 
-  var Rooms = {};
+  const Rooms = {};
 
   Rooms.import = function () {
     throw new Error('not implemented');
   };
 
   Rooms.batchImport = function (array, options, progressCallback, batchCallback) {
-    var index = 0;
+    let index = 0;
     options = extend(true, {}, options);
 
     async.eachSeries(
       array,
-      function (record, next) {
-        Rooms.import(record, options, function(err, data) {
-          progressCallback(err, {data: data, index: ++index});
+      (record, next) => {
+        Rooms.import(record, options, (err, data) => {
+          progressCallback(err, { data, index: ++index });
           // ignore errors:
           // let progressCallback throw an error or log a warning if it wants to.
           next();
         });
       },
-      function (err) {
+      (err) => {
         batchCallback(err);
-      });
+      },
+    );
   };
 
   Rooms.setImported = function (_rid, rid, room, callback) {
@@ -41,7 +42,7 @@
     return Data.deleteImported('_imported:_rooms', '_imported_room:', _rid, callback);
   };
 
-  Rooms.deleteEachImported = function(onProgress, callback) {
+  Rooms.deleteEachImported = function (onProgress, callback) {
     return Data.deleteEachImported('_imported:_rooms', '_imported_room:', onProgress, callback);
   };
 
@@ -53,28 +54,28 @@
     return Data.each('_imported:_rooms', '_imported_room:', iterator, options, callback);
   };
 
-  Rooms.countImported = function(callback) {
+  Rooms.countImported = function (callback) {
     Data.count('_imported:_rooms', callback);
   };
 
   Rooms.count = function (callback) {
-    db.keys('chat:room:*', function(err, keys) {
+    db.keys('chat:room:*', (err, keys) => {
       if (err) {
         callback(err);
       }
-      callback(err, keys.length)
+      callback(err, keys.length);
     });
   };
 
   Rooms.each = function (iterator, options, callback) {
     options = options || {};
-    var prefix = 'chat:room:';
-    db.keys(prefix + '*', function(err, keys) {
+    const prefix = 'chat:room:';
+    db.keys(`${prefix}*`, (err, keys) => {
       if (err) {
         return callback(err);
       }
-      async.mapLimit(keys, options.batch || Data.DEFAULT_BATCH_SIZE, function(key, next) {
-        db.getObject(key, function(err, room) {
+      async.mapLimit(keys, options.batch || Data.DEFAULT_BATCH_SIZE, (key, next) => {
+        db.getObject(key, (err, room) => {
           if (room) {
             room.roomId = key.replace(prefix, '');
           }
@@ -85,5 +86,4 @@
   };
 
   module.exports = Rooms;
-
 }(module));

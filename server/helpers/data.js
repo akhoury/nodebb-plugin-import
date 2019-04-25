@@ -1,28 +1,27 @@
-(function(module) {
+(function (module) {
+  const nbbRequire = require('nodebb-plugin-require');
+  const db = require('../augmented/database');
+  const dispatcher = require('../helpers/dispatcher');
 
-  var nbbRequire = require('nodebb-plugin-require');
-  var db = require('../augmented/database');
-  var dispatcher = require('../helpers/dispatcher');
+  const async = require('async');
+  const utils = require('../../public/js/utils');
 
-  var async = require('async');
-  var utils = require('../../public/js/utils');
+  const batch = nbbRequire('src/batch');
 
-  var batch = nbbRequire('src/batch');
+  const DEFAULT_BATCH_SIZE = 100;
 
-  var DEFAULT_BATCH_SIZE = 100;
-
-  var Data = {DEFAULT_BATCH_SIZE: DEFAULT_BATCH_SIZE};
+  const Data = { DEFAULT_BATCH_SIZE };
   dispatcher(Data);
 
-  db.on('ready', function() {
+  db.on('ready', () => {
     Data.emit('ready');
   });
 
-  Data.count = function(setKey, callback) {
+  Data.count = function (setKey, callback) {
     db.sortedSetCard(setKey, callback);
   };
 
-  Data.each = function(setKey, prefixEachId, iterator, options, callback) {
+  Data.each = function (setKey, prefixEachId, iterator, options, callback) {
     if (typeof options === 'function') {
       callback = options;
       options = {};
@@ -30,7 +29,7 @@
     return Data.processSet(
       setKey,
       prefixEachId,
-      function(err, records, nextBatch) {
+      (err, records, nextBatch) => {
         if (err) {
           return nextBatch(err);
         }
@@ -46,19 +45,17 @@
         }
       },
       options,
-      callback
+      callback,
     );
   };
 
-  Data.processSet = function(setKey, prefixEachId, process, options, callback) {
+  Data.processSet = function (setKey, prefixEachId, process, options, callback) {
     return batch.processSortedSet(
       setKey,
-      function(ids, next) {
-        var keys = ids.map(function(id) {
-          return prefixEachId + id;
-        });
-        db.getObjects(keys, function(err, objects) {
-          process(err, objects, function(err) {
+      (ids, next) => {
+        const keys = ids.map(id => prefixEachId + id);
+        db.getObjects(keys, (err, objects) => {
+          process(err, objects, (err) => {
             if (err) {
               return next(err);
             }
@@ -67,40 +64,42 @@
         });
       },
       options,
-      callback);
+      callback,
+    );
   };
 
-  Data.processIdsSet = function(setKey, process, options, callback) {
+  Data.processIdsSet = function (setKey, process, options, callback) {
     if (typeof options === 'function') {
       callback = options;
       options = {};
     }
 
-    callback = typeof callback === 'function' ? callback : function(){};
+    callback = typeof callback === 'function' ? callback : function () {};
     options = options || {};
 
     if (typeof process !== 'function') {
-      throw new Error(process + ' is not a function');
+      throw new Error(`${process} is not a function`);
     }
 
     // custom done condition
-    options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function(){};
+    options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function () {};
 
-    var batch = options.batch || DEFAULT_BATCH_SIZE;
+    const batch = options.batch || DEFAULT_BATCH_SIZE;
 
     if (db.helpers.mongo && !utils.isNumber(options.alwaysStartAt)) {
-      var cursor = db.client.collection('objects').find({'_key': setKey}).sort({'score': 1}).project({'_id': 0, 'value': 1}).batchSize(batch);
-      var ids = [];
+      const cursor = db.client.collection('objects').find({ _key: setKey }).sort({ score: 1 }).project({ _id: 0, value: 1 })
+        .batchSize(batch);
+      let ids = [];
 
-      cursor.forEach(function(doc) {
+      cursor.forEach((doc) => {
         ids.push(doc.value);
         if (ids.length >= batch) {
-          process(null, ids, function(err) {
+          process(null, ids, (err) => {
             // do nothing
           });
           ids = [];
         }
-      }, function(err) {
+      }, (err) => {
         if (err) {
           return callback(err);
         }
@@ -115,19 +114,19 @@
 
     // always start at, useful when deleting all records
     // options.alwaysStartAt
-    var start = 0;
-    var end = batch;
-    var done = false;
+    let start = 0;
+    let end = batch;
+    let done = false;
 
     async.whilst(
-      function(err) {
+      (err) => {
         if (err) {
           return true;
         }
         return !done;
       },
-      function(next) {
-        db.getSortedSetRange(setKey, start, end, function(err, ids) {
+      (next) => {
+        db.getSortedSetRange(setKey, start, end, (err, ids) => {
           if (err) {
             return next(err);
           }
@@ -135,7 +134,7 @@
             done = true;
             return next();
           }
-          process(err, ids, function(err) {
+          process(err, ids, (err) => {
             if (err) {
               return next(err);
             }
@@ -143,43 +142,42 @@
             end = start + batch;
             next();
           });
-        })
+        });
       },
-      callback
+      callback,
     );
   };
 
-  Data.isImported = function(setKey, _id, callback) {
-    return db.isSortedSetMember(setKey, _id, function(err, result) {
+  Data.isImported = function (setKey, _id, callback) {
+    return db.isSortedSetMember(setKey, _id, (err, result) => {
       callback(err, result);
     });
   };
 
-  Data.getImported = function(setKey, objPrefix, _id, callback) {
-    Data.isImported(setKey, _id, function(err, result) {
+  Data.getImported = function (setKey, objPrefix, _id, callback) {
+    Data.isImported(setKey, _id, (err, result) => {
       if (err || !result) {
         return callback(null, undefined);
       }
-      db.getObject(objPrefix + _id, function(err, obj) {
+      db.getObject(objPrefix + _id, (err, obj) => {
         if (err || !obj) {
           return callback(null, null);
         }
         callback(null, obj);
       });
     });
-
   };
 
-  Data.setImported = function(setKey, objPrefix, _id, score, data, callback) {
+  Data.setImported = function (setKey, objPrefix, _id, score, data, callback) {
     delete data._typeCast;
     delete data.parse;
     delete data._key; // for mongo
 
-    if (typeof score != 'number' || isNaN(score)) {
+    if (typeof score !== 'number' || isNaN(score)) {
       score = +new Date(); // for redis, zadd score must be a number
     }
 
-    return db.setObject(objPrefix + _id, data, function(err) {
+    return db.setObject(objPrefix + _id, data, (err) => {
       if (err) {
         return callback(err);
       }
@@ -187,35 +185,35 @@
     });
   };
 
-  Data.deleteImported = function(setKey, objPrefix, _id, callback) {
-    return db.sortedSetRemove(setKey, _id, function() {
-      db.delete(objPrefix + _id, function (err) {
+  Data.deleteImported = function (setKey, objPrefix, _id, callback) {
+    return db.sortedSetRemove(setKey, _id, () => {
+      db.delete(objPrefix + _id, (err) => {
         // ignore errors
         callback(err);
       });
     });
   };
 
-  Data.deleteEachImported = function(setKey, objPrefix, onProgress, callback) {
-    Data.count(setKey, function(err, total) {
-      var count = 1;
+  Data.deleteEachImported = function (setKey, objPrefix, onProgress, callback) {
+    Data.count(setKey, (err, total) => {
+      let count = 1;
       batch.processSortedSet(
         setKey,
-        function(ids, nextBatch) {
-          async.each(ids, function(_id, cb) {
-            Data.deleteImported(setKey, objPrefix, _id, function(err, response) {
-              onProgress(err, {total: total, count: count++, percentage: (count/total)});
+        (ids, nextBatch) => {
+          async.each(ids, (_id, cb) => {
+            Data.deleteImported(setKey, objPrefix, _id, (err, response) => {
+              onProgress(err, { total, count: count++, percentage: (count / total) });
               cb(err);
             });
           }, nextBatch);
         },
         {
-          alwaysStartAt: 0
+          alwaysStartAt: 0,
         },
-        callback);
+        callback,
+      );
     });
   };
 
   module.exports = Data;
-
-})(module);
+}(module));

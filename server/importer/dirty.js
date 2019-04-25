@@ -1,89 +1,86 @@
 
-var path = require('path');
-var fs = require('fs-extra');
-
-var filepath = function (type) {
-  return path.join(__dirname, PREFIX + type);
-};
-
-var checkSync = function (type) {
-  var dirty = !!fs.existsSync(filepath(type));
-  CACHE[type] = dirty;
-  return dirty;
-};
-
-var cleanSync = function () {
-  TYPES.forEach(function (type) {
-      fs.removeSync(filepath(type));
-  });
-};
-
-var CACHE = {};
-var PREFIX = 'tmp/importer.dirty.';
-
-var TYPES = [
-  'groups',
-  'categories',
-  'users',
-  'rooms',
-  'messages',
-  'topics',
-  'posts',
-  'votes',
-  'bookmarks'
+const path = require('path');
+const fs = require('fs-extra');
+const PREFIX = 'tmp/importer.dirty.';
+const CACHE = {};
+const TYPES = [
+	'groups',
+	'categories',
+	'users',
+	'rooms',
+	'messages',
+	'topics',
+	'posts',
+	'votes',
+	'bookmarks',
 ];
+const SKIP = {};
 
-var dirtyIndex = null;
-TYPES.some(function (type, index) {
-  if (checkSync(type)) {
-    dirtyIndex = index;
-    return true;
-  }
+const filepath = function (type) {
+	return path.join(__dirname, PREFIX + type);
+};
+
+const checkSync = function (type) {
+	const dirty = !!fs.existsSync(filepath(type));
+	CACHE[type] = dirty;
+	return dirty;
+};
+
+const cleanSync = function () {
+	TYPES.forEach((type) => {
+		fs.removeSync(filepath(type));
+	});
+};
+
+
+let dirtyIndex = null;
+TYPES.some((type, index) => {
+	if (checkSync(type)) {
+		dirtyIndex = index;
+		return true;
+	}
 });
 
-var SKIP = {};
-TYPES.forEach(function (type, index) {
-  if (dirtyIndex != null && index < dirtyIndex)  {
-    SKIP[type] = true;
-  }
+TYPES.forEach((type, index) => {
+	if (dirtyIndex != null && index < dirtyIndex) {
+		SKIP[type] = true;
+	}
 });
 
 module.exports = {
 
-  filpath: filepath,
+	filepath,
 
-  checkSync: checkSync,
+	checkSync,
 
-  cleanSync: cleanSync,
+	cleanSync,
 
-  writeSync: function (type) {
-    return fs.writeFileSync(filepath(type), +new Date(), {encoding: 'utf8'});
-  },
+	writeSync(type) {
+		return fs.writeFileSync(filepath(type), +new Date(), { encoding: 'utf8' });
+	},
 
-  remove: function (type, next) {
-    fs.remove(filepath(type), function (err, response) {
-      if (!err) {
-        delete CACHE[type];
-      }
-       next && next(err, response)
-    });
-  },
+	remove(type, next) {
+		debugger;
+		fs.remove(filepath(type), (err, response) => {
+			if (!err) {
+				delete CACHE[type];
+			}
+			next && next(err, response);
+		});
+	},
 
-  are: function (type, checkSyncfs) {
-    if (checkSyncfs) {
-      return checkSync(type);
-    }
-    return !!CACHE[type];
-  },
+	are(type, checkSyncfs) {
+		if (checkSyncfs) {
+			return checkSync(type);
+		}
+		return !!CACHE[type];
+	},
 
-  any: function () {
-    return TYPES.some(function (type) {
-      return checkSync(type);
-    });
-  },
+	any() {
+		return TYPES.some(type => checkSync(type));
+	},
 
-  skip: function (type) {
-    return SKIP[type];
-  }
+	skip(type) {
+		return SKIP[type];
+	},
 };
-

@@ -1,40 +1,40 @@
 
-var nbbRequire = require('nodebb-plugin-require');
+const nbbRequire = require('nodebb-plugin-require');
 
-var async = require('async');
-var _ = require('underscore');
-var EventEmitter2 = require('eventemitter2').EventEmitter2;
+const async = require('async');
+const _ = require('underscore');
+const { EventEmitter2 } = require('eventemitter2');
 
-var COUNT_BATCH_SIZE = 600000;
-var DEFAULT_EXPORT_BATCH_SIZE = 600000;
+const COUNT_BATCH_SIZE = 600000;
+const DEFAULT_EXPORT_BATCH_SIZE = 600000;
 
 // mysql is terrible
-var MAX_MYSQL_INT = -1 >>> 1;
+const MAX_MYSQL_INT = -1 >>> 1;
 
-var noop = function() {};
+const noop = function () {};
 
-var getModuleId = function(module) {
+const getModuleId = function (module) {
   if (module.indexOf('github.com') > -1) {
     return module.split('/').pop().split('#')[0];
   }
   return module.split('@')[0];
 };
 
-var searchModulesCache = function(moduleName, callback) {
-  var mod = safeRequire(getModuleId(moduleName));
+const searchModulesCache = function (moduleName, callback) {
+  let mod = safeRequire(getModuleId(moduleName));
 
   if (mod && ((mod = require.cache[mod]) !== undefined)) {
     (function run(mod) {
-      mod.children.forEach(function (child) {
+      mod.children.forEach((child) => {
         run(child);
       });
       callback(mod);
-    })(mod);
+    }(mod));
   }
 };
 
 var safeRequire = function (moduleName) {
-  var m;
+  let m;
   try {
     m = require(require.resolve(moduleName));
   } catch (e) {
@@ -43,42 +43,42 @@ var safeRequire = function (moduleName) {
   return m;
 };
 
-var reloadModule = function(moduleName) {
-  searchModulesCache(moduleName, function(mod) {
+const reloadModule = function (moduleName) {
+  searchModulesCache(moduleName, (mod) => {
     delete require.cache[mod.id];
   });
   return safeRequire(moduleName);
 };
 
-(function(Exporter) {
-  var utils = require('../../public/js/utils.js');
+(function (Exporter) {
+  const utils = require('../../public/js/utils');
 
   Exporter._exporter = null;
 
   Exporter._dispatcher = new EventEmitter2({
-    wildcard: true
+    wildcard: true,
   });
 
-  Exporter.init = function(config, cb) {
-    Exporter.config = config.exporter || {} ;
+  Exporter.init = function (config, cb) {
+    Exporter.config = config.exporter || {};
     async.series([
-      function(next) {
-        var opt = {force: true};
+      function (next) {
+        const opt = { force: true };
         if (config.exporter.skipInstall) {
           opt.skipInstall = true;
           opt.force = false;
         }
         Exporter.install(config.exporter.module, opt, next);
       },
-      Exporter.setup
+      Exporter.setup,
     ], _.isFunction(cb) ? cb() : noop);
   };
 
-  Exporter.setup = function(cb) {
+  Exporter.setup = function (cb) {
     Exporter.augmentLogFunctions();
-    Exporter._exporter.setup(Exporter.config, function(err) {
+    Exporter._exporter.setup(Exporter.config, (err) => {
       if (err) {
-        Exporter.emit('exporter.error', {error: err});
+        Exporter.emit('exporter.error', { error: err });
         return cb(err);
       }
       Exporter.emit('exporter.ready');
@@ -86,7 +86,7 @@ var reloadModule = function(moduleName) {
     });
   };
 
-  Exporter.countAll = function(cb) {
+  Exporter.countAll = function (cb) {
     async.series([
       Exporter.countUsers,
       Exporter.countGroups,
@@ -96,8 +96,8 @@ var reloadModule = function(moduleName) {
       Exporter.countRooms,
       Exporter.countMessages,
       Exporter.countVotes,
-      Exporter.countBookmarks
-    ], function(err, results) {
+      Exporter.countBookmarks,
+    ], (err, results) => {
       if (err) return cb(err);
       cb({
         users: results[0],
@@ -108,163 +108,163 @@ var reloadModule = function(moduleName) {
         rooms: results[5],
         messages: results[6],
         votes: results[7],
-        bookmarks: results[8]
+        bookmarks: results[8],
       });
     });
   };
 
-  Exporter.countUsers = function(cb) {
+  Exporter.countUsers = function (cb) {
     if (Exporter._exporter.countUsers) {
       return Exporter._exporter.countUsers(cb);
     }
-    var count = 0;
-    Exporter.exportUsers(function(err, map, arr, nextBatch) {
-        count += arr.length;
-        nextBatch();
-      },
-      {
-        batch: COUNT_BATCH_SIZE
-      },
-      function(err) {
-        cb(err, count);
-      });
-  };
-
-  Exporter.countGroups = function(cb) {
-    if (Exporter._exporter.countGroups) {
-      return Exporter._exporter.countGroups(cb);
-    }
-    var count = 0;
-    Exporter.exportGroups(function(err, map, arr, nextBatch) {
-        count += arr.length;
-        nextBatch();
-      },
-      {
-        batch: COUNT_BATCH_SIZE
-      },
-      function(err) {
-        cb(err, count);
-      });
-  };
-
-  Exporter.countRooms = function(cb) {
-    if (Exporter._exporter.countRooms) {
-      return Exporter._exporter.countRooms(cb);
-    }
-    var count = 0;
-    Exporter.exportRooms(function(err, map, arr, nextBatch) {
+    let count = 0;
+    Exporter.exportUsers((err, map, arr, nextBatch) => {
       count += arr.length;
       nextBatch();
-    }, {
-      batch: COUNT_BATCH_SIZE
-    }, function(err) {
+    },
+    {
+      batch: COUNT_BATCH_SIZE,
+    },
+    (err) => {
       cb(err, count);
     });
   };
 
-  Exporter.countMessages = function(cb) {
+  Exporter.countGroups = function (cb) {
+    if (Exporter._exporter.countGroups) {
+      return Exporter._exporter.countGroups(cb);
+    }
+    let count = 0;
+    Exporter.exportGroups((err, map, arr, nextBatch) => {
+      count += arr.length;
+      nextBatch();
+    },
+    {
+      batch: COUNT_BATCH_SIZE,
+    },
+    (err) => {
+      cb(err, count);
+    });
+  };
+
+  Exporter.countRooms = function (cb) {
+    if (Exporter._exporter.countRooms) {
+      return Exporter._exporter.countRooms(cb);
+    }
+    let count = 0;
+    Exporter.exportRooms((err, map, arr, nextBatch) => {
+      count += arr.length;
+      nextBatch();
+    }, {
+      batch: COUNT_BATCH_SIZE,
+    }, (err) => {
+      cb(err, count);
+    });
+  };
+
+  Exporter.countMessages = function (cb) {
     if (Exporter._exporter.countMessages) {
       return Exporter._exporter.countMessages(cb);
     }
-    var count = 0;
-    Exporter.exportMessages(function(err, map, arr, nextBatch) {
-        count += arr.length;
-        nextBatch();
-      },
-      {
-        batch: COUNT_BATCH_SIZE
-      },
-      function(err) {
-        cb(err, count);
-      });
+    let count = 0;
+    Exporter.exportMessages((err, map, arr, nextBatch) => {
+      count += arr.length;
+      nextBatch();
+    },
+    {
+      batch: COUNT_BATCH_SIZE,
+    },
+    (err) => {
+      cb(err, count);
+    });
   };
 
-  Exporter.countCategories = function(cb) {
+  Exporter.countCategories = function (cb) {
     if (Exporter._exporter.countCategories) {
       return Exporter._exporter.countCategories(cb);
     }
-    var count = 0;
-    Exporter.exportCategories(function(err, map, arr, nextBatch) {
-        count += arr.length;
-        nextBatch();
-      },
-      {
-        batch: COUNT_BATCH_SIZE
-      },
-      function(err) {
-        cb(err, count);
-      });
+    let count = 0;
+    Exporter.exportCategories((err, map, arr, nextBatch) => {
+      count += arr.length;
+      nextBatch();
+    },
+    {
+      batch: COUNT_BATCH_SIZE,
+    },
+    (err) => {
+      cb(err, count);
+    });
   };
 
-  Exporter.countTopics = function(cb) {
+  Exporter.countTopics = function (cb) {
     if (Exporter._exporter.countTopics) {
       return Exporter._exporter.countTopics(cb);
     }
-    var count = 0;
-    Exporter.exportTopics(function(err, map, arr, nextBatch) {
-        count += arr.length;
-        nextBatch();
-      },
-      {
-        batch: COUNT_BATCH_SIZE
-      },
-      function(err) {
-        cb(err, count);
-      });
+    let count = 0;
+    Exporter.exportTopics((err, map, arr, nextBatch) => {
+      count += arr.length;
+      nextBatch();
+    },
+    {
+      batch: COUNT_BATCH_SIZE,
+    },
+    (err) => {
+      cb(err, count);
+    });
   };
 
-  Exporter.countPosts = function(cb) {
+  Exporter.countPosts = function (cb) {
     if (Exporter._exporter.countPosts) {
       return Exporter._exporter.countPosts(cb);
     }
-    var count = 0;
-    Exporter.exportPosts(function(err, map, arr, nextBatch) {
-        count += arr.length;
-        nextBatch();
-      },
-      {
-        batch: COUNT_BATCH_SIZE
-      },
-      function(err) {
-        cb(err, count);
-      });
+    let count = 0;
+    Exporter.exportPosts((err, map, arr, nextBatch) => {
+      count += arr.length;
+      nextBatch();
+    },
+    {
+      batch: COUNT_BATCH_SIZE,
+    },
+    (err) => {
+      cb(err, count);
+    });
   };
 
-  Exporter.countVotes = function(cb) {
+  Exporter.countVotes = function (cb) {
     if (Exporter._exporter.countVotes) {
       return Exporter._exporter.countVotes(cb);
     }
-    var count = 0;
-    Exporter.exportVotes(function(err, map, arr, nextBatch) {
-        count += arr.length;
-        nextBatch();
-      },
-      {
-        batch: COUNT_BATCH_SIZE
-      },
-      function(err) {
-        cb(err, count);
-      });
+    let count = 0;
+    Exporter.exportVotes((err, map, arr, nextBatch) => {
+      count += arr.length;
+      nextBatch();
+    },
+    {
+      batch: COUNT_BATCH_SIZE,
+    },
+    (err) => {
+      cb(err, count);
+    });
   };
 
-  Exporter.countBookmarks = function(cb) {
+  Exporter.countBookmarks = function (cb) {
     if (Exporter._exporter.countBookmarks) {
       return Exporter._exporter.countBookmarks(cb);
     }
-    var count = 0;
-    Exporter.exportBookmarks(function(err, map, arr, nextBatch) {
-        count += arr.length;
-        nextBatch();
-      },
-      {
-        batch: COUNT_BATCH_SIZE
-      },
-      function(err) {
-        cb(err, count);
-      });
+    let count = 0;
+    Exporter.exportBookmarks((err, map, arr, nextBatch) => {
+      count += arr.length;
+      nextBatch();
+    },
+    {
+      batch: COUNT_BATCH_SIZE,
+    },
+    (err) => {
+      cb(err, count);
+    });
   };
 
-  var onGroups = function(err, arg1, arg2, cb) {
+  const onGroups = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
     if (_.isObject(arg1)) {
       return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
@@ -274,25 +274,25 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getGroups = function(cb) {
+  Exporter.getGroups = function (cb) {
     if (!Exporter._exporter.getGroups) {
       return onGroups(null, {}, [], cb);
     }
-    Exporter._exporter.getGroups(function(err, arg1, arg2) {
+    Exporter._exporter.getGroups((err, arg1, arg2) => {
       onGroups(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedGroups = function(start, end, cb) {
+  Exporter.getPaginatedGroups = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedGroups) {
       return Exporter.getGroups(cb);
     }
-    Exporter._exporter.getPaginatedGroups(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedGroups(start, end, (err, arg1, arg2) => {
       onUsers(err, arg1, arg2, cb);
     });
   };
 
-  var onUsers = function(err, arg1, arg2, cb) {
+  var onUsers = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
     if (_.isObject(arg1)) {
       return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
@@ -302,22 +302,22 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getUsers = function(cb) {
-    Exporter._exporter.getUsers(function(err, arg1, arg2) {
+  Exporter.getUsers = function (cb) {
+    Exporter._exporter.getUsers((err, arg1, arg2) => {
       onUsers(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedUsers = function(start, end, cb) {
+  Exporter.getPaginatedUsers = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedUsers) {
       return Exporter.getUsers(cb);
     }
-    Exporter._exporter.getPaginatedUsers(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedUsers(start, end, (err, arg1, arg2) => {
       onUsers(err, arg1, arg2, cb);
     });
   };
 
-  var onCategories = function(err, arg1, arg2, cb) {
+  const onCategories = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
 
     if (_.isObject(arg1)) {
@@ -328,22 +328,22 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getCategories = function(cb) {
-    Exporter._exporter.getCategories(function(err, arg1, arg2) {
+  Exporter.getCategories = function (cb) {
+    Exporter._exporter.getCategories((err, arg1, arg2) => {
       onCategories(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedCategories = function(start, end, cb) {
+  Exporter.getPaginatedCategories = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedCategories) {
       return Exporter.getCategories(cb);
     }
-    Exporter._exporter.getPaginatedCategories(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedCategories(start, end, (err, arg1, arg2) => {
       onCategories(err, arg1, arg2, cb);
     });
   };
 
-  var onTopics = function(err, arg1, arg2, cb) {
+  const onTopics = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
 
     if (_.isObject(arg1)) {
@@ -354,22 +354,22 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getTopics = function(cb) {
-    Exporter._exporter.getTopics(function(err, arg1, arg2) {
+  Exporter.getTopics = function (cb) {
+    Exporter._exporter.getTopics((err, arg1, arg2) => {
       onTopics(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedTopics = function(start, end, cb) {
+  Exporter.getPaginatedTopics = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedTopics) {
       return Exporter.getTopics(cb);
     }
-    Exporter._exporter.getPaginatedTopics(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedTopics(start, end, (err, arg1, arg2) => {
       onTopics(err, arg1, arg2, cb);
     });
   };
 
-  var onPosts = function(err, arg1, arg2, cb) {
+  const onPosts = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
 
     if (_.isObject(arg1)) {
@@ -380,22 +380,22 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getPosts = function(cb) {
-    Exporter._exporter.getPosts(function(err, arg1, arg2) {
+  Exporter.getPosts = function (cb) {
+    Exporter._exporter.getPosts((err, arg1, arg2) => {
       onPosts(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedPosts = function(start, end, cb) {
+  Exporter.getPaginatedPosts = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedPosts) {
       return Exporter.getPosts(cb);
     }
-    Exporter._exporter.getPaginatedPosts(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedPosts(start, end, (err, arg1, arg2) => {
       onPosts(err, arg1, arg2, cb);
     });
   };
 
-  var onRooms = function(err, arg1, arg2, cb) {
+  const onRooms = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
     if (_.isObject(arg1)) {
       return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
@@ -405,26 +405,26 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getRooms = function(cb) {
+  Exporter.getRooms = function (cb) {
     if (!Exporter._exporter.getRooms) {
-      Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getRooms function, skipping...'});
+      Exporter.emit('exporter.warn', { warn: 'Current selected exporter does not implement getRooms function, skipping...' });
       return onRooms(null, {}, [], cb);
     }
-    Exporter._exporter.getRooms(function(err, arg1, arg2) {
+    Exporter._exporter.getRooms((err, arg1, arg2) => {
       onRooms(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedRooms = function(start, end, cb) {
+  Exporter.getPaginatedRooms = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedRooms) {
       return Exporter.getRooms(cb);
     }
-    Exporter._exporter.getPaginatedRooms(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedRooms(start, end, (err, arg1, arg2) => {
       onRooms(err, arg1, arg2, cb);
     });
   };
 
-  var onMessages = function(err, arg1, arg2, cb) {
+  const onMessages = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
     if (_.isObject(arg1)) {
       return cb(null, arg1, _.isArray(arg2) ? arg2 : _.toArray(arg1));
@@ -434,27 +434,27 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getMessages = function(cb) {
+  Exporter.getMessages = function (cb) {
     if (!Exporter._exporter.getMessages) {
-      Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getMessages function, skipping...'});
+      Exporter.emit('exporter.warn', { warn: 'Current selected exporter does not implement getMessages function, skipping...' });
       return onMessages(null, {}, [], cb);
     }
-    Exporter._exporter.getMessages(function(err, arg1, arg2) {
+    Exporter._exporter.getMessages((err, arg1, arg2) => {
       onMessages(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedMessages = function(start, end, cb) {
+  Exporter.getPaginatedMessages = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedMessages) {
       return Exporter.getMessages(cb);
     }
-    Exporter._exporter.getPaginatedMessages(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedMessages(start, end, (err, arg1, arg2) => {
       onMessages(err, arg1, arg2, cb);
     });
   };
 
   // Votes getters
-  var onVotes = function(err, arg1, arg2, cb) {
+  const onVotes = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
 
     if (_.isObject(arg1)) {
@@ -465,27 +465,27 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getVotes = function(cb) {
+  Exporter.getVotes = function (cb) {
     if (!Exporter._exporter.getVotes) { // votes is an optional feature
-      Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getVotes function, skipping...'});
+      Exporter.emit('exporter.warn', { warn: 'Current selected exporter does not implement getVotes function, skipping...' });
       return onVotes(null, {}, [], cb);
     }
-    Exporter._exporter.getVotes(function(err, arg1, arg2) {
+    Exporter._exporter.getVotes((err, arg1, arg2) => {
       onVotes(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedVotes = function(start, end, cb) {
+  Exporter.getPaginatedVotes = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedVotes) {
       return Exporter.getVotes(cb);
     }
-    Exporter._exporter.getPaginatedVotes(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedVotes(start, end, (err, arg1, arg2) => {
       onVotes(err, arg1, arg2, cb);
     });
   };
 
   // Bookmarks getters
-  var onBookmarks = function(err, arg1, arg2, cb) {
+  const onBookmarks = function (err, arg1, arg2, cb) {
     if (err) return cb(err);
 
     if (_.isObject(arg1)) {
@@ -496,31 +496,31 @@ var reloadModule = function(moduleName) {
     }
   };
 
-  Exporter.getBookmarks = function(cb) {
+  Exporter.getBookmarks = function (cb) {
     if (!Exporter._exporter.getBookmarks) { // votes is an optional feature
-      Exporter.emit('exporter.warn', {warn: 'Current selected exporter does not implement getBookmarks function, skipping...'});
+      Exporter.emit('exporter.warn', { warn: 'Current selected exporter does not implement getBookmarks function, skipping...' });
       return onBookmarks(null, {}, [], cb);
     }
-    Exporter._exporter.getBookmarks(function(err, arg1, arg2) {
+    Exporter._exporter.getBookmarks((err, arg1, arg2) => {
       onBookmarks(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.getPaginatedBookmarks = function(start, end, cb) {
+  Exporter.getPaginatedBookmarks = function (start, end, cb) {
     if (!Exporter._exporter.getPaginatedBookmarks) {
       return Exporter.getBookmarks(cb);
     }
-    Exporter._exporter.getPaginatedBookmarks(start, end, function(err, arg1, arg2) {
+    Exporter._exporter.getPaginatedBookmarks(start, end, (err, arg1, arg2) => {
       onBookmarks(err, arg1, arg2, cb);
     });
   };
 
-  Exporter.teardown = function(cb) {
+  Exporter.teardown = function (cb) {
     Exporter._exporter.teardown(cb);
   };
 
-  Exporter.install = function(module, options, next) {
-    var	npm = require('npm');
+  Exporter.install = function (module, options, next) {
+    const	npm = require('npm');
     Exporter._exporter = null;
 
     if (_.isFunction(options)) {
@@ -529,56 +529,56 @@ var reloadModule = function(moduleName) {
     }
 
     if (options.skipInstall) {
-      var mid = getModuleId(module);
+      const mid = getModuleId(module);
       Exporter._exporter = reloadModule(mid);
       Exporter._module = module;
       Exporter._moduleId = mid;
       return next();
     }
 
-    npm.load(options, function(err) {
+    npm.load(options, (err) => {
       if (err) {
         next(err);
       }
 
-      Exporter.emit('exporter.log', 'installing: ' + module);
+      Exporter.emit('exporter.log', `installing: ${module}`);
 
       npm.config.set('spin', false);
       npm.config.set('force', !!options.force);
       npm.config.set('verbose', true);
 
-      npm.commands.install([module], function(err) {
+      npm.commands.install([module], (err) => {
         if (err) {
           next(err);
         }
 
-        var moduleId = getModuleId(module);
-        var exporter = reloadModule(moduleId);
+        const moduleId = getModuleId(module);
+        const exporter = reloadModule(moduleId);
 
-        if (! Exporter.isCompatible(exporter)) {
+        if (!Exporter.isCompatible(exporter)) {
           // no?
           if (module.indexOf('github.com/akhoury') === -1) {
-            Exporter.emit('exporter.warn', {warn: module + ' is not compatible, trying github.com/akhoury\'s fork'});
+            Exporter.emit('exporter.warn', { warn: `${module} is not compatible, trying github.com/akhoury's fork` });
 
-            npm.commands.uninstall([module], function(err) {
-              if(err) {
+            npm.commands.uninstall([module], (err) => {
+              if (err) {
                 next(err);
               }
-              Exporter.emit('exporter.log', 'uninstalled: ' + module);
+              Exporter.emit('exporter.log', `uninstalled: ${module}`);
 
               // let's try my #master fork till the PRs close and get published
-              Exporter.install('git://github.com/akhoury/' + moduleId + '#master', {'no-registry': true}, next);
+              Exporter.install(`git://github.com/akhoury/${moduleId}#master`, { 'no-registry': true }, next);
             });
           } else {
-            Exporter.emit('exporter.error', {error: module + ' is not compatible.'});
-            next({error: module + ' is not compatible.'});
+            Exporter.emit('exporter.error', { error: `${module} is not compatible.` });
+            next({ error: `${module} is not compatible.` });
           }
         } else {
-
-          if (! Exporter.supportsPagination(exporter)) {
-            Exporter.emit('exporter.warn', {warn: module + ' does not support Pagination, '
-              + 'it will work, but if you run into memory issues, you might want to contact the developer of it or add support your self. '
-              + 'See https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md'
+          if (!Exporter.supportsPagination(exporter)) {
+            Exporter.emit('exporter.warn', {
+              warn: `${module} does not support Pagination, `
+              + `it will work, but if you run into memory issues, you might want to contact the developer of it or add support your self. `
+              + `See https://github.com/akhoury/nodebb-plugin-import/blob/master/write-my-own-exporter.md`,
             });
           }
 
@@ -592,28 +592,28 @@ var reloadModule = function(moduleName) {
     });
   };
 
-  Exporter.isCompatible = function(exporter) {
+  Exporter.isCompatible = function (exporter) {
     exporter = exporter || Exporter._exporter;
 
     return exporter
       && _.isFunction(exporter.setup)
       && (
-        Exporter.supportsPagination(exporter) ||
-        (
+        Exporter.supportsPagination(exporter)
+        || (
           _.isFunction(exporter.getUsers)
           && _.isFunction(exporter.getCategories)
           && _.isFunction(exporter.getTopics)
           && _.isFunction(exporter.getPosts)
         )
       )
-      && _.isFunction(exporter.teardown)
+      && _.isFunction(exporter.teardown);
   };
 
-  Exporter.supportsPagination = function(exporter, type) {
+  Exporter.supportsPagination = function (exporter, type) {
     exporter = exporter || Exporter._exporter;
 
     return exporter
-      && (function(type) {
+      && (function (type) {
         switch (type) {
           case 'users':
             return _.isFunction(exporter.getPaginatedUsers);
@@ -648,88 +648,88 @@ var reloadModule = function(moduleName) {
               && _.isFunction(exporter.getPaginatedTopics)
               && _.isFunction(exporter.getPaginatedPosts);
         }
-      })(type);
+      }(type));
   };
 
-  Exporter.exportGroups = function(process, options, callback) {
+  Exporter.exportGroups = function (process, options, callback) {
     return Exporter.exportType('groups', process, options, callback);
   };
 
-  Exporter.exportUsers = function(process, options, callback) {
+  Exporter.exportUsers = function (process, options, callback) {
     return Exporter.exportType('users', process, options, callback);
   };
 
-  Exporter.exportRooms = function(process, options, callback) {
+  Exporter.exportRooms = function (process, options, callback) {
     return Exporter.exportType('rooms', process, options, callback);
   };
 
-  Exporter.exportMessages = function(process, options, callback) {
+  Exporter.exportMessages = function (process, options, callback) {
     return Exporter.exportType('messages', process, options, callback);
   };
 
-  Exporter.exportCategories = function(process, options, callback) {
+  Exporter.exportCategories = function (process, options, callback) {
     return Exporter.exportType('categories', process, options, callback);
   };
 
-  Exporter.exportTopics = function(process, options, callback) {
+  Exporter.exportTopics = function (process, options, callback) {
     return Exporter.exportType('topics', process, options, callback);
   };
 
-  Exporter.exportPosts = function(process, options, callback) {
+  Exporter.exportPosts = function (process, options, callback) {
     return Exporter.exportType('posts', process, options, callback);
   };
 
-  Exporter.exportVotes = function(process, options, callback) {
+  Exporter.exportVotes = function (process, options, callback) {
     return Exporter.exportType('votes', process, options, callback);
   };
 
-  Exporter.exportBookmarks = function(process, options, callback) {
+  Exporter.exportBookmarks = function (process, options, callback) {
     return Exporter.exportType('bookmarks', process, options, callback);
   };
 
-  Exporter.exportType = function(type, process, options, callback) {
+  Exporter.exportType = function (type, process, options, callback) {
     if (typeof options === 'function') {
       callback = options;
       options = {};
     }
 
-    callback = typeof callback === 'function' ? callback : function(){};
+    callback = typeof callback === 'function' ? callback : function () {};
     options = options || {};
 
     if (typeof process !== 'function') {
-      throw new Error(process + ' is not a function');
+      throw new Error(`${process} is not a function`);
     }
 
     // custom done condition
-    options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function(){};
+    options.doneIf = typeof options.doneIf === 'function' ? options.doneIf : function () {};
 
     // always start at, useful when deleting all records
     // options.alwaysStartAt
 
     // i.e. exporter.getPaginatedPosts
     // will fallback to get[Type] is pagination is not supported
-    var Type = type[0].toUpperCase() + type.substr(1).toLowerCase();
-    var fnName = 'getPaginated' + Type;
+    const Type = type[0].toUpperCase() + type.substr(1).toLowerCase();
+    const fnName = `getPaginated${Type}`;
 
-    var batch = Exporter.supportsPagination(null, type) ? options.batch || Exporter._exporter.DEFAULT_EXPORT_BATCH_SIZE || DEFAULT_EXPORT_BATCH_SIZE : MAX_MYSQL_INT;
+    const batch = Exporter.supportsPagination(null, type) ? options.batch || Exporter._exporter.DEFAULT_EXPORT_BATCH_SIZE || DEFAULT_EXPORT_BATCH_SIZE : MAX_MYSQL_INT;
 
-    var start = 0;
-    var limit = batch;
-    var done = false;
+    let start = 0;
+    const limit = batch;
+    let done = false;
 
     async.whilst(
-      function(err) {
+      (err) => {
         if (err) {
           return true;
         }
         return !done;
       },
-      function(next) {
+      (next) => {
         if (!Exporter.supportsPagination(null, type) && start > 0) {
           done = true;
           return next();
         }
-        Exporter[fnName](start, limit, function(err, map, arr) {
+        Exporter[fnName](start, limit, (err, map, arr) => {
           if (err) {
             return next(err);
           }
@@ -737,21 +737,21 @@ var reloadModule = function(moduleName) {
             done = true;
             return next();
           }
-          process(err, map, arr, function(err) {
+          process(err, map, arr, (err) => {
             if (err) {
               return next(err);
             }
             start += utils.isNumber(options.alwaysStartAt) ? options.alwaysStartAt : batch + 1;
             next();
           });
-        })
+        });
       },
-      callback
+      callback,
     );
   };
 
   Exporter.emit = function (type, b, c) {
-    var args = Array.prototype.slice.call(arguments, 0);
+    const args = Array.prototype.slice.call(arguments, 0);
     console.log.apply(console, args);
     args.unshift(args[0]);
     Exporter._dispatcher.emit.apply(Exporter._dispatcher, args);
@@ -765,7 +765,7 @@ var reloadModule = function(moduleName) {
     Exporter._dispatcher.once.apply(Exporter._dispatcher, arguments);
   };
 
-  Exporter.removeAllListeners = function() {
+  Exporter.removeAllListeners = function () {
     Exporter._dispatcher.removeAllListeners();
   };
 
@@ -775,37 +775,36 @@ var reloadModule = function(moduleName) {
         base.apply(this, arguments);
         extra.apply(this, arguments);
       };
-    })();
+    }());
   };
 
-  Exporter.augmentLogFunctions = function() {
-    var log = Exporter._exporter.log;
+  Exporter.augmentLogFunctions = function () {
+    const { log } = Exporter._exporter;
     if (_.isFunction(log)) {
       Exporter._exporter.log = Exporter.augmentFn(log, function (a, b, c) {
-        var args = _.toArray(arguments);
-        args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
+        const args = _.toArray(arguments);
+        args[0] = `[${(new Date()).toISOString()}] ${args[0]}`;
         args.unshift('exporter.log');
         Exporter.emit.apply(Exporter, args);
       });
     }
-    var warn = Exporter._exporter.warn;
+    const { warn } = Exporter._exporter;
     if (_.isFunction(warn)) {
       Exporter._exporter.warn = Exporter.augmentFn(warn, function () {
-        var args = _.toArray(arguments);
-        args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
+        const args = _.toArray(arguments);
+        args[0] = `[${(new Date()).toISOString()}] ${args[0]}`;
         args.unshift('exporter.warn');
         Exporter.emit.apply(Exporter, args);
       });
     }
-    var error = Exporter._exporter.error;
+    const { error } = Exporter._exporter;
     if (_.isFunction(error)) {
       Exporter._exporter.error = Exporter.augmentFn(error, function () {
-        var args = _.toArray(arguments);
-        args[0] = '[' + (new Date()).toISOString() + '] ' + args[0];
+        const args = _.toArray(arguments);
+        args[0] = `[${(new Date()).toISOString()}] ${args[0]}`;
         args.unshift('exporter.error');
         Exporter.emit.apply(Exporter, args);
       });
     }
-  }
-
-})(module.exports);
+  };
+}(module.exports));

@@ -1,26 +1,24 @@
 
-var path = require("path");
-var fs = require("fs");
-var assert = require("chai").assert;
-var pkg = require("../package.json");
+const path = require('path');
+const fs = require('fs');
+const { assert } = require('chai');
+const nbbRequire = require('nodebb-plugin-require');
+const pkg = require('../package.json');
 
-var nbbRequire = require("nodebb-plugin-require");
 
-var Data = require("../server/helpers/data");
+const Data = require('../server/helpers/data');
 
-describe(pkg.name + "@" + pkg.version + " test", function() {
-
-  before(function(done) {
+describe(`${pkg.name}@${pkg.version} test`, () => {
+  before((done) => {
     done();
   });
 
-  it("find correct NodeBB path", function (done) {
+  it('find correct NodeBB path', (done) => {
     assert.equal(nbbRequire.isNodebbDirectory(nbbRequire.fullpath), true);
     done();
   });
 
-  after(function(done) {
+  after((done) => {
     done();
   });
-
 });
