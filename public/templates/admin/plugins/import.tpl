@@ -97,6 +97,19 @@
             <h2>Importer Configs</h2>
 
             <div class="form-group">
+				<div class="checkbox">
+					<label for="importer-auto-resume-on-interruption">
+						<input type="checkbox" id="importer-auto-resume-on-interruption" name="auto-resume-on-interruption"> Auto resume on interruption
+					</label>
+					<p class="help-block">
+						If the server crashes for some reason, but it recovers, the importer can auto-resume.
+						This option would only work if you are using <code>./nodebb start</code> or some other process manager able to
+						restart the process if crashed and you must have import plugin page open on the browser.
+					</p>
+				</div>
+			</div>
+
+            <div class="form-group">
                 <div class="checkbox">
                     <label for="importer-passwordgen-enabled">
                         <input
@@ -158,6 +171,24 @@
 
             <hr />
 
+			<div class="form-group">
+				<div class="checkbox">
+					<label for="importer-override-duplicate-emails-data-with-original-data">
+						<input type="checkbox" id="importer-override-duplicate-emails-data-with-original-data" name="importer-override-duplicate-emails-data-with-original-data"> Override duplicate emails original data
+					</label>
+					<p class="help-block">
+					   If a username with a duplicate email was found, the original forum data will override existing data,
+					   <ul>
+					     <li>if this is not selected it, posts/topics owned by the user in the original set will be skipped.</li>
+					     <li>if this selected, the "Import duplicate emails" option will be ignored.</li>
+					     <li>It is recommended to keep this option only if you are importing into a nodebb database that already has some users in it.</li>
+					   </ul>
+					</p>
+				</div>
+			</div>
+
+			<hr />
+
             <div class="form-group">
                 <div class="checkbox">
                     <label for="importer-import-duplicate-emails">
@@ -170,6 +201,7 @@
                     </p>
                 </div>
             </div>
+
             <hr />
 
             <div class="form-group">

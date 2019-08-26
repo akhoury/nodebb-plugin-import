@@ -93,6 +93,7 @@
         },
 
 
+
         downloadUsersCsv: function(e) {
           togglePostImportTools(false);
 
@@ -330,6 +331,28 @@
           });
       };
 
+      var autoResume = function () {
+		  var autoResumeOnInterruption = $wrapper.find('#importer-auto-resume-on-interruption').is(':checked');
+		  if (autoResumeOnInterruption) {
+			  $.get(plugin.apiHost + '/isDirty')
+				  .done(function(data) {
+					  if (data && data.isDirty) {
+						  getState()
+							  .done(function (state) {
+							  	  if (state.now === "idle") {
+									  app.alert({
+										  message: 'Resuming in 5 seconds....',
+										  timeout: 5000
+									  });
+									  setTimeout(plugin.actions.resume, 5000);
+								  }
+							  });
+
+					  }
+				  });
+		  }
+	  };
+
       var getLocalStorage = function(key) {
         if (window.localStorage) {
           var data = localStorage.getItem(STORAGE_KEY + '-data'),
@@ -404,7 +427,7 @@
         }
       };
 
-      var checkDirty = function() {
+      var checkDirty = function () {
         $.get(plugin.apiHost + '/isDirty')
           .done(function(data) {
             if (data && data.isDirty) {
@@ -415,7 +438,7 @@
           })
           .fail(function() {
             utils.toggleVisible($wrapper.find('#import-resume'), false);
-          });
+		  });
       };
 
       var bindActions = function() {
@@ -582,6 +605,7 @@
         };
 
         var importer = {
+          autoResumeOnInterruption: $wrapper.find('#importer-auto-resume-on-interruption').is(':checked'),
           passwordGen: {
             enabled: $('#importer-passwordgen-enabled').is(':checked'),
             chars: $('#importer-passwordgen-chars').val(),
@@ -593,7 +617,8 @@
             _uid: $wrapper.find('#importer-admin-take-ownership-uid').val()
           },
           importDuplicateEmails: $wrapper.find('#importer-import-duplicate-emails').is(':checked'),
-          autoConfirmEmails: $('#importer-autoconfirm-emails').is(':checked'),
+		  overrideDuplicateEmailDataWithOriginalData: $wrapper.find('#importer-override-duplicate-emails-data-with-original-data').is(':checked'),
+		  autoConfirmEmails: $('#importer-autoconfirm-emails').is(':checked'),
           userReputationMultiplier: parseInt($('#importer-user-reputation-multiplier').val(), 10),
 
           categoriesTextColors: (($('#importer-categories-text-colors').val() || '')).replace(/ /g,'').split(','),
@@ -710,7 +735,10 @@
             event: 'server.connected'
           });
           setTimeout(function() {
-            getState().done(onControllerState);
+            getState().done(function (state) {
+				onControllerState(state);
+            	autoResume();
+			});
           }, 1000);
         });
 
@@ -769,6 +797,7 @@
 
         postImportToolsAvailable();
         checkDirty();
+        autoResume();
 
         getState().done(function() {
           setTimeout(function() {

@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-import",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Import your forum data to nodebb",
   "main": "./server/importer.js",
   "scripts": {
@@ -52,13 +52,13 @@
     "bbcode-to-markdown": "^1.0.0",
     "encoding": "^0.1.11",
     "eventemitter2": "~0.4.14",
-    "extend": "^3.0.0",
+    "extend": "^3.0.2",
     "file-type": "^3.4.0",
-    "fs-extra": "~0.11.0",
+    "fs-extra": "^8.1.0",
     "iconv": "^2.1.11",
     "nconf": "^0.10.0",
     "nodebb-plugin-require": "^0.0.6",
-    "npm": "^6.9.0",
+    "npm": "^6.11.2",
     "underscore": "~1.5.2"
   },
   "devDependencies": {
@@ -69,6 +69,6 @@
     "mocha": "^6.1.4"
   },
   "nbbpm": {
-    "compatibility": "1.12.1"
+    "compatibility": "1.12.2"
   }
 }

@@ -64,7 +64,7 @@ const defaults = {
 
   Controller.postImportToolsAvailble = function () {
     const state = Controller.state();
-    return (!state || state.now === 'idle') && fs.existsSync(LAST_IMPORT_TIMESTAMP_FILE);
+    return (!state || state.now === 'idle') && fs.pathExistsSync(LAST_IMPORT_TIMESTAMP_FILE);
   };
 
   Controller.isDirty = function () {
@@ -969,7 +969,7 @@ const defaults = {
         Controller.progress(1, 1);
         Controller.phase('deleteExtraFieldsDone');
 
-        fs.remove(LAST_IMPORT_TIMESTAMP_FILE, (err) => {
+        fs.unlink(LAST_IMPORT_TIMESTAMP_FILE, (err) => {
           Controller.state({
             now: 'idle',
             event: 'delete.done',

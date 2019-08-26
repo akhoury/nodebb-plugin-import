@@ -21,7 +21,7 @@ const filepath = function (type) {
 };
 
 const checkSync = function (type) {
-	const dirty = !!fs.existsSync(filepath(type));
+	const dirty = !!fs.pathExistsSync(filepath(type));
 	CACHE[type] = dirty;
 	return dirty;
 };
@@ -60,7 +60,6 @@ module.exports = {
 	},
 
 	remove(type, next) {
-		debugger;
 		fs.remove(filepath(type), (err, response) => {
 			if (!err) {
 				delete CACHE[type];

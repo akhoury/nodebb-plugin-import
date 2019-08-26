@@ -80,9 +80,7 @@
 }
 .import-darker-on-hover {
 }
-.import-darker-on-hover:hover {
-  filter: brightness(90%);
-}
+.import-darker-on-hover:hover {}
 #content-convert-parse-before,
 #content-convert-parse-after {
 	width: 100%;
