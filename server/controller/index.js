@@ -1142,7 +1142,15 @@ const defaults = {
                       },
                       function (cb) {
                         if (rconf.categoriesDescriptions && __imported_original_data__._description) {
-                          db.setObjectField(`category:${category.cid}`, 'description', Controller.convert(__imported_original_data__._description, 'category:description', category.cid), cb);
+                        	var description = Controller.convert(__imported_original_data__._description, 'category:description', category.cid);
+                        	async.parallel([
+                        		function (next) {
+									db.setObjectField(`category:${category.cid}`, 'parsedDescription', description, next);
+								},
+								function (next) {
+									db.setObjectField(`category:${category.cid}`, 'description', description, next);
+								},
+							], cb);
                         } else {
                           cb();
                         }

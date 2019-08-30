@@ -687,6 +687,18 @@ const reloadModule = function (moduleName) {
     return Exporter.exportType('bookmarks', process, options, callback);
   };
 
+  Exporter.eachTypeImmediateProcess = function (type, obj, options, callback) {
+	  var exporter = Exporter._exporter;
+	  if (Exporter.supportsEachTypeImmediateProcess(type) && obj) {
+		  return exporter[`each${type[0].toUpperCase()}${type.slice(1)}ImmediateProcess`](obj, options, callback);
+	  }
+	  callback();
+  };
+
+  Exporter.supportsEachTypeImmediateProcess = function (type) {
+  	  return Exporter._exporter && typeof Exporter._exporter[`each${type[0].toUpperCase()}${type.slice(1)}ImmediateProcess`] === 'function';
+  };
+
   Exporter.exportType = function (type, process, options, callback) {
     if (typeof options === 'function') {
       callback = options;

@@ -148,6 +148,10 @@ Each record should look like this:
         "_level": "administrator" // OPTIONAL, [OPTIONS: 'administrator' or 'moderator'], defaults to '', also note that a moderator will become a NodeBB Moderator on ALL categories at the moment.
 
         "_lastonline": 1386475827370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to undefined
+        
+        "_fields": { // OPTIONAL, extra field to be merge with on the main nodebb object hash defaults to undefined
+        	googleId: "123465"
+        } 
 }
 ```
 
@@ -192,6 +196,10 @@ Each record should look like this:
 	      "_bgColor": "#123ABC", // OPTIONAL, background color, defaults to random
 
 	      "_icon": "comment", // OPTIONAL, Font Awesome icon, defaults to random
+	      
+	      "_fields": { // OPTIONAL, extra field to be merge with on the main nodebb object hash defaults to undefined
+        	googleId: "123465"
+          } 
 }
 ```
 
@@ -264,7 +272,12 @@ Each record should look like this:
 
         "_path": "/myoldforum/topic/123", // OPTIONAL, the old path to reach this topic's page, defaults to ''
 
-        "_slug": "old-topic-slug" // OPTIONAL, defaults to ''
+        "_slug": "old-topic-slug", // OPTIONAL, defaults to ''
+        
+        "_fields": { // OPTIONAL, extra field to be merge with on the main nodebb object hash defaults to undefined
+            googleId: "123465"
+        } 
+
 }
 ```
 
@@ -319,7 +332,11 @@ Each record should look like this:
 
         "_path": "/myoldforum/topic/123#post56789", // OPTIONAL, the old path to reach this post's page and maybe deep link, defaults to ''
 
-        "_slug": "old-post-slug" // OPTIONAL, defaults to ''
+        "_slug": "old-post-slug", // OPTIONAL, defaults to ''
+        
+        "_fields": { // OPTIONAL, extra field to be merge with on the main nodebb object hash defaults to undefined
+            googleId: "123465"
+        } 
 
 }
 ```
@@ -429,7 +446,11 @@ Each record should look like this:
 
         "_hidden": 0, // OPTIONAL, if hidden group
 
-        "_timestamp": 1386475817370 // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+        "_timestamp": 1386475817370, // OPTIONAL, [UNIT: MILLISECONDS], defaults to current
+        
+        "_fields": { // OPTIONAL, extra field to be merge with on the main nodebb object hash defaults to undefined
+            googleId: "123465"
+        } 
 }
 ```
 
@@ -510,7 +531,53 @@ If you need to do something before the export is done, like closing a connection
 
 ## Optionals
 
-### 4 more functions:
+
+### `YourModule.each${Model}ImmediateProcess`
+
+These functions will run right after the whole import process is done, just in case you need to do something custom 
+
+* `YourModule.eachUserImmediateProcess(user, options, callback)`
+* `YourModule.eachMessageImmediateProcess(message, options, callback)`
+* `YourModule.eachGroupImmediateProcess(group, options, callback)`
+* `YourModule.eachCategoryImmediateProcess(category, options, callback)`
+* `YourModule.eachTopicImmediateProcess(topic, options, callback)`
+* `YourModule.eachPostImmediateProcess(post, options, callback)`
+* `YourModule.eachBookmarkImmediateProcess(bookmark, options, callback)`
+* `YourModule.eachVoteImmediateProcess(vote, options, callback)`
+
+Example
+
+```javascript
+YourModule.eachUserImmediateProcess = function (user, options, callback) {
+    options.$refs.db.setObjectField('foo:uid', user.uid, user.uid, callback);
+};
+```
+
+
+`options` has a $refs property which has a references to helpful modules which you can use in your exporter
+
+```javascript
+options = {
+    $refs: {
+        utils,
+        nconf,
+        Meta,
+        Categories,
+        Groups,
+        User,
+        Messaging,
+        Topics,
+        Posts,
+        File,
+        db,
+        privileges,
+        Rooms,
+        Votes,
+        Bookmarks
+    }
+};
+```
+
 
 #### Logger functions
 * `YourModule.log([args])`
