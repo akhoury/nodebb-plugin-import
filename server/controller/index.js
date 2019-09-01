@@ -1145,7 +1145,7 @@ const defaults = {
                         	var description = Controller.convert(__imported_original_data__._description, 'category:description', category.cid);
                         	async.parallel([
                         		function (next) {
-									db.setObjectField(`category:${category.cid}`, 'parsedDescription', description, next);
+									db.setObjectField(`category:${category.cid}`, 'descriptionParsed', description, next);
 								},
 								function (next) {
 									db.setObjectField(`category:${category.cid}`, 'description', description, next);
