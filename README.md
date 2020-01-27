@@ -38,13 +38,25 @@ If you want a higher revision, import to the supported one, then just follow the
 
 ## Usage
 
-Install it from the NodeBB Admin Panel, or
+Install it and activate it from the NodeBB Admin Panel, or
+
 ```
 npm install nodebb-plugin-import
 ```
+
+then re-build nodebb
+
+```
+./nodebb build
+```
+
 then run nodebb
+
 ```
 node app
+
+# or
+./nodebb start
 ```
 __DISABLE ALL OTHER PLUGINS__ especially any DB indexer and Markdown
 
