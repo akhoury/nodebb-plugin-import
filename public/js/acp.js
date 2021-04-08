@@ -178,6 +178,26 @@
           });
         },
 
+				downloadRedirectionNginxMaps: function(e) {
+          togglePostImportTools(false);
+          app.alert({
+            message: 'Preparing [model].nginx.redirect.map, please be patient',
+            timeout: 1000
+          });
+          saveConfig().done(function() {
+            postImportToolsAvailable().done(function (data) {
+              if (data && data.available) {
+                $.get(plugin.apiHost + '/download/nginx.redirect.maps')
+                  .fail(function () {
+                    app.alertError('Something went wrong :(');
+                  })
+              } else {
+                app.alertError('Cannot download file(s) at the moment', 1000);
+              }
+            });
+          });
+        },
+
         convertContent: function(e) {
           app.alert({
             message: 'Starting content conversion, please be patient',
@@ -576,18 +596,28 @@
         $progressPercentage.text(data.count + '/' + data.total + ', ' + (data.percentage || 0).toFixed(7));
       };
 
-      var onDownload = function(data) {
+			var onFileDataDownload = function(data) {
         if (data) {
           var pom = document.createElement('a');
           pom.setAttribute('download', data.filename || 'file');
-
           if (data.content) {
             pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(data.content || ''));
           } else if (data.fileurl) {
             pom.setAttribute('href', data.fileurl);
           }
-
           pom.click();
+        }
+      };
+
+      var onDownload = function(data) {
+        if (data) {
+					if (data.filenames) {
+						data.filenames.forEach((filename, i) => {
+							onFileDataDownload({ filename, fileurl: data.fileurls[i], content: data.contents[i] })
+						})
+					} else {
+						onFileDataDownload(data)
+					}
         }
       };
 

@@ -166,6 +166,15 @@ const sockets = nbbRequire('src/socket.io');
         }
       },
 
+			redirectNginxMaps(req, res, next) {
+        if (Plugin.controller.postImportToolsAvailble()) {
+          Plugin.controller.getRedirectionMap({ format: 'nginx' });
+          res.json({ started: true });
+        } else {
+          res.json({ error: 'Cannot download now' });
+        }
+      },
+
       usersJson(req, res, next) {
         if (Plugin.controller.postImportToolsAvailble()) {
           Plugin.controller.getUsersJson();

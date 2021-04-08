@@ -75,7 +75,7 @@ const defaults = {
   };
 
   Controller.complete = function (callback) {
-    fs.writeFileSync(LAST_IMPORT_TIMESTAMP_FILE, +new Date(), { encoding: 'utf8' });
+    fs.writeFileSync(LAST_IMPORT_TIMESTAMP_FILE, `${+new Date()}`, { encoding: 'utf8' });
     fs.remove(DIRTY_FILE, (err) => {
       Controller.state({
         now: 'idle',
@@ -218,7 +218,7 @@ const defaults = {
   };
 
   Controller.startImport = function (exporter, config, callback) {
-    fs.writeFileSync(DIRTY_FILE, +new Date(), { encoding: 'utf8' });
+    fs.writeFileSync(DIRTY_FILE, `${+new Date()}`, { encoding: 'utf8' });
     Controller._requireImporter(callback);
 
     if (_.isFunction(config)) {
@@ -582,6 +582,12 @@ const defaults = {
 
     let json = '';
     let csv = '';
+		let nginxMaps = {
+			users: '',
+			categories: '',
+			topics: '',
+			posts: '',
+		}
 
     if (Controller.postImportToolsAvailble()) {
       Controller.state({
@@ -607,6 +613,7 @@ const defaults = {
 
                   json += `"${oldPath}":"${newPath}",\n`;
                   csv += `\n${oldPath},${newPath}`;
+									nginxMaps.users += `\n\t\t${oldPath}\t${newPath};`
                 }
                 Controller.progress(index++, total);
               }, (err) => {
@@ -628,13 +635,16 @@ const defaults = {
               Categories.each(
                 (category) => {
                   const __imported_original_data__ = utils.jsonParseSafe((category || {}).__imported_original_data__, {});
-
                   if (category && __imported_original_data__._cid) {
-                    const oldPath = Controller.redirectTemplates.categories.oldPath(__imported_original_data__);
-                    const newPath = Controller.redirectTemplates.categories.newPath(category);
-
-                    json += `"${oldPath}":"${newPath}",\n`;
-                    csv += `\n${oldPath},${newPath}`;
+										try {
+											const oldPath = Controller.redirectTemplates.categories.oldPath(__imported_original_data__);
+											const newPath = Controller.redirectTemplates.categories.newPath(category);
+											json += `"${oldPath}":"${newPath}",\n`;
+											csv += `\n${oldPath},${newPath}`;
+											nginxMaps.categories += `\n\t\t${oldPath}\t${newPath};`
+										} catch (e) {
+											console.warn(`_cid:${__imported_original_data__._cid}, cid:${category.cid}`, e.message)
+										}
                   }
                   Controller.progress(index++, total);
                 },
@@ -665,9 +675,9 @@ const defaults = {
                   if (topic && __imported_original_data__._tid) {
                     const oldPath = Controller.redirectTemplates.topics.oldPath(__imported_original_data__);
                     const newPath = Controller.redirectTemplates.topics.newPath(topic);
-
                     json += `"${oldPath}":"${newPath}",\n`;
                     csv += `\n${oldPath},${newPath}`;
+										nginxMaps.topics += `\n\t\t${oldPath}\t${newPath};`
                   }
                   Controller.progress(index++, total);
                 },
@@ -695,9 +705,9 @@ const defaults = {
                   if (post && __imported_original_data__._pid && !_mainPids[post.pid]) {
                     const oldPath = Controller.redirectTemplates.posts.oldPath(__imported_original_data__);
                     const newPath = Controller.redirectTemplates.posts.newPath(post);
-
                     json += `"${oldPath}":"${newPath}",\n`;
                     csv += `\n${oldPath},${newPath}`;
+										nginxMaps.posts += `\n\t\t${oldPath}\t${newPath};`
                   }
                   Controller.progress(index++, total);
                 },
@@ -725,22 +735,53 @@ const defaults = {
           json = json.substring(0, lastCommaIdx);
         }
         json += '\n}';
+				if (format === 'nginx') {
+					const filenames = []
+					const contents = []
+					const filepaths = []
+					const fileurls = []
+					Object.keys(nginxMaps).forEach((key) => {
+						if (nginxMaps[key]) {
+							nginxMaps[key] = `map $request_uri $new_${key}_uri { \n\t\tdefault "";` + nginxMaps[key] + '\n}';
+							let filename = `${key}.nginx.redirect.map`;
+							filenames.push(filename);
+							contents.push(nginxMaps[key]);
+							filepaths.push(path.join(DELIVERABLES_TMP_DIR, `/${filename}`));
+							fileurls.push(`${DELIVERABLES_TMP_DIR}/${filename}`);
+						}
+					})
+					async.parallel(
+						filepaths.map((filepath, i) => {
+							return (next) => {
+								fs.writeFile(filepath, contents[i], 'utf-8', next)
+							}
+						})
+					, function (err) {
+						const ret = { filenames, fileurls, filepaths, contents }
+						Controller.emit('controller.download', ret);
+						Controller.state({
+							now: 'idle',
+							event: 'controller.download',
+						});
+						callback(null, ret);
+					});
+				} else {
+					const filename = format === 'json' ? 'redirect.map.json' : 'redirect.map.csv';
+					const content = format === 'json' ? json : csv;
 
-        const filename = format === 'json' ? 'redirect.map.json' : 'redirect.map.csv';
-        const content = format === 'json' ? json : csv;
+					const filepath = path.join(DELIVERABLES_TMP_DIR, `/${filename}`);
+					const fileurl = `${DELIVERABLES_TMP_URL}/${filename}`;
+					const ret = { filename, fileurl, filepath };
 
-        const filepath = path.join(DELIVERABLES_TMP_DIR, `/${filename}`);
-        const fileurl = `${DELIVERABLES_TMP_URL}/${filename}`;
-        const ret = { filename, fileurl, filepath };
-
-        fs.writeFile(filepath, content, 'utf-8', () => {
-          Controller.emit('controller.download', ret);
-          Controller.state({
-            now: 'idle',
-            event: 'controller.download',
-          });
-          callback(null, ret);
-        });
+					fs.writeFile(filepath, content, 'utf-8', () => {
+						Controller.emit('controller.download', ret);
+						Controller.state({
+							now: 'idle',
+							event: 'controller.download',
+						});
+						callback(null, ret);
+					});
+				}
       });
     } else {
       error({ error: 'Cannot download files.' });

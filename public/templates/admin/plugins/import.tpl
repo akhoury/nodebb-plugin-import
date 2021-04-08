@@ -464,24 +464,46 @@
         <input disabled="disabled" value="/topic/<%= tid %>/#<%= pid %>" type="text" class="form-control" id="redirection-templates-posts-newpath" name="redirection-templates-posts-newpath" placeholder="/topic/<%= tid %>/#<%= pid %>">
     </div>
     <p></p>
-    <button
-            title="Attempts to retrieve and download redirect.map.csv of your last import run"
-            class="btn btn-lg btn-default import-download-btn disabled"
-            disabled="disabled"
-            data-on="click"
-            data-action="downloadRedirectionCsv"
-            id="download-redirection-csv"
-            type="button">Download redirect.map.csv (might take some time)
-    </button>
-	<button
-			title="Attempts to retrieve and download redirect.map.json of your last import run"
-			class="btn btn-lg btn-default import-download-btn disabled"
-			disabled="disabled"
-			data-on="click"
-			data-action="downloadRedirectionJson"
-			id="download-redirection-json"
-			type="button">Download redirect.map.json (might take some time)
-	</button>
+    <div>
+        <button
+                title="Attempts to retrieve and download redirect.map.csv of your last import run"
+                class="btn btn-lg btn-default import-download-btn disabled"
+                disabled="disabled"
+                data-on="click"
+                data-action="downloadRedirectionCsv"
+                id="download-redirection-csv"
+                type="button">Download redirect.map.csv (might take some time)
+        </button>
+    </div>
+    <br>
+    <div>
+        <button
+                title="Attempts to retrieve and download redirect.map.json of your last import run"
+                class="btn btn-lg btn-default import-download-btn disabled"
+                disabled="disabled"
+                data-on="click"
+                data-action="downloadRedirectionJson"
+                id="download-redirection-json"
+                type="button">Download redirect.map.json (might take some time)
+        </button>
+    </div>
+    <br>
+    <div>
+        <button
+                title="Attempts to retrieve and download each [model].nginx.redirect.map of your last import run"
+                class="btn btn-lg btn-default import-download-btn disabled"
+                disabled="disabled"
+                data-on="click"
+                data-action="downloadRedirectionNginxMaps"
+                id="download-redirection-nginx-maps"
+                type="button">Download each [model].nginx.redirect.map (might take some time)
+        </button>
+        <p>
+            <small>
+                You might be prompted to allow this page to "Download multiple files", please do so in order to get all map files.
+            </small>
+        </p>
+    </div>
 </div>
 
 <div class="form-group">

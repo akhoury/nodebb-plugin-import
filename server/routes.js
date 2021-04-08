@@ -22,6 +22,7 @@ module.exports = {
 
     router.get(`${apiPrefix}/download/redirect.json`, Plugin.api.get.redirectJson);
     router.get(`${apiPrefix}/download/redirect.csv`, Plugin.api.get.redirectCsv);
+    router.get(`${apiPrefix}/download/nginx.redirect.maps`, Plugin.api.get.redirectNginxMaps);
 
     router.post(`${apiPrefix}/start`, middleware.applyCSRF, Plugin.api.post.start);
     router.post(`${apiPrefix}/resume`, middleware.applyCSRF, Plugin.api.post.resume);

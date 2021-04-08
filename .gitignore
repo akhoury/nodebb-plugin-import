@@ -26,3 +26,4 @@ server/*.DS_Store
 server/logs/*.log
 public/tmp/*.csv
 public/tmp/*.json
+public/tmp/*.map

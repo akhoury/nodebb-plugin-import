@@ -55,7 +55,7 @@
     "extend": "^3.0.2",
     "file-type": "^3.4.0",
     "fs-extra": "^8.1.0",
-    "iconv": "^2.1.11",
+    "iconv": "^3.0.0",
     "nconf": "^0.10.0",
     "nodebb-plugin-require": "^0.0.10",
     "npm": "^6.11.2",

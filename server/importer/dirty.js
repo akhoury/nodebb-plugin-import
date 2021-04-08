@@ -56,7 +56,7 @@ module.exports = {
 	cleanSync,
 
 	writeSync(type) {
-		return fs.writeFileSync(filepath(type), +new Date(), { encoding: 'utf8' });
+		return fs.writeFileSync(filepath(type), `${+new Date()}`, { encoding: 'utf8' });
 	},
 
 	remove(type, next) {
