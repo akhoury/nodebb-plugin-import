@@ -613,7 +613,7 @@ const defaults = {
 
                   json += `"${oldPath}":"${newPath}",\n`;
                   csv += `\n${oldPath},${newPath}`;
-									nginxMaps.users += `\n\t\t${oldPath}\t${newPath};`
+									nginxMaps.users += `\n${oldPath}\t${newPath};`
                 }
                 Controller.progress(index++, total);
               }, (err) => {
@@ -641,7 +641,7 @@ const defaults = {
 											const newPath = Controller.redirectTemplates.categories.newPath(category);
 											json += `"${oldPath}":"${newPath}",\n`;
 											csv += `\n${oldPath},${newPath}`;
-											nginxMaps.categories += `\n\t\t${oldPath}\t${newPath};`
+											nginxMaps.categories += `\n${oldPath}\t${newPath};`
 										} catch (e) {
 											console.warn(`_cid:${__imported_original_data__._cid}, cid:${category.cid}`, e.message)
 										}
@@ -677,7 +677,7 @@ const defaults = {
                     const newPath = Controller.redirectTemplates.topics.newPath(topic);
                     json += `"${oldPath}":"${newPath}",\n`;
                     csv += `\n${oldPath},${newPath}`;
-										nginxMaps.topics += `\n\t\t${oldPath}\t${newPath};`
+										nginxMaps.topics += `\n${oldPath}\t${newPath};`
                   }
                   Controller.progress(index++, total);
                 },
@@ -707,7 +707,7 @@ const defaults = {
                     const newPath = Controller.redirectTemplates.posts.newPath(post);
                     json += `"${oldPath}":"${newPath}",\n`;
                     csv += `\n${oldPath},${newPath}`;
-										nginxMaps.posts += `\n\t\t${oldPath}\t${newPath};`
+										nginxMaps.posts += `\n${oldPath}\t${newPath};`
                   }
                   Controller.progress(index++, total);
                 },
@@ -742,7 +742,6 @@ const defaults = {
 					const fileurls = []
 					Object.keys(nginxMaps).forEach((key) => {
 						if (nginxMaps[key]) {
-							nginxMaps[key] = `map $request_uri $new_${key}_uri { \n\t\tdefault "";` + nginxMaps[key] + '\n}';
 							let filename = `${key}.nginx.redirect.map`;
 							filenames.push(filename);
 							contents.push(nginxMaps[key]);

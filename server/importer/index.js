@@ -644,8 +644,9 @@ const defaults = {
                       fullname: user._fullname || '',
                       birthday: user._birthday || '',
                       showemail: user._showemail ? 1 : 0,
-                      lastposttime: user._lastposttime || 0,
-                      lastonline: user._lastonline || user._joindate,
+                      showfullname: user._showfullname ? 1 : 0,
+                      lastposttime: user._lastposttime || user._lastonline || 0,
+                      lastonline: user._lastonline || user._lastposttime || user._joindate,
 
                       'email:confirmed': config.autoConfirmEmails ? 1 : 0,
 
@@ -1501,7 +1502,7 @@ const defaults = {
     return `\n<img class="imported-image-tag" style="display:block" src="${href}" alt="${filename}" />`;
   }
   function generateAnchorTag(url) {
-    const href = url.url || url.src || url;
+    const href = url.url || url.src || url || '';
     const filename = url.filename || href.split('/').pop();
     return `\n<a download="${filename}" class="imported-anchor-tag" href="${href}" target="_blank">${filename}</a>`;
   }
@@ -1674,7 +1675,7 @@ const defaults = {
                           votes: post._votes || 0,
 
                           edited: post._edited || 0,
-                          deleted: post._deleted || 0,
+                          deleted: post._deleted ? 1 : 0,
 
                           __imported_original_data__: JSON.stringify(_.omit(post, ['_attachmentsBlobs'])),
 						  ...(post._fields || {})
