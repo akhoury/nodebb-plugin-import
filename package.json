@@ -59,7 +59,7 @@
     "nconf": "^0.10.0",
     "nodebb-plugin-require": "^0.0.10",
     "npm": "^6.11.2",
-    "underscore": "~1.5.2"
+    "underscore": "~1.12.1"
   },
   "devDependencies": {
     "chai": "^3.5.0",
