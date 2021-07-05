@@ -51,12 +51,14 @@
   }
 
   // only allows wildcards i.e. "user:*"
-  db.keys = db.keys || (function () {
+  db.keys = db.keys || db.scan || (function () {
     switch (dbType) {
       case 'mongo':
         return mongoKeys;
       case 'redis':
         return db.client.keys;
+      case 'postgres':
+        return postgresKeys;
     }
   }());
 
@@ -75,6 +77,24 @@
         callback(null, !err && arr ? arr.map((v, i) => v._key) : []);
       });
     });
+  }
+
+  function postgresKeys(key, callback) {
+    if (key.startsWith('*')) {
+      key = '%' + key.substring(1);
+    }
+    if (key.endsWith('*')) {
+      key = key.substring(0, key.length - 1) + '%';
+    }
+
+    db.client.query({
+      text: `
+    SELECT o."_key"
+    FROM "legacy_object_live" o
+    WHERE o."_key" LIKE '${key}'`,
+    })
+      .then(res => callback(null, res && res.rows ? res.rows.map(r => r._key) : []))
+      .catch(err => callback(err));
   }
 
   function setupConfigs() {
