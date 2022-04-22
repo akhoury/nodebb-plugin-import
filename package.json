@@ -56,7 +56,7 @@
     "file-type": "^3.4.0",
     "fs-extra": "^8.1.0",
     "iconv": "^3.0.0",
-    "nconf": "^0.10.0",
+    "nconf": "^0.11.4",
     "nodebb-plugin-require": "^0.0.10",
     "npm": "^6.11.2",
     "underscore": "~1.5.2"
