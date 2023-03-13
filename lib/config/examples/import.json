@@ -1,0 +1,33 @@
+{
+    "log": true,
+    "passwordGen": {
+        "enabled": false,
+        "chars": "{}.-_=+qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM1234567890",
+        "len": 13
+    },
+    "categoriesTextColors": [
+        "#FFFFFF"
+    ],
+    "categoriesBgColors": [
+        "#AB4642",
+        "#DC9656",
+        "#F7CA88",
+        "#A1B56C",
+        "#86C1B9",
+        "#7CAFC2",
+        "#BA8BAF",
+        "#A16946"
+    ],
+    "categoriesIcons": [
+        "fa-comment"
+    ],
+    "autoConfirmEmails": true,
+    "userReputationMultiplier": 1,
+    "adminTakeOwnership": {
+        "enable": true,
+        "_username": "admin",
+        "_uid": "1"
+    },
+    "importDuplicateEmails": true,
+    "overrideDuplicateEmailDataWithOriginalData": true
+}
