@@ -1,0 +1,26 @@
+{
+    "redirectionFormat": "json",
+    "contentConvert": {
+        "mainConvert": "html-to-md",
+        "convertRecords": {
+            "topicsTitle": true,
+            "topicsContent": true,
+            "categoriesDescriptions": true
+        }
+    },
+    "redirectionTemplates": {
+        "users": {
+            "oldPath": null,
+            "newPath": "/user/<%= userslug %>"
+        },
+        "categories": {
+            "oldPath": null,
+            "newPath": "/category/<%= cid %>"
+        },
+        "topics": {
+            "oldPath": null,
+            "newPath": "/topic/<%= tid %>"
+        },
+        "posts": null
+    }
+}

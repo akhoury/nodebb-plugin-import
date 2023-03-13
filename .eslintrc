@@ -1,0 +1,12 @@
+{
+	"rules": {
+    "indent": ["error", 4],
+    "quotes": ["error", "single"],
+    "space-before-function-paren": "off",
+    "comma-dangle": "off",
+    "no-void": "off",
+    "no-prototype-builtins": "off",
+    "no-console": "off",
+    "ecmaVersion": 2020
+  }
+}
