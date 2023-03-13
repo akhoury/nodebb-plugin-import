@@ -5,7 +5,7 @@
   "main": "library.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/psychobunny/nodebb-plugin-import"
+    "url": "https://github.com/akhoury/nodebb-plugin-import"
   },
   "keywords": [
     "nodebb",
@@ -26,12 +26,12 @@
     ]
   },
   "author": {
-    "name": "psychobunny",
-    "email": "psycho.bunny@hotmail.com"
+    "name": "akhoury",
+    "email": "bentael@gmail.com"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/psychobunny/nodebb-plugin-import/issues"
+    "url": "https://github.com/akhoury/nodebb-plugin-import/issues"
   },
   "readmeFilename": "README.md",
   "nbbpm": {
