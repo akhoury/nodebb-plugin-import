@@ -5,7 +5,7 @@ Import your old forum data to nodebb | a one time use plugin
 # THIS PLUGIN ONLY SUPPORTS:
 ## [NodeBB v1.12.1](https://github.com/NodeBB/NodeBB/tree/v1.12.1)
 
-but __you can upgrade__ after the import is done, make sure you follow the [upgrade docs](https://docs.nodebb.org/vi/latest/upgrading/)
+but __you can upgrade__ after the import is done, make sure you follow the [upgrade docs](https://docs.nodebb.org/configuring/upgrade/)
 
 ```
 git clone https://github.com/NodeBB/NodeBB.git
